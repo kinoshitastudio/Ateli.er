@@ -2958,6 +2958,25 @@
   }
   /* Empty avatar = subtle placeholder circle (still visible, paper-2 fill).
      Used when user has no avatar URL set yet. */
+  /* Phase D-1: small notification dot — shown when atelierTraces reports
+     unread comments on the user's own blocks (cross-user) */
+  .account-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1;
+    margin-left: 4px;
+    cursor: pointer;
+    pointer-events: auto;
+    animation: pulseDot 2.4s ease-in-out infinite;
+  }
+  .account-pill-badge:hover { opacity: 0.7; }
+  @keyframes pulseDot {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
   .account-pill-avatar.is-empty {
     background: var(--paper-2);
   }
@@ -3563,6 +3582,7 @@
     <button id="userMenu" type="button" hidden class="account-pill" title="account & settings">
       <span id="userAvatar" class="account-pill-avatar is-empty" aria-hidden="true"></span>
       <span id="userHandle" class="account-pill-handle"></span>
+      <span id="userTracesBadge" class="account-pill-badge" hidden>●</span>
       <span class="account-pill-cog" aria-hidden="true">⚙</span>
     </button>
   </div>
@@ -7728,17 +7748,23 @@
     e.preventDefault();
     const text = $('#slitText').value.trim();
     if (!text) return;
-    const fp = {
-      name: 'anonymous',
-      text,
-      trackId: currentTrack ? currentTrack.id : null,
-      ts: Date.now(),
-    };
+    const id = `tr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const ts = Date.now();
+    const blockId = currentTrack ? currentTrack.id : null;
+    const handle = (document.getElementById('userHandle')?.textContent || '').replace(/^@+/, '').trim() || null;
+    const fp = { id, name: handle || 'anonymous', handle, text, trackId: blockId, ts, _isOwnAuthor: true };
     const arr = loadFP();
     arr.push(fp);
     saveFP(arr);
     $('#slitText').value = '';
     renderFP();
+    // Phase D-1: also push to the shared traces table when authed + bound to a block.
+    if (currentUser && blockId) {
+      let blockOwnerId = currentUser.id;
+      const r = _resolveBlockOrTrack(blockId);
+      if (r?.external && r.obj?._ownerId) blockOwnerId = r.obj._ownerId;
+      atelierTraces.post({ id, blockId, blockOwnerId, text, ts });
+    }
     // If piece modal is open and the trace is bound to the same piece,
     // re-render the piece's comments section so the new trace appears immediately.
     if (currentPieceModalTrack && fp.trackId === currentPieceModalTrack.id) {
@@ -8324,61 +8350,117 @@
 
   // Reusable comments section (works for audio/image/text blocks). Renders an
   // inline composer + the existing comments for `blockId`.
+  // Phase D-1: combine local FP cache with remote traces. Render local first
+  // for snappy UX, then re-render once the remote fetch resolves so handle
+  // attribution and other-user comments appear without blocking.
+  function _normalizeFP(f) {
+    return {
+      id: f.id || `local-${f.ts}-${Math.random().toString(36).slice(2, 6)}`,
+      name: f.name || 'anonymous',
+      handle: f.handle || null,
+      text: f.text || '',
+      ts: f.ts || 0,
+      trackId: f.trackId || null,
+      _isOwnAuthor: !!f._isOwnAuthor,
+    };
+  }
+  function _normalizeRemoteTrace(r) {
+    return {
+      id: r.id,
+      name: r.author_handle || 'anonymous',
+      handle: r.author_handle || null,
+      text: r.text || '',
+      ts: Number(r.ts) || 0,
+      trackId: r.block_id,
+      author_id: r.author_id,
+    };
+  }
+  function _mergeTraces(localArr, remoteArr) {
+    const byId = new Map();
+    [...localArr.map(_normalizeFP), ...remoteArr.map(_normalizeRemoteTrace)].forEach(it => {
+      const cur = byId.get(it.id);
+      // remote always wins (canonical) — same id from local will be replaced
+      if (!cur || (it.author_id && !cur.author_id)) byId.set(it.id, it);
+    });
+    return [...byId.values()].sort((a, b) => b.ts - a.ts);
+  }
   function _renderBlockCommentsInto(wrapId, blockId) {
     const wrap = document.getElementById(wrapId);
     if (!wrap) return;
-    const arr = loadFP()
-      .filter(f => f.trackId === blockId)
-      .sort((a, b) => b.ts - a.ts);
+    const localArr = loadFP().filter(f => f.trackId === blockId);
     const composer = `
       <form class="ptc-composer" data-bid="${escapeHtml(blockId)}">
         <input type="text" class="ptc-composer-input" placeholder="${escapeHtml(t('composerPlaceholder'))}" maxlength="160" autocomplete="off">
         <button type="submit" class="ptc-composer-submit">${t('composerLeave')}</button>
       </form>
     `;
-    if (arr.length === 0) {
-      wrap.innerHTML = `
-        <h4>${t('pmCommentsHead')}</h4>
-        ${composer}
-        <p class="pc-empty">${t('pmCommentsEmpty')}</p>
-      `;
-    } else {
-      const items = arr.map(f => {
-        const op = traceOpacityForAge(f.ts);
-        return `
-          <li style="opacity: ${op.toFixed(2)}">
-            <span class="ptc-name">${escapeHtml(f.name || 'anonymous')}</span>
-            <span class="ptc-text">${escapeHtml(f.text)}</span>
-            <span class="ptc-when">${ageString(f.ts)}</span>
-          </li>
+    function paint(merged) {
+      if (merged.length === 0) {
+        wrap.innerHTML = `
+          <h4>${t('pmCommentsHead')}</h4>
+          ${composer}
+          <p class="pc-empty">${t('pmCommentsEmpty')}</p>
         `;
-      }).join('');
-      wrap.innerHTML = `
-        <h4>${t('pmCommentsHead')} · ${arr.length}</h4>
-        ${composer}
-        <ul class="ptc-list">${items}</ul>
-        <p class="ptc-note">${t('pmCommentsNote')}</p>
-      `;
+      } else {
+        const items = merged.map(f => {
+          const op = traceOpacityForAge(f.ts);
+          const handleHtml = f.handle ? `@${escapeHtml(f.handle)}` : escapeHtml(f.name || 'anonymous');
+          return `
+            <li style="opacity: ${op.toFixed(2)}">
+              <span class="ptc-name">${handleHtml}</span>
+              <span class="ptc-text">${escapeHtml(f.text)}</span>
+              <span class="ptc-when">${ageString(f.ts)}</span>
+            </li>
+          `;
+        }).join('');
+        wrap.innerHTML = `
+          <h4>${t('pmCommentsHead')} · ${merged.length}</h4>
+          ${composer}
+          <ul class="ptc-list">${items}</ul>
+          <p class="ptc-note">${t('pmCommentsNote')}</p>
+        `;
+      }
+      _wireCommentComposer(wrap, wrapId, blockId);
     }
-    const form = wrap.querySelector('.ptc-composer');
-    if (form) {
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = form.querySelector('.ptc-composer-input');
-        const text = (input.value || '').trim();
-        if (!text) return;
-        customConfirm(t('confirmLeaveComment')).then(ok => {
-          if (!ok) return;
-          const fp = { name: 'anonymous', text, trackId: blockId, ts: Date.now() };
-          const all = loadFP();
-          all.push(fp);
-          saveFP(all);
-          input.value = '';
-          _renderBlockCommentsInto(wrapId, blockId);
-          if (typeof renderFP === 'function') renderFP();
-        });
+    // Initial paint with local data only (instant)
+    paint(_mergeTraces(localArr, []));
+    // Async: fetch remote, re-paint with merged set
+    if (currentUser) {
+      atelierTraces.listForBlock(blockId).then(remote => {
+        if (!Array.isArray(remote)) return;
+        paint(_mergeTraces(localArr, remote));
       });
     }
+  }
+  function _wireCommentComposer(wrap, wrapId, blockId) {
+    const form = wrap.querySelector('.ptc-composer');
+    if (!form) return;
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = form.querySelector('.ptc-composer-input');
+      const text = (input.value || '').trim();
+      if (!text) return;
+      customConfirm(t('confirmLeaveComment')).then(ok => {
+        if (!ok) return;
+        const id = `tr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const ts = Date.now();
+        const handle = (document.getElementById('userHandle')?.textContent || '').replace(/^@+/, '').trim() || null;
+        // Local cache: include id + handle so dedup with remote works.
+        const fp = { id, name: handle || 'anonymous', handle, text, trackId: blockId, ts, _isOwnAuthor: true };
+        const all = loadFP();
+        all.push(fp);
+        saveFP(all);
+        input.value = '';
+        // Determine block_owner_id for the remote row.
+        let blockOwnerId = currentUser?.id || null;
+        const r = _resolveBlockOrTrack(blockId);
+        if (r?.external && r.obj?._ownerId) blockOwnerId = r.obj._ownerId;
+        // Fire-and-forget remote post; UI doesn't wait on it.
+        if (currentUser) atelierTraces.post({ id, blockId, blockOwnerId, text, ts });
+        _renderBlockCommentsInto(wrapId, blockId);
+        if (typeof renderFP === 'function') renderFP();
+      });
+    });
   }
   function renderPieceComments(track) {
     _renderBlockCommentsInto('pieceComments', track.id);
@@ -9629,6 +9711,155 @@
     return { upsert, remove, sync, list };
   })();
 
+  // ──────────────── TRACES — cross-user comments (Phase D-1) ────────────────
+  // Comments live in a shared `traces` table so a comment on user A's block
+  // by user B is visible to A and to anyone else viewing the block. The
+  // local footprints store (atelier_footprints_v2) is kept as an offline
+  // cache so the existing render pipeline doesn't break when offline; when
+  // authed the remote table is the canonical source.
+  const atelierTraces = (() => {
+    function _accessToken() {
+      try {
+        const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        const tokenData = tokenKey ? JSON.parse(localStorage.getItem(tokenKey) || 'null') : null;
+        return tokenData?.access_token || null;
+      } catch (e) { return null; }
+    }
+    function _ownHandle() {
+      const el = document.getElementById('userHandle');
+      return (el?.textContent || '').replace(/^@+/, '').trim() || null;
+    }
+    async function post({ id, blockId, blockOwnerId, text, ts }) {
+      if (!currentUser || !blockId || !text) return false;
+      const token = _accessToken();
+      if (!token) return false;
+      const row = {
+        id: id || `tr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        block_id: blockId,
+        author_id: currentUser.id,
+        author_handle: _ownHandle(),
+        text,
+        ts: ts || Date.now(),
+        block_owner_id: blockOwnerId || null,
+      };
+      try {
+        const res = await Promise.race([
+          fetch(`${SUPABASE_URL}/rest/v1/traces`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_PUB_KEY,
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=minimal',
+            },
+            body: JSON.stringify(row),
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('trace post timeout')), 10000)),
+        ]);
+        if (!res.ok) {
+          const txt = await res.text().catch(() => `HTTP ${res.status}`);
+          throw new Error(`HTTP ${res.status}: ${txt}`);
+        }
+        return row;  // return the synthesized row so caller can render immediately
+      } catch (e) {
+        console.warn('[atelierTraces] post error:', e);
+        return false;
+      }
+    }
+    async function listForBlock(blockId, limit) {
+      if (!blockId) return [];
+      const url = `${SUPABASE_URL}/rest/v1/traces?block_id=eq.${encodeURIComponent(blockId)}&select=*&order=ts.asc&limit=${limit || 200}`;
+      try {
+        const headers = { 'apikey': SUPABASE_PUB_KEY };
+        const token = _accessToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await Promise.race([
+          fetch(url, { headers }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('trace list timeout')), 10000)),
+        ]);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        console.warn('[atelierTraces] listForBlock error:', e);
+        return [];
+      }
+    }
+    // Counts traces on the viewer's own blocks newer than the given watermark.
+    // Used by the unread-badge in the topbar.
+    async function countUnreadForOwner(ownerId, sinceTs) {
+      if (!ownerId) return 0;
+      const since = Number(sinceTs) || 0;
+      const url = `${SUPABASE_URL}/rest/v1/traces?block_owner_id=eq.${encodeURIComponent(ownerId)}&ts=gt.${since}&select=id&author_id=neq.${encodeURIComponent(ownerId)}`;
+      try {
+        const headers = { 'apikey': SUPABASE_PUB_KEY, 'Prefer': 'count=exact' };
+        const token = _accessToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await Promise.race([
+          fetch(url, { headers }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('trace count timeout')), 10000)),
+        ]);
+        if (!res.ok) return 0;
+        // PostgREST returns the count in the Content-Range header when Prefer: count=exact
+        const range = res.headers.get('content-range') || '';
+        const m = range.match(/\/(\d+|\*)$/);
+        if (m && m[1] !== '*') return parseInt(m[1], 10) || 0;
+        // Fallback: read body length
+        const data = await res.json().catch(() => []);
+        return Array.isArray(data) ? data.length : 0;
+      } catch (e) {
+        console.warn('[atelierTraces] countUnread error:', e);
+        return 0;
+      }
+    }
+    async function remove(id) {
+      if (!currentUser || !id) return false;
+      const token = _accessToken();
+      if (!token) return false;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/traces?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_PUB_KEY, 'Authorization': `Bearer ${token}`, 'Prefer': 'return=minimal' },
+        });
+        return res.ok || res.status === 404;
+      } catch (e) {
+        console.warn('[atelierTraces] remove error:', e);
+        return false;
+      }
+    }
+    // Watermark: ts of the last "mark all read" action. Stored locally
+    // (not in user_state) so each device has independent read state.
+    const WATERMARK_KEY = 'atelier_traces_watermark_v1';
+    function getWatermark() {
+      try { return Number(localStorage.getItem(WATERMARK_KEY)) || 0; } catch (e) { return 0; }
+    }
+    function setWatermark(ts) {
+      try { localStorage.setItem(WATERMARK_KEY, String(ts || Date.now())); } catch (e) {}
+    }
+    async function refreshUnreadBadge() {
+      if (!currentUser) {
+        const el = document.getElementById('userTracesBadge');
+        if (el) el.hidden = true;
+        return;
+      }
+      const count = await countUnreadForOwner(currentUser.id, getWatermark());
+      const el = document.getElementById('userTracesBadge');
+      if (!el) return;
+      if (count > 0) {
+        el.hidden = false;
+        el.title = `${count} new trace${count === 1 ? '' : 's'}`;
+        el.dataset.count = String(count);
+      } else {
+        el.hidden = true;
+      }
+    }
+    function markAllRead() {
+      setWatermark(Date.now());
+      const el = document.getElementById('userTracesBadge');
+      if (el) el.hidden = true;
+    }
+    return { post, listForBlock, countUnreadForOwner, remove, refreshUnreadBadge, markAllRead, getWatermark, setWatermark };
+  })();
+
   // Validate an invite code against the Supabase `invites` table (read-only).
   async function validateInvite(code) {
     if (!supabaseClient) return { ok: false, message: 'バックエンドに接続できません。' };
@@ -9851,6 +10082,14 @@
     document.getElementById('settingsModal')?.classList.remove('is-open');
   }
   document.getElementById('userMenu')?.addEventListener('click', openSettingsModal);
+  // Phase D-1: clicking the dot specifically marks all traces as read
+  // (without opening the Settings modal — stop propagation).
+  document.getElementById('userTracesBadge')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    atelierTraces.markAllRead();
+    showToast('既読にしました');
+  });
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-act="settings-close"]')) closeSettingsModal();
   });
@@ -9990,6 +10229,8 @@
           const ok = await atelierSync.pull();
           if (ok) refreshAllViews();
         } catch (e) { console.warn('[atelierSync] sign-in pull failed:', e); }
+        // Phase D-1: prime the unread-traces badge.
+        atelierTraces.refreshUnreadBadge();
       } else if (event === 'SIGNED_OUT') {
         showLanding();
       }
@@ -10019,6 +10260,10 @@
       const ok = await atelierSync.pull();
       if (ok) refreshAllViews();
     } catch (e) { console.warn('[atelierSync] reload pull failed:', e); }
+    // Phase D-1: refresh the unread-traces badge once per app load.
+    atelierTraces.refreshUnreadBadge();
+    // Periodic refresh while the tab is open so notifications appear without reload.
+    setInterval(() => atelierTraces.refreshUnreadBadge(), 60_000);
   })();
 
   // ──────────────── INIT ────────────────
