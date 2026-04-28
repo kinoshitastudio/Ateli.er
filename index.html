@@ -485,6 +485,18 @@
     margin-left: 6px;
     vertical-align: super;
   }
+  /* Phase D-1 polish: incoming-trace pulse on the Comment tab so the user
+     sees a notification right where the activity lives. Mirrors the pill dot. */
+  .modal-tabs .tab .tab-incoming-badge {
+    display: inline-block;
+    color: var(--ink);
+    font-size: 11px;
+    margin-left: 4px;
+    line-height: 1;
+    vertical-align: middle;
+    animation: pulseDot 2.4s ease-in-out infinite;
+  }
+  .modal-tabs .tab .tab-incoming-badge[hidden] { display: none; }
   .modal-tabs .modal-close {
     margin-left: auto;
     font-family: var(--mono);
@@ -3708,7 +3720,7 @@
         <button class="tab" data-pane="pieces">Channel<span class="tn" id="tabPiecesN">8</span></button>
         <button class="tab" data-pane="feed">Feed<span class="tn" id="tabFeedN">0</span></button>
         <button class="tab" data-pane="explore">Explore<span class="tn" id="tabExploreN">0</span></button>
-        <button class="tab" data-pane="traces">Comment<span class="tn" id="tabTracesN">0</span></button>
+        <button class="tab" data-pane="traces">Comment<span class="tn" id="tabTracesN">0</span><span class="tab-incoming-badge" id="tabTracesIncoming" hidden>●</span></button>
         <button class="tab" data-pane="atelier">Upload</button>
         <button class="modal-close" id="modalClose">— close</button>
       </div>
@@ -8493,12 +8505,18 @@
     const feedN    = document.getElementById('tabFeedN')?.textContent    || '0';
     const exploreN = document.getElementById('tabExploreN')?.textContent || '0';
     const tracesN  = document.getElementById('tabTracesN')?.textContent  || '0';
+    // Mirror the unread-traces dot from the static modal Comment tab
+    // so the piece modal carries the same notification cue.
+    const incomingEl = document.getElementById('tabTracesIncoming');
+    const incomingHtml = (incomingEl && !incomingEl.hidden)
+      ? '<span class="tab-incoming-badge">●</span>'
+      : '';
     return `
       <div class="modal-tabs piece-modal-tabs">
         <button class="tab is-active" type="button" data-piece-tab="pieces">${t('tabMyChannel')}<span class="tn">${piecesN}</span></button>
         <button class="tab" type="button" data-piece-tab="feed">${t('tabFeed')}<span class="tn">${feedN}</span></button>
         <button class="tab" type="button" data-piece-tab="explore">${t('tabExplore')}<span class="tn">${exploreN}</span></button>
-        <button class="tab" type="button" data-piece-tab="traces">${t('tabComment')}<span class="tn">${tracesN}</span></button>
+        <button class="tab" type="button" data-piece-tab="traces">${t('tabComment')}<span class="tn">${tracesN}</span>${incomingHtml}</button>
         <button class="tab" type="button" data-piece-tab="atelier">${t('tabUpload')}</button>
         <button class="modal-close" type="button" data-act="piece-close">${t('modalClose')}</button>
       </div>
@@ -9839,30 +9857,29 @@
     function setWatermark(ts) {
       try { localStorage.setItem(WATERMARK_KEY, String(ts || Date.now())); } catch (e) {}
     }
+    function _setBadges(visible, count) {
+      const pill = document.getElementById('userTracesBadge');
+      const tab = document.getElementById('tabTracesIncoming');
+      [pill, tab].forEach(el => {
+        if (!el) return;
+        el.hidden = !visible;
+        if (visible) {
+          el.title = `${count} new trace${count === 1 ? '' : 's'}`;
+          el.dataset.count = String(count);
+        }
+      });
+    }
     async function refreshUnreadBadge() {
-      if (!currentUser) {
-        const el = document.getElementById('userTracesBadge');
-        if (el) el.hidden = true;
-        return;
-      }
+      if (!currentUser) { _setBadges(false); return; }
       const count = await countUnreadForOwner(currentUser.id, getWatermark());
-      const el = document.getElementById('userTracesBadge');
-      if (!el) return;
-      if (count > 0) {
-        el.hidden = false;
-        el.title = `${count} new trace${count === 1 ? '' : 's'}`;
-        el.dataset.count = String(count);
-      } else {
-        el.hidden = true;
-      }
+      _setBadges(count > 0, count);
     }
     // Set the watermark beyond the most recent trace on this owner's blocks.
     // Using the server's max(ts) avoids the clock-skew bug where Date.now()
     // on the client could be < the server-stamped trace ts and the badge
     // would re-appear on the next refresh tick.
     async function markAllRead() {
-      const el = document.getElementById('userTracesBadge');
-      if (el) el.hidden = true;  // optimistic hide
+      _setBadges(false);  // optimistic hide on both pill + Comment-tab badge
       let target = Date.now() + 1000;
       if (currentUser) {
         try {
