@@ -598,6 +598,19 @@
   }
   .ix-by::before { content: ''; }
   .pane-index li.is-external .ix-num { color: var(--gray); }
+  /* Phase C polish: small public marker on the user's own published blocks */
+  .ix-public-mark {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 1px 6px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    width: fit-content;
+  }
   .explore-block-thumb {
     aspect-ratio: 4/3;
     background: var(--paper-2) center/cover no-repeat;
@@ -5737,6 +5750,11 @@
           const byLine = it.external
             ? `<span class="ix-by">— by @${escapeHtml(it.ownerHandle || '')}</span>`
             : '';
+          // Phase C polish: publish indicator on the viewer's own blocks.
+          const sourceObj = it.kind === 'audio' ? it.track : it.block;
+          const publicMark = (!it.external && sourceObj?.isPublic)
+            ? `<span class="ix-public-mark">${t('blockPublicBadge')}</span>`
+            : '';
           if (it.kind === 'audio') {
             const tr = it.track;
             return `<li class="${ownClass}" data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
@@ -5747,6 +5765,7 @@
                 <span class="ix-title">${escapeHtml(tr.title)}</span>
                 <span class="ix-phrase">— ${escapeHtml((tr.phrases && tr.phrases[0]) || '')} —</span>
                 ${byLine}
+                ${publicMark}
               </span>
               <span class="ix-art">${escapeHtml(tr.artist)}</span>
               <span class="ix-time">${fmtDur(tr.sec)}</span>
@@ -5763,6 +5782,7 @@
                 <span class="ix-title">${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
                 ${byLine}
+                ${publicMark}
               </span>
               <span class="ix-art">image</span>
               <span class="ix-time">↗</span>
@@ -5781,6 +5801,7 @@
                 <span class="ix-title">${escapeHtml(preview)}${(b.text || '').length > 160 ? '…' : ''}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
                 ${byLine}
+                ${publicMark}
               </span>
               <span class="ix-art">text</span>
               <span class="ix-time">↗</span>
@@ -5800,6 +5821,7 @@
                 <span class="ix-title">${escapeHtml(b.title || b.url || '(url)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.source || '')} —</span>
                 ${byLine}
+                ${publicMark}
               </span>
               <span class="ix-art">link</span>
               <span class="ix-time">↗</span>
@@ -8685,6 +8707,19 @@
     });
   }
   function openExternalBlock({ id, kind, payload, ownerHandle, ownerId, channelLabel }) {
+    // Defensive: if the caller hands us a block we actually own, drop the
+    // external markers and open it in normal owner mode so edit/delete come
+    // back. Prevents a Phase C-2 footgun where a stale Explore cache row of
+    // the viewer's own block could otherwise route through the wrong actions.
+    if (ownerId && currentUser?.id && ownerId === currentUser.id) {
+      const own = _resolveBlockOrTrack(id);
+      if (own && !own.external) {
+        if (own.kind === 'audio') return openPieceModal(own.obj);
+        if (own.kind === 'image') return openImageModal(own.obj);
+        if (own.kind === 'text')  return openTextModal(own.obj);
+        if (own.kind === 'url')   return openUrlModal(own.obj);
+      }
+    }
     const ext = {
       ...(payload || {}),
       id, kind,
@@ -8703,15 +8738,19 @@
     const list = document.getElementById('explorePublicList');
     if (!list) return;
     list.innerHTML = '<li class="explore-empty">読み込み中…</li>';
-    const rows = await atelierPublic.list(60);
+    let rows = await atelierPublic.list(60);
     if (rows == null) {
       list.innerHTML = '<li class="explore-empty">読み込みエラー</li>';
       return;
     }
+    // Phase C polish: hide the viewer's own public blocks from Explore — they
+    // already live in the viewer's channels, no point in offering "+ connect"
+    // for blocks they own.
+    if (currentUser?.id) rows = rows.filter(r => r.owner_id !== currentUser.id);
     _explorePublicCache = {};
     rows.forEach(r => { _explorePublicCache[r.id] = r; });
     if (rows.length === 0) {
-      list.innerHTML = '<li class="explore-empty">まだ公開されている block はありません。</li>';
+      list.innerHTML = '<li class="explore-empty">他のユーザーの公開 block はまだありません。</li>';
       return;
     }
     list.innerHTML = rows.map(r => {
