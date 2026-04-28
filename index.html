@@ -580,10 +580,24 @@
     padding: 14px;
     border: 1px solid var(--line-soft);
     background: var(--paper);
-    transition: border-color 0.18s;
+    cursor: pointer;
+    transition: border-color 0.18s, transform 0.12s;
   }
-  /* Phase C-1: cards are read-only previews; Connect/open lands in Phase C-2 */
-  .explore-block-card:hover { border-color: var(--gray-2); }
+  .explore-block-card:hover { border-color: var(--ink); }
+  .explore-block-card:active { transform: translateY(1px); }
+  /* Phase C-2: external (other-user) marker in breadcrumb */
+  .bc-h4-user.bc-external { font-style: italic; }
+  .bc-owner-text.bc-external { font-style: italic; }
+  /* Phase C-2: "— by @handle" attribution under channel-detail items */
+  .ix-by {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+  .ix-by::before { content: ''; }
+  .pane-index li.is-external .ix-num { color: var(--gray); }
   .explore-block-thumb {
     aspect-ratio: 4/3;
     background: var(--paper-2) center/cover no-repeat;
@@ -644,6 +658,74 @@
     cursor: pointer;
   }
   .uf-row-public .uf-public-label { color: var(--ink); }
+  /* Phase C-2: external connect picker overlay */
+  .cc-overlay {
+    position: fixed; inset: 0;
+    z-index: 320;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cc-overlay-bg {
+    position: absolute; inset: 0;
+    background: rgba(22, 0, 162, 0.12);
+    backdrop-filter: blur(2px);
+  }
+  .cc-overlay-card {
+    position: relative;
+    max-width: 420px;
+    width: calc(100% - 48px);
+    background: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 22px 22px 18px;
+    box-shadow: 0 6px 28px rgba(10, 10, 10, 0.08);
+  }
+  .cc-overlay-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .cc-overlay-x {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gray);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+  }
+  .cc-overlay-x:hover { color: var(--ink); }
+  .cc-overlay-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .cc-overlay-opt {
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-family: var(--sans-jp);
+    font-size: 14px;
+    color: var(--ink);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .cc-overlay-opt:hover {
+    background: var(--paper-2);
+    border-color: var(--line);
+  }
   /* Public-state pill for the block modal head */
   .block-public-pill {
     display: inline-block;
@@ -4272,6 +4354,12 @@
       blockMetaEdited: 'edited',
       blockVisibilityHint: 'show on Explore (other residents can see)',
       blockPublicBadge:    'public',
+      blockConnectMine:    'connect to my channel',
+      blockDisconnect:     'disconnect',
+      connectExternalPickPrompt: 'add this block to which channel?',
+      connectExternalDone: 'connected to',
+      disconnectExternalDone: 'disconnected',
+      alreadyConnected:    'already connected to',
       // confirm dialog
       confirmCancel:   '— cancel',
       confirmProceed:  '— proceed',
@@ -4460,6 +4548,12 @@
       blockMetaEdited: '編集',
       blockVisibilityHint: 'Explore に公開する (他の住人から見える)',
       blockPublicBadge:    '公開中',
+      blockConnectMine:    '自分のチャンネルに connect',
+      blockDisconnect:     'disconnect',
+      connectExternalPickPrompt: 'どのチャンネルに置く?',
+      connectExternalDone: 'connect しました →',
+      disconnectExternalDone: 'disconnect しました',
+      alreadyConnected:    '既に connect されています →',
       confirmCancel:   '— キャンセル',
       confirmProceed:  '— 実行',
       confirmSaveChannel: 'チャンネルの変更を保存しますか？',
@@ -5323,6 +5417,52 @@
     return b.channelId === cid || (b.connectedTo || []).includes(cid);
   }
 
+  // ──────────────── EXTERNAL BLOCKS (Phase C-2) ────────────────
+  // Snapshot of another user's public_blocks row, attached to one of the
+  // current user's channels. Snapshot semantics (not live): if the upstream
+  // block is later edited or deleted, the local copy stays as it was at
+  // connect time. Trade-off documented in the Phase C-2 commit.
+  // Shape: { [myChannelId]: [{id, kind, payload, ownerId, ownerHandle, channelLabel, connectedAt}, ...] }
+  const EXTERNAL_BLOCKS_KEY = 'atelier_external_blocks_v1';
+  function loadExternalBlocks() {
+    try { return JSON.parse(localStorage.getItem(EXTERNAL_BLOCKS_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveExternalBlocks(map) {
+    try { localStorage.setItem(EXTERNAL_BLOCKS_KEY, JSON.stringify(map)); } catch (e) {}
+  }
+  function externalBlocksInChannel(cid) {
+    return (loadExternalBlocks()[cid] || []).slice();
+  }
+  function connectExternalBlock(cid, snapshot) {
+    if (!cid || !snapshot || !snapshot.id) return false;
+    const map = loadExternalBlocks();
+    const arr = map[cid] || [];
+    if (arr.some(x => x.id === snapshot.id)) return false;  // already connected
+    arr.push({ ...snapshot, connectedAt: Date.now() });
+    map[cid] = arr;
+    saveExternalBlocks(map);
+    return true;
+  }
+  function disconnectExternalBlock(cid, blockId) {
+    const map = loadExternalBlocks();
+    if (!map[cid]) return false;
+    const before = map[cid].length;
+    map[cid] = map[cid].filter(x => x.id !== blockId);
+    if (map[cid].length === before) return false;
+    if (map[cid].length === 0) delete map[cid];
+    saveExternalBlocks(map);
+    return true;
+  }
+  function findExternalBlock(blockId) {
+    const map = loadExternalBlocks();
+    for (const cid of Object.keys(map)) {
+      const hit = (map[cid] || []).find(x => x.id === blockId);
+      if (hit) return { channelId: cid, snapshot: hit };
+    }
+    return null;
+  }
+
   // Mutators — persist to the right store (placeholder track vs user block)
   function _persistTrackConn(trackId, list) {
     const conns = loadTrackConnections();
@@ -5394,6 +5534,14 @@
       .forEach(t => items.push({ kind:'audio', track:t }));
     loadBlocks().filter(b => b.kind !== 'audio' && isBlockInChannel(b, cid))
       .forEach(b => items.push({ kind: b.kind, block: b }));
+    // Phase C-2: external blocks attached to this channel via Connect.
+    // Each carries an `external` flag and ownerHandle for attribution + a
+    // hand-off to the read-only block-modal flow.
+    externalBlocksInChannel(cid).forEach(snap => {
+      const block = { ...(snap.payload || {}), id: snap.id, kind: snap.kind, _external: true, _ownerHandle: snap.ownerHandle, _ownerId: snap.ownerId, _hostChannelId: cid };
+      if (snap.kind === 'audio') items.push({ kind: 'audio', track: block, external: true, ownerHandle: snap.ownerHandle });
+      else items.push({ kind: snap.kind, block, external: true, ownerHandle: snap.ownerHandle });
+    });
     // Apply custom per-channel ordering (if any). IDs in the saved order list
     // come first, in that order; new items not yet ordered fall in at the end.
     const order = loadChannelOrder()[cid] || [];
@@ -5584,10 +5732,11 @@
         items.map((it, idx) => {
           const cbox = checkboxFor(it);
           const reord = reorderBtnsFor(it, idx, total);
-          const ownClass = isOwnBlock(it) ? 'is-mine' : 'is-connected';
-          const ownerTag = isOwnBlock(it)
-            ? `<span class="ix-owner ix-owner-mine">${t('blockOwnerMine')}</span>`
-            : `<span class="ix-owner ix-owner-connect">${t('blockOwnerConnect')}</span>`;
+          const ownClass = it.external ? 'is-external' : (isOwnBlock(it) ? 'is-mine' : 'is-connected');
+          // Phase C-2: attribution line for external (other-user) blocks.
+          const byLine = it.external
+            ? `<span class="ix-by">— by @${escapeHtml(it.ownerHandle || '')}</span>`
+            : '';
           if (it.kind === 'audio') {
             const tr = it.track;
             return `<li class="${ownClass}" data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
@@ -5597,6 +5746,7 @@
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(tr.title)}</span>
                 <span class="ix-phrase">— ${escapeHtml((tr.phrases && tr.phrases[0]) || '')} —</span>
+                ${byLine}
               </span>
               <span class="ix-art">${escapeHtml(tr.artist)}</span>
               <span class="ix-time">${fmtDur(tr.sec)}</span>
@@ -5612,6 +5762,7 @@
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
+                ${byLine}
               </span>
               <span class="ix-art">image</span>
               <span class="ix-time">↗</span>
@@ -5629,6 +5780,7 @@
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(preview)}${(b.text || '').length > 160 ? '…' : ''}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
+                ${byLine}
               </span>
               <span class="ix-art">text</span>
               <span class="ix-time">↗</span>
@@ -5647,6 +5799,7 @@
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(b.title || b.url || '(url)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.source || '')} —</span>
+                ${byLine}
               </span>
               <span class="ix-art">link</span>
               <span class="ix-time">↗</span>
@@ -5817,6 +5970,20 @@
     detail.querySelectorAll('li[data-kind]').forEach(li => {
       const kind = li.dataset.kind;
       const navigate = () => {
+        const bid = li.dataset.bid;
+        // Phase C-2: external snapshots aren't in TRACKS / loadBlocks() — they
+        // live in external_blocks storage. Resolve there first.
+        const ext = findExternalBlock(bid);
+        if (ext) {
+          closeModal();
+          openExternalBlock({
+            id: ext.snapshot.id, kind: ext.snapshot.kind,
+            payload: ext.snapshot.payload,
+            ownerHandle: ext.snapshot.ownerHandle, ownerId: ext.snapshot.ownerId,
+            channelLabel: ext.snapshot.channelLabel,
+          });
+          return;
+        }
         if (kind === 'audio') {
           const t = TRACKS.find(x => x.id === li.dataset.tid);
           if (t) { closeModal(); openPieceModal(t); }
@@ -6437,6 +6604,91 @@
       if (r.kind === 'audio') deleteTrack(id);
       else deleteBlock(id);
       if (currentBlockModalId === id) closePieceModal();
+      refreshAllViews();
+    });
+  }
+
+  // ──────────────── EXTERNAL CONNECT PICKER (Phase C-2) ────────────────
+  // Lightweight overlay that lists the viewer's own active channels so they
+  // can attach an external (other-user) block as a snapshot.
+  function _userActiveChannels() {
+    return CHANNELS.filter(c => c.state !== 'past');
+  }
+  function promptConnectExternal(blockId) {
+    // Resolve the source — first try the Explore cache (fresh fetch),
+    // then fall back to a local snapshot (in case the user is acting from
+    // an already-connected external block in their channel).
+    let src = null;
+    if (_explorePublicCache[blockId]) {
+      const r = _explorePublicCache[blockId];
+      src = {
+        id: r.id, kind: r.kind, payload: r.payload || {},
+        ownerHandle: r.owner_handle || '', ownerId: r.owner_id || '',
+        channelLabel: r.channel_label || '',
+      };
+    } else {
+      const ext = findExternalBlock(blockId);
+      if (ext) src = {
+        id: ext.snapshot.id, kind: ext.snapshot.kind, payload: ext.snapshot.payload,
+        ownerHandle: ext.snapshot.ownerHandle, ownerId: ext.snapshot.ownerId,
+        channelLabel: ext.snapshot.channelLabel || '',
+      };
+    }
+    if (!src) { showToast('block データが見つかりません'); return; }
+    const channels = _userActiveChannels();
+    if (channels.length === 0) { showToast('まずチャンネルを作ってください'); return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'cc-overlay';
+    overlay.innerHTML = `
+      <div class="cc-overlay-bg" data-act="cc-cancel"></div>
+      <div class="cc-overlay-card">
+        <div class="cc-overlay-head">
+          <span>${t('connectExternalPickPrompt')}</span>
+          <button type="button" class="cc-overlay-x" data-act="cc-cancel">— close</button>
+        </div>
+        <div class="cc-overlay-list">
+          ${ channels.map(c => `<button type="button" class="cc-overlay-opt" data-cid="${escapeHtml(c.id)}">${escapeHtml(c.label)}</button>`).join('') }
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => {
+      const cancel = e.target.closest('[data-act="cc-cancel"]');
+      if (cancel) { overlay.remove(); return; }
+      const opt = e.target.closest('.cc-overlay-opt[data-cid]');
+      if (!opt) return;
+      const cid = opt.dataset.cid;
+      const targetChannel = CHANNELS.find(c => c.id === cid);
+      const snapshot = {
+        id: src.id,
+        kind: src.kind,
+        payload: src.payload,
+        ownerId: src.ownerId,
+        ownerHandle: src.ownerHandle,
+        channelLabel: src.channelLabel,
+      };
+      const ok = connectExternalBlock(cid, snapshot);
+      overlay.remove();
+      if (ok) {
+        showToast(`${t('connectExternalDone')} ${targetChannel?.label || cid}`);
+        // Refresh modal so the action button flips to "disconnect" + the
+        // grid picks up the new external item on next render.
+        refreshAllViews();
+        if (currentBlockModalId === src.id) refreshCurrentBlockModal();
+      } else {
+        showToast(`${t('alreadyConnected')} ${targetChannel?.label || cid}`);
+      }
+    });
+  }
+  function promptDisconnectExternal(blockId) {
+    const ext = findExternalBlock(blockId);
+    if (!ext) return;
+    customConfirm(`${t('blockDisconnect')}?`).then(ok => {
+      if (!ok) return;
+      disconnectExternalBlock(ext.channelId, blockId);
+      showToast(t('disconnectExternalDone'));
+      // Close the modal — the block no longer has a host to return to.
+      closePieceModal();
       refreshAllViews();
     });
   }
@@ -7665,6 +7917,12 @@
     if (trk) return { obj: trk, kind: 'audio' };
     const b = loadBlocks().find(x => x.id === id);
     if (b) return { obj: b, kind: b.kind };
+    // Phase C-2: external block snapshot (other user's public block we connected)
+    const ext = findExternalBlock(id);
+    if (ext) {
+      const obj = { ...(ext.snapshot.payload || {}), id: ext.snapshot.id, kind: ext.snapshot.kind, _external: true, _ownerHandle: ext.snapshot.ownerHandle, _ownerId: ext.snapshot.ownerId, _hostChannelId: ext.channelId };
+      return { obj, kind: ext.snapshot.kind, external: true };
+    }
     return null;
   }
 
@@ -7809,6 +8067,24 @@
 
   function refreshCurrentBlockModal() {
     if (!currentBlockModalId) return;
+    // Phase C-2: external block (either connected snapshot or fresh from
+    // Explore cache) — reopen via the external opener so action set + owner
+    // attribution stay consistent post-action.
+    const ext = findExternalBlock(currentBlockModalId);
+    if (ext) {
+      openExternalBlock({
+        id: ext.snapshot.id, kind: ext.snapshot.kind,
+        payload: ext.snapshot.payload,
+        ownerHandle: ext.snapshot.ownerHandle, ownerId: ext.snapshot.ownerId,
+        channelLabel: ext.snapshot.channelLabel,
+      });
+      return;
+    }
+    const cachedExt = _explorePublicCache[currentBlockModalId];
+    if (cachedExt) {
+      openExternalFromCache(currentBlockModalId);
+      return;
+    }
     if (currentBlockModalKind === 'audio') {
       const t = TRACKS.find(x => x.id === currentBlockModalId);
       if (t) openPieceModal(t);
@@ -8222,13 +8498,18 @@
   }
   // Block title with breadcrumb path: "Taka / Archive 00 / Block Title"
   // — handle and channel are linked, block title is the current location.
-  function _blockTitleHtml({ channel, label } = {}) {
-    const handle = _currentHandle();
+  // Phase C-2: when `ownerHandle` is given, the breadcrumb shows the upstream
+  // owner instead of the viewer (used for external blocks from Explore).
+  function _blockTitleHtml({ channel, label, ownerHandle, channelLabel } = {}) {
+    const handle = ownerHandle ? String(ownerHandle).replace(/^@+/, '') : _currentHandle();
     const cid = channel?.id || '';
-    const cLabel = channel?.label || '';
-    return `<a class="bc-h4-user" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`
+    const cLabel = channelLabel || channel?.label || '';
+    const channelPart = ownerHandle
+      ? `<span class="bc-h4-channel">${escapeHtml(cLabel)}</span>`  // not linkable for external
+      : `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
+    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`
       + `<span class="bc-h4-sep">/</span>`
-      + `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`
+      + channelPart
       + `<span class="bc-h4-sep">/</span>`
       + escapeHtml(label || '');
   }
@@ -8266,12 +8547,33 @@
     const createdLabel = channel?.createdAt ? ageString(channel.createdAt) : '—';
     const editedLabel  = lastActivityTs ? ageString(lastActivityTs) : '—';
     const publicPill = block?.isPublic ? `<span class="block-public-pill">${t('blockPublicBadge')}</span>` : '';
+    // Phase C-2: external (non-owner) blocks get a different action set.
+    const isExternal = !!block?._external;
+    const ownerHandle = block?._ownerHandle || '';
+    const titleArgs = isExternal
+      ? { channel, label, ownerHandle, channelLabel: block?._externalChannelLabel || channel?.label || '' }
+      : { channel, label };
+    const externalPill = isExternal
+      ? `<span class="block-public-pill" style="background: var(--gray); margin-left: 8px;">— by @${escapeHtml(ownerHandle)}</span>`
+      : '';
+    let actionsHtml;
+    if (isExternal) {
+      const alreadyHere = !!findExternalBlock(block.id);
+      actionsHtml = alreadyHere
+        ? `<button class="yu-action del" type="button" data-act="ext-disconnect">— disconnect</button>`
+        : `<button class="yu-action" type="button" data-act="ext-connect" style="color: var(--ink);">+ ${t('blockConnectMine') || 'connect to my channel'}</button>`;
+    } else {
+      actionsHtml = `
+        <button class="yu-action" type="button" data-act="edit">${t('blockEdit')}</button>
+        <button class="yu-action del" type="button" data-act="delete">${t('blockDelete')}</button>
+      `;
+    }
     return `
       <div class="ch-detail-head">
         <div class="ch-head-title">
           <div style="min-width:0; flex:1;">
-            <div class="piece-modal-num">${escapeHtml(kindLabel)}${publicPill}</div>
-            <h2 class="piece-modal-title">${_blockTitleHtml({ channel, label })}</h2>
+            <div class="piece-modal-num">${escapeHtml(kindLabel)}${publicPill}${externalPill}</div>
+            <h2 class="piece-modal-title">${_blockTitleHtml(titleArgs)}</h2>
           </div>
           <div class="ch-head-right">
             <div class="ch-head-icons">
@@ -8279,14 +8581,13 @@
               <button class="ch-icon-btn" type="button" data-act="share" title="${t('blockShare')}" aria-label="${t('blockShare')}">${iconShare}</button>
             </div>
             <div class="ch-head-actions">
-              <button class="yu-action" type="button" data-act="edit">${t('blockEdit')}</button>
-              <button class="yu-action del" type="button" data-act="delete">${t('blockDelete')}</button>
+              ${actionsHtml}
             </div>
           </div>
         </div>
         ${ channel ? `
           <span class="meta">${escapeHtml(channel.meta || '')} · ${count} ${blocksLabel}</span>
-          <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${_ownerTextLink()}</span>
+          <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${isExternal ? `<a class="bc-owner-text bc-external">@${escapeHtml(ownerHandle)}</a>` : _ownerTextLink()}</span>
         ` : '' }
       </div>
     `;
@@ -8368,6 +8669,36 @@
     // Phase C-1: also render public blocks across users.
     renderExplorePublicBlocks();
   }
+  // Cache of last-fetched public_blocks rows, keyed by id, so click on an
+  // Explore card can read the full payload without a second network round-trip.
+  let _explorePublicCache = {};
+  // Phase C-2: open an external (other-user) public block in preview mode.
+  // We synthesize an enriched block object carrying _external markers so the
+  // existing modal helpers swap to the read-only / connect action set.
+  function openExternalFromCache(rowId) {
+    const r = _explorePublicCache[rowId];
+    if (!r) return;
+    openExternalBlock({
+      id: r.id, kind: r.kind, payload: r.payload || {},
+      ownerHandle: r.owner_handle || '', ownerId: r.owner_id || '',
+      channelLabel: r.channel_label || '',
+    });
+  }
+  function openExternalBlock({ id, kind, payload, ownerHandle, ownerId, channelLabel }) {
+    const ext = {
+      ...(payload || {}),
+      id, kind,
+      channelId: undefined,  // intentional: head helper skips meta lines for external
+      _external: true,
+      _ownerHandle: ownerHandle || '',
+      _ownerId: ownerId || '',
+      _externalChannelLabel: channelLabel || '',
+    };
+    if (kind === 'audio') openPieceModal(ext);
+    else if (kind === 'image') openImageModal(ext);
+    else if (kind === 'text') openTextModal(ext);
+    else if (kind === 'url') openUrlModal(ext);
+  }
   async function renderExplorePublicBlocks() {
     const list = document.getElementById('explorePublicList');
     if (!list) return;
@@ -8377,6 +8708,8 @@
       list.innerHTML = '<li class="explore-empty">読み込みエラー</li>';
       return;
     }
+    _explorePublicCache = {};
+    rows.forEach(r => { _explorePublicCache[r.id] = r; });
     if (rows.length === 0) {
       list.innerHTML = '<li class="explore-empty">まだ公開されている block はありません。</li>';
       return;
@@ -8414,6 +8747,16 @@
         </li>
       `;
     }).join('');
+    // Wire (idempotent) click handler on the list — open external block preview.
+    if (!list._wiredC2) {
+      list.addEventListener('click', (e) => {
+        const card = e.target.closest('.explore-block-card[data-pb-id]');
+        if (!card) return;
+        e.preventDefault();
+        openExternalFromCache(card.dataset.pbId);
+      });
+      list._wiredC2 = true;
+    }
   }
   document.querySelectorAll('.triggers .trig[data-tab]').forEach(t => {
     t.addEventListener('click', () => openModal(t.dataset.tab));
@@ -8713,6 +9056,9 @@
           if (act === 'search') { openSearch(); return; }
           const id = currentBlockModalId;
           if (!id) return;
+          // Phase C-2: external block actions (resolved via _explorePublicCache or local snapshot)
+          if (act === 'ext-connect') { promptConnectExternal(id); return; }
+          if (act === 'ext-disconnect') { promptDisconnectExternal(id); return; }
           if (act === 'edit')        openEditForm(id);
           else if (act === 'delete') promptDeleteBlock(id);
           else if (act === 'save')   saveEditForm(id, currentBlockModalKind);
@@ -8844,6 +9190,7 @@
     'atelier_track_edits_v1',
     'atelier_track_connections_v1',
     'atelier_channel_order_v1',
+    'atelier_external_blocks_v1',  // Phase C-2: snapshots of other users' public blocks
     'atelier_footprints_v2',
     'atelier_lang_v1',
     'atelier_seeded_v2',
