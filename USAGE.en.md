@@ -1,6 +1,6 @@
 # Ateli.er — User Manual (English)
 
-> Last updated: 2026-04-27 / Prototype stage (Phase A: Login/Signup UI mock complete)
+> Last updated: 2026-04-28 / Multi-user live (Phase B-3b + C-1 + C-2 complete)
 > 日本語版: [USAGE.md](./USAGE.md)
 
 ---
@@ -8,40 +8,98 @@
 ## 0. Design Philosophy
 
 - **The app hosts nothing**. All audio/image files live on your own Google Drive / Dropbox / iCloud / any host. Only the URL is pasted into Ateli.er.
-- What's stored is **only the catalog (text, URLs, references)**. Currently in `localStorage`.
-- Backend has been decided: **Supabase (free tier)**. Will be wired up in Phase B. Today, localStorage only.
+- What's stored is **only the catalog (text, URLs, references)**.
+- Persistence layer is localStorage as a hot cache, **synced as a single `user_state` JSONB row in Supabase Postgres** so the same data is visible across devices.
 - Structure follows **Are.na-style Block × Channel**. Block has 4 kinds (audio / image / text / url); Channel groups Blocks by issue or theme.
 - **Color scheme:** paper `#DCDBD5` (warm beige) + ink `#1600A2` (deep ink-blue). Independent of the studio-wide monochrome aesthetic — Ateli.er has its own key palette.
 
 ---
 
-## 0a. Login / Signup (Phase A — UI mock)
+## 0a. Login / Signup (Phase B-3a — Supabase real auth)
 
 On first visit, the **landing screen** is shown.
 
 ### Sign up (new account)
 1. Click the `Sign up` button (top right)
 2. Fill three fields:
-   - **invite code**: Invite-only. Currently any non-empty string passes (real validation in Phase B)
+   - **invite code**: Validated against the `invites` table (`max_uses`, `expires_at`)
    - **email**: For magic link delivery
-   - **handle**: Display name (alphanumeric / Japanese accepted)
-3. Click `— request access` → "magic link sent" status → after 1.2 sec, session created → enters Ateli.er
+   - **handle**: Display name. Stored in both `profiles` and user_metadata
+3. Click `— request access` → Supabase sends a magic link → click it in your inbox → enter
 
 ### Log in (return)
 1. Click `Log in` (top right)
 2. Enter **email** only
-3. Click `— send magic link` → same flow, session restored
+3. Click `— send magic link` → check inbox → click → session restored
+
+### Settings (the `@handle ⚙` pill bottom-right)
+- **avatar URL**: Direct image URL (same conversion logic as image blocks)
+- Edit **handle**
+- **email** is read-only
+- **log out** (red, with a confirm dialog → reload)
 
 ### Dev URL helpers
-- `?landing=1` → forces landing even when session exists
-- `?logout=1` → clears session and shows landing
-- Otherwise, while session is in localStorage, landing is skipped
+- `?landing=1` → forces landing even when a session exists
+- `?logout=1` → clears Supabase session and shows landing
+- Otherwise, while a Supabase session is in localStorage, landing is skipped
 
-### Phase A limitations
-- invite code is not actually validated (any string OK)
-- magic link is not really sent (session is created 1.2 sec after submit)
-- no handle uniqueness check
-- All these are deferred to Phase B (Supabase integration)
+### If you hit the email rate limit
+- Free Supabase allows ~3-4 emails/hour. Heavy testing will trip `email rate limit exceeded`
+- Wait an hour, or create a user manually via Supabase Studio → Authentication → Users → Add user
+- Before launch, switch to a Custom SMTP (Resend / Mailgun / SendGrid) to remove the cap
+
+---
+
+## 0b. Cross-Device Sync (Phase B-3b)
+
+- Every action is reflected in localStorage immediately (snappy UX)
+- `Storage.setItem` is monkey-patched, so writes to any `SYNC_KEYS` key trigger a 1.5s-debounced push of the whole state to a `user_state` JSONB row
+- On sign-in / reload, the state is pulled from the DB and overwrites localStorage; views re-render
+- A `beforeunload` keepalive fetch flushes any in-flight debounce so closing the tab doesn't lose the last write
+- The legacy Sync URL (manual export/import) still works as an emergency backup
+
+Implementation note: Supabase JS SDK's query builder hangs in this environment, so `profiles.update`, `public_blocks` ops, and `user_state` ops are all written with raw `fetch` against the REST endpoint, with a 10s timeout.
+
+---
+
+## 0c. Public / Explore (Phase C-1)
+
+### Publishing a block
+1. Open one of your own blocks → `edit`
+2. Tick the new bottom row **`visibility — show on Explore`** → save
+3. The modal head shows a small `public` ink-blue pill, and the channel item list shows a small `public` mark next to it
+
+### What happens internally
+- An `isPublic` flag is stored on the block
+- Every save triggers `atelierPublic.sync(block)`
+  - true → upsert to `public_blocks`
+  - false → delete the row
+- Deletes are mirrored too (`deleteBlock` → `atelierPublic.remove`)
+
+### Explore tab (top of the modal)
+- `— residents`: every profile (`@handle` + avatar + joined ago)
+- `— public blocks`: 60 most-recent public blocks across users (ts desc)
+  - Your own blocks are filtered out (it would just be Connecting to yourself)
+  - Each card carries a `— by @handle · age` attribution
+
+---
+
+## 0d. Connecting another user's block (Phase C-2)
+
+### Flow
+1. Explore → click any card in `— public blocks`
+2. The block modal opens in read-only mode (breadcrumb italicised: `@otherHandle / theirChannel / blockTitle`)
+3. The single action shown is **`+ connect to my channel`**
+4. Click → a centred overlay lists your active channels
+5. Pick one → toast `connect しました → [channel]` → action flips to `— disconnect`
+6. In that channel, the block now appears in the item list with a **`— by @otherHandle`** attribution
+7. Clicking it reopens the read-only modal; `— disconnect` removes it
+
+### Snapshot semantics (important)
+- Connecting copies the block's full payload into `atelier_external_blocks_v1`
+- Edits / unpublish / delete by the upstream owner do **not** propagate
+- Pros: fast renders, no network calls per render, robust to upstream removal
+- Cons: connector's copy can drift. Phase C-3 will add a "refresh from upstream" affordance
 
 ---
 

@@ -1,6 +1,6 @@
 # Ateli.er 使い方マニュアル（日本語版）
 
-> 最終更新: 2026-04-27 / プロトタイプ段階（Phase A: Login/Signup UI モック完了）
+> 最終更新: 2026-04-28 / multi-user 稼働中（Phase B-3b + C-1 + C-2 完了）
 > English version: [USAGE.en.md](./USAGE.en.md)
 
 ---
@@ -8,40 +8,102 @@
 ## 0. このプロトタイプの設計思想
 
 - **アプリは何もホストしない**。音源・画像はすべて自分の Google Drive / Dropbox / iCloud / 任意のホスティング先に置き、URL だけを Ateli.er に貼る。
-- 保存されるのは **目録（テキスト・URL・参照）だけ**。現状は `localStorage` に保存される。
-- バックエンドは **Supabase（無料枠）に決定**。Phase B で接続予定。現在は localStorage のみ動作。
+- 保存されるのは **目録（テキスト・URL・参照）だけ**。
+- データ層は localStorage を一次キャッシュ、**Supabase Postgres に `user_state` JSONB 一行で丸ごと sync**。端末横断で同じデータが見える。
 - 構造は **Are.na 的な Block × Channel**。Block は 4 種類（audio / image / text / url）、Channel は号や主題ごとの束。
 - **配色:** paper `#DCDBD5` (warm beige) + ink `#1600A2` (deep ink-blue)。スタジオ全体のモノクロームとは独立した、Ateli.er 固有のキーカラー。
 
 ---
 
-## 0a. Login / Signup（Phase A — UI モック）
+## 0a. Login / Signup（Phase B-3a — Supabase 実認証）
 
 初回アクセスすると **landing 画面** が表示される。
 
 ### Sign up（新規登録）
 1. 右上の `Sign up` ボタンクリック
 2. 3項目入力:
-   - **invite code**（招待コード）: 限定招待制。今は任意の非空文字列で通る（Phase B で実検証）
+   - **invite code**（招待コード）: `invites` テーブルで実検証。`max_uses` と `expires_at` をチェック
    - **email**: マジックリンク受信用
-   - **handle**: 表示名（英数 / 日本語可）
-3. `— request access` クリック → status「マジックリンク送信」表示 → 1.2秒後にセッション作成 → Ateli.er 入室
+   - **handle**: 表示名（英数 / 日本語可）。`profiles` と user_metadata 双方に保存
+3. `— request access` クリック → Supabase が magic link を送信 → 受信箱のリンクをクリック → 戻ってきて入室
 
 ### Log in（再ログイン）
 1. 右上の `Log in` ボタン
 2. **email** のみ入力
-3. `— send magic link` → 同様に session 復帰
+3. `— send magic link` → メール受信 → クリック → session 復帰
+
+### Settings（右下の `@handle ⚙` をクリック）
+- **avatar URL**: 画像直 URL（同じ画像変換ロジックで OK）
+- **handle** の編集
+- **email** は read-only 表示
+- **log out**（赤色、確認ダイアログ → リロード）
 
 ### 開発用 URL helper
 - `?landing=1` を付けて開く → session 有でも landing 強制表示
 - `?logout=1` を付けて開く → session クリア + landing 表示
-- 通常は session が localStorage にある間は landing スキップ → 直接 Ateli.er
+- 通常は Supabase session が localStorage にある間は landing スキップ → 直接 Ateli.er
 
-### Phase A の制約
-- invite code は実検証されない（任意文字列OK）
-- magic link は実送信されない（フォーム送信1.2秒後に即セッション作成）
-- handle 重複チェックなし
-- → すべて Phase B（Supabase 接続）で実装
+### email rate limit に当たったら
+- Supabase 無料枠は ~3-4 通/時間。テストで叩きすぎると `email rate limit exceeded`
+- 1 時間待つ、あるいは Supabase Studio → Authentication → Users → Add user で手動作成
+- launch 時は Custom SMTP（Resend / Mailgun / SendGrid 等）に切り替えて制限回避
+
+---
+
+## 0b. 端末横断同期（Phase B-3b）
+
+- 操作は全て localStorage に即時反映（snappy UX）
+- `Storage.setItem` を monkey-patch し、`SYNC_KEYS` への書き込みを 1.5 秒
+  debounce で `user_state` JSONB blob に push
+- sign-in / reload 時に DB から pull → localStorage を上書き → 再描画
+- `beforeunload` で keepalive fetch flush（タブを閉じても直前の変更が落ちない）
+- 旧 Sync URL 機能（手動 export / import）は引き続き動作。緊急用バックアップ
+
+実装上の注意: Supabase JS SDK の query builder がこの環境でハングするため、
+`profiles.update` と `public_blocks` 系・`user_state` 系は全て **生 fetch + REST**
+で書いてある。10 秒タイムアウト付き。
+
+---
+
+## 0c. Public / Explore（Phase C-1）
+
+### block を公開する
+1. 自作 block を edit で開く
+2. 一番下の **`visibility — show on Explore`** にチェック → save
+3. block modal の head に `公開中 / public` の濃紺 pill が出る
+4. channel 詳細の item list でも小さい `public` マーク表示
+
+### 内部で起きていること
+- `isPublic` フラグが block に付く
+- save の度に `atelierPublic.sync(block)` が走る
+  - true → `public_blocks` テーブルに upsert
+  - false → row を delete
+- 削除も同期（`deleteBlock` で `public_blocks.remove` が呼ばれる）
+
+### Explore タブ（モーダル上部）
+- `— residents`: 全 profiles 一覧（@handle + avatar + joined ago）
+- `— public blocks`: 全ユーザーの公開 block を ts 降順で 60 件
+  - 自分の block は filter out（自分のものを自分の channel に connect する意味がない）
+  - 各 card に **`— by @handle · age`** の帰属表記
+
+---
+
+## 0d. 他ユーザーの block を Connect（Phase C-2）
+
+### 流れ
+1. Explore → `— public blocks` の任意 card をクリック
+2. block modal が開く（read-only モード、breadcrumb がイタリックで `@otherHandle / theirChannel / blockTitle`）
+3. action 部分に **`+ connect to my channel`**
+4. クリック → 中央 overlay に自分の channel 一覧
+5. channel を選ぶ → toast `connect しました → [channel name]` → action が `— disconnect` に flip
+6. その channel に行くと、外部 block が **`— by @otherHandle`** 帰属付きで item list に並ぶ
+7. クリックで再度 read-only modal、`— disconnect` で外せる
+
+### snapshot 戦略（重要）
+- connect した瞬間に block の payload を **コピー** して `atelier_external_blocks_v1` に保存
+- 上流 owner が edit / unpublish / delete しても、connect 済みの snapshot は変わらない
+- 利点: render が速い、network 不要、上流が消えても見える
+- 欠点: 上流の編集が反映されない（Phase C-3 で「refresh from upstream」追加予定）
 
 ---
 

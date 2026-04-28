@@ -10,17 +10,20 @@ A single-file prototype of a music platform built around the metaphor of a close
 
 ## 状態
 
-🟡 **PROTOTYPE — multi-user フェーズ A（UI モック）完了**
-最終更新: 2026-04-27
+🟢 **MULTI-USER 稼働中 — Phase B-3b + C-1 + C-2 完了**
+最終更新: 2026-04-28
 
 | | |
 |---|---|
-| 段階 | プロトタイプ（vanilla HTML 単一ファイル） + Login/Signup UI モック |
+| 段階 | プロトタイプ（vanilla HTML 単一ファイル） + Supabase 多端末同期 + 公開／接続 |
 | 本番 | <https://kinoshitastudio.github.io/Ateli.er/>（手動アップロード予定） |
-| 開発リポ | この `projects/Ateli.er/` 配下 |
-| バックエンド | **Supabase（無料枠）に決定** — Phase B で接続予定。現在は localStorage のみ |
+| 開発リポ | この `projects/Ateli.er/` 配下（独立 git） |
+| バックエンド | **Supabase 無料枠** — auth + profiles + user_state (JSONB) + public_blocks |
 | 招待 | 限定招待制（invite-only）。課金プラン無し |
-| Auth 方式 | magic link（パスワード不要） |
+| Auth 方式 | magic link（パスワード不要、Supabase 実送信） |
+| データ | localStorage を一次キャッシュ、`user_state` JSONB 1 行に丸ごと sync（端末横断） |
+| 公開 | block 単位で `isPublic` フラグ → `public_blocks` に index → Explore で閲覧可能 |
+| 接続 | 他ユーザーの公開 block を自分の channel に snapshot として attach（Connect） |
 
 ---
 
@@ -82,16 +85,42 @@ projects/Ateli.er/
 - Feed タブ：全 Block の時系列ストリーム
 - EN / JP 言語切替
 
-### 永続化 / 同期
-- 全データを localStorage に保存
-- 端末間 Sync URL 機能（手動 export / import）
+### 永続化 / 同期（Phase B-3b 完了）
+- localStorage は一次キャッシュ（操作はローカルで即時反映 → スナピー）
+- `Storage.setItem` を monkey-patch して `SYNC_KEYS` への書き込みを 1.5 秒
+  debounce で `user_state` に push（生 REST 経由、SDK のハングを回避）
+- sign-in / reload 時に DB から pull → localStorage を上書き → 再描画。
+  別端末で行った編集が次回起動時に反映される
+- `beforeunload` で keepalive fetch flush（タブを閉じても in-flight な
+  debounce が落ちない）
+- 旧 Sync URL（手動 export / import）は引き続き動作。緊急用バックアップに
 
-### Auth（Phase A — UI モック）
+### Auth（Phase B-3a 完了）
 - Landing ページ → Sign up / Log in モーダル
-- invite code 必須（Phase A は任意文字列で通る）
-- handle は英数 / 日本語可
-- magic link 方式（Phase A は実送信せずに即 session 作成）
-- 開発用 URL: `?landing=1`（強制表示）/ `?logout=1`（セッションクリア）
+- invite code は `invites` テーブルで実検証（max_uses / expires_at 確認）
+- handle は user_metadata + `profiles` テーブルの双方に保存
+- magic link を Supabase が実送信、リンククリック → onAuthStateChange で SIGNED_IN
+- Settings モーダルで handle / avatar URL の編集、log out
+- 開発用 URL: `?landing=1`（強制表示）/ `?logout=1`（session クリア）
+
+### Public / Explore（Phase C-1 完了）
+- block の edit 画面に **`show on Explore`** トグル → `isPublic: true` で
+  `public_blocks` index に upsert、false にすると row を削除
+- block modal の head に **`公開中 / public`** pill、channel 一覧の各行にも
+  小さい `public` マーク
+- Explore タブが 2 段構成: `— residents`（profiles 一覧）+
+  `— public blocks`（最新 60 件、ts 降順、自分の block は除外）
+
+### Connect 他ユーザーブロック（Phase C-2 完了）
+- Explore の public block card をクリック → 読み取り専用プレビューで開く。
+  breadcrumb は `@otherHandle / theirChannel / blockTitle`（イタリック）
+- 「**+ connect to my channel**」 → overlay でチャンネル選択 →
+  block の **snapshot** が `atelier_external_blocks_v1` に保存
+- channel 詳細では external block に `— by @otherHandle` 帰属表記、
+  クリックで再度 read-only モーダル
+- 「**— disconnect**」 で channel から外す（snapshot は破棄、再 connect 可能）
+- snapshot 戦略: 上流 owner の編集／削除が下流に伝播しない（Are.na 流）。
+  代わりに renderer は常に local データを読むので high-perf + offline 耐性
 
 ---
 
@@ -99,13 +128,15 @@ projects/Ateli.er/
 
 | 項目 | 採用 |
 |---|---|
-| ランタイム | vanilla HTML（単一ファイル） |
+| ランタイム | vanilla HTML（単一ファイル、ビルド工程なし） |
 | 音響再生 | HTML5 Audio（Drive 不可・Dropbox 推奨） |
 | プレースホルダ音 | Web Audio API（procedural ambient drone） |
 | 視覚 | CSS animation marquee × inline SVG |
 | フォント | Noto Sans JP / JetBrains Mono |
-| 永続化 | localStorage（足跡・ブロック・チャンネル等） |
-| デプロイ | GitHub Pages（手動 upload） |
+| 永続化 | localStorage 一次 + Supabase Postgres `user_state` JSONB（端末横断） |
+| Auth | Supabase magic link（`@supabase/supabase-js@2` CDN） |
+| Realtime | 実装なし（pull-on-signin / pull-on-reload で十分） |
+| デプロイ | GitHub Pages（手動 upload）— launch 時に別アカウントへ移行予定 |
 
 ---
 
@@ -131,13 +162,17 @@ projects/Ateli.er/
 - [x] kind icon (♪ ▣ ¶ ↗) + Channel 一覧サムネ表示
 - [x] 共有 URL deep link（`#b=` `#ch=` 受信処理）
 - [x] paper aesthetic 配色刷新（ink-blue + warm beige）
-- [x] **Phase A: Login/Signup UI モック**（2026-04-27 完了）
-- [ ] **Phase B: Supabase 接続**（auth, profiles, channels, blocks, invites スキーマ + 実認証）
-- [ ] **Phase C: 全ユーザー共有 view**（Explore タブ的、public block 横断）
+- [x] **Phase A: Login/Signup UI モック**（2026-04-27）
+- [x] **Phase B-3a: Supabase 実認証**（magic link, profiles, invites, RLS）
+- [x] **Phase B-3b: 端末横断同期**（user_state JSONB + monkey-patch sync layer）
+- [x] **Phase C-1: Explore + 公開 block index**（profiles 一覧 + public_blocks）
+- [x] **Phase C-2: 他ユーザー block の Connect**（snapshot, attribution, disconnect）
+- [ ] **launch 準備**: 新 GitHub アカウント / 新 Supabase project / Custom SMTP
 - [ ] アーティスト別ポートフォリオページ
 - [ ] iframe 埋め込み（外部記事を Ateli.er 内で展開）
 - [ ] 過去 Issue（−01）に風化された実データを置く
 - [ ] iCloud URL 解決ロジック
+- [ ] Phase C-3: external block の「refresh from upstream」アフォーダンス
 
 ---
 
