@@ -9852,10 +9852,32 @@
         el.hidden = true;
       }
     }
-    function markAllRead() {
-      setWatermark(Date.now());
+    // Set the watermark beyond the most recent trace on this owner's blocks.
+    // Using the server's max(ts) avoids the clock-skew bug where Date.now()
+    // on the client could be < the server-stamped trace ts and the badge
+    // would re-appear on the next refresh tick.
+    async function markAllRead() {
       const el = document.getElementById('userTracesBadge');
-      if (el) el.hidden = true;
+      if (el) el.hidden = true;  // optimistic hide
+      let target = Date.now() + 1000;
+      if (currentUser) {
+        try {
+          const url = `${SUPABASE_URL}/rest/v1/traces?block_owner_id=eq.${encodeURIComponent(currentUser.id)}&select=ts&order=ts.desc&limit=1`;
+          const headers = { 'apikey': SUPABASE_PUB_KEY };
+          const token = _accessToken();
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          const res = await Promise.race([
+            fetch(url, { headers }),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('mark-read query timeout')), 5000)),
+          ]);
+          if (res.ok) {
+            const rows = await res.json();
+            const latestTs = Number(rows[0]?.ts || 0);
+            if (latestTs >= target) target = latestTs + 1;
+          }
+        } catch (e) { /* fallback to Date.now()+1s already set */ }
+      }
+      setWatermark(target);
     }
     return { post, listForBlock, countUnreadForOwner, remove, refreshUnreadBadge, markAllRead, getWatermark, setWatermark };
   })();
