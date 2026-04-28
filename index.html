@@ -751,6 +751,69 @@
     background: var(--paper-2);
     border-color: var(--line);
   }
+  /* Phase D-1 polish: incoming-traces section in the Comment pane */
+  .incoming-section { margin-bottom: 48px; }
+  .fp-incoming-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .fp-incoming-list li {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 14px;
+    align-items: baseline;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line-soft);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .fp-incoming-list li:hover { opacity: 0.78; }
+  .fp-incoming-list li.is-unread { padding-left: 14px; position: relative; }
+  .fp-incoming-list li.is-unread::before {
+    content: '●';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    color: var(--ink);
+    font-size: 11px;
+    line-height: 1;
+    animation: pulseDot 2.4s ease-in-out infinite;
+  }
+  .fp-incoming-list .fpi-handle {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+  }
+  .fp-incoming-list .fpi-text {
+    font-family: var(--sans-jp);
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .fp-incoming-list .fpi-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+    text-align: right;
+  }
+  .fp-incoming-list .fpi-block {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--gray-2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  @media (max-width: 720px) {
+    .fp-incoming-list li { grid-template-columns: 1fr; gap: 4px; }
+    .fp-incoming-list .fpi-meta { text-align: left; }
+  }
   /* Public-state pill for the block modal head */
   .block-public-pill {
     display: inline-block;
@@ -3780,6 +3843,12 @@
           <h3>Your <em>Comments</em></h3>
           <span class="pane-meta" id="paneTracesMeta">0 pieces engaged · 0 comments</span>
         </div>
+        <!-- Phase D-1 polish: cross-user comments on the viewer's blocks. -->
+        <div id="incomingSection" class="incoming-section" hidden>
+          <h4 class="explore-section-head">— incoming</h4>
+          <ul class="fp-incoming-list" id="incomingList"></ul>
+        </div>
+        <h4 class="explore-section-head" id="ownTracesHead">— your comments</h4>
         <p style="font-family: var(--mono); font-size: 10px; color: var(--gray); letter-spacing: 0.06em; line-height: 1.85; margin-bottom: 36px;">
           comments you've left, grouped by the piece they're tied to.<br>
           to leave a comment, play a piece first, then use the slit at the lower-left.<br>
@@ -7674,6 +7743,75 @@
   }
   // Group traces by trackId — your personal "channel" view (Are.na-like).
   // Each group: a piece header + your comments on it, ordered newest first.
+  // Phase D-1 polish: fetch + render incoming traces (cross-user comments
+  // on the viewer's own blocks). Unread (ts > watermark) entries get a
+  // pulsing dot. Clicking an entry opens the source block.
+  async function renderIncomingTraces() {
+    const section = document.getElementById('incomingSection');
+    const list = document.getElementById('incomingList');
+    if (!section || !list) return;
+    if (!currentUser) { section.hidden = true; return; }
+    const url = `${SUPABASE_URL}/rest/v1/traces?block_owner_id=eq.${encodeURIComponent(currentUser.id)}&author_id=neq.${encodeURIComponent(currentUser.id)}&select=*&order=ts.desc&limit=80`;
+    let rows = [];
+    try {
+      const headers = { 'apikey': SUPABASE_PUB_KEY };
+      const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      const tokenData = tokenKey ? JSON.parse(localStorage.getItem(tokenKey) || 'null') : null;
+      if (tokenData?.access_token) headers['Authorization'] = `Bearer ${tokenData.access_token}`;
+      const res = await Promise.race([
+        fetch(url, { headers }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('incoming traces timeout')), 10000)),
+      ]);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      rows = await res.json();
+    } catch (e) {
+      console.warn('[atelierTraces] incoming fetch error:', e);
+      section.hidden = true;
+      return;
+    }
+    if (!Array.isArray(rows) || rows.length === 0) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    const watermark = atelierTraces.getWatermark ? atelierTraces.getWatermark() : 0;
+    list.innerHTML = rows.map(r => {
+      const handle = (r.author_handle || 'visitor').replace(/^@+/, '');
+      const ago = r.ts ? ageString(Number(r.ts)) : '';
+      const isUnread = Number(r.ts) > watermark;
+      return `
+        <li class="${isUnread ? 'is-unread' : ''}" data-block-id="${escapeHtml(r.block_id || '')}">
+          <span class="fpi-handle">@${escapeHtml(handle)}</span>
+          <span>
+            <span class="fpi-text">${escapeHtml(r.text || '')}</span>
+            <div class="fpi-block">↗ ${escapeHtml(r.block_id || '')}</div>
+          </span>
+          <span class="fpi-meta">${escapeHtml(ago)}</span>
+        </li>
+      `;
+    }).join('');
+    // Wire click → open the source block (works for own blocks; external
+    // ones can be opened via the standard resolver).
+    if (!list._wiredD1) {
+      list.addEventListener('click', (e) => {
+        const li = e.target.closest('li[data-block-id]');
+        if (!li) return;
+        const bid = li.dataset.blockId;
+        if (!bid) return;
+        closeModal();
+        const r = _resolveBlockOrTrack(bid);
+        if (!r) {
+          showToast(`block ${bid} が見つかりません`);
+          return;
+        }
+        if (r.kind === 'audio') openPieceModal(r.obj);
+        else if (r.kind === 'image') openImageModal(r.obj);
+        else if (r.kind === 'text') openTextModal(r.obj);
+        else if (r.kind === 'url') openUrlModal(r.obj);
+      });
+      list._wiredD1 = true;
+    }
+  }
   function renderFP() {
     const arr = loadFP();
     $('#trigTraceCount').textContent = '(' + arr.length + ')';
@@ -8587,6 +8725,7 @@
     });
     if (name === 'feed') renderFeed();
     if (name === 'explore') renderExplore();
+    if (name === 'traces') renderIncomingTraces();
   }
 
   // ──────────────── BREADCRUMB helpers ────────────────
