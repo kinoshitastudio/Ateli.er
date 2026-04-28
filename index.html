@@ -553,6 +553,110 @@
     letter-spacing: 0.04em;
     padding: 22px 0;
   }
+  /* Phase C-1: section break inside Explore (residents · then public blocks) */
+  .explore-section-head {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--gray);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 56px 0 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .explore-section-head:first-of-type { margin-top: 8px; }
+  .explore-blocks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 24px 18px;
+  }
+  .explore-block-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--line-soft);
+    background: var(--paper);
+    transition: border-color 0.18s;
+  }
+  /* Phase C-1: cards are read-only previews; Connect/open lands in Phase C-2 */
+  .explore-block-card:hover { border-color: var(--gray-2); }
+  .explore-block-thumb {
+    aspect-ratio: 4/3;
+    background: var(--paper-2) center/cover no-repeat;
+    border: 1px solid var(--line-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gray);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    overflow: hidden;
+  }
+  .explore-block-thumb.is-text {
+    aspect-ratio: 4/3;
+    padding: 12px;
+    text-align: center;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--sans-jp);
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .explore-block-title {
+    font-family: var(--sans-jp);
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .explore-block-by {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--gray);
+    letter-spacing: 0.06em;
+  }
+  .explore-block-by .by-handle { color: var(--ink); }
+  /* Public toggle inside edit form */
+  .uf-row-public .uf-public-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+  }
+  .uf-row-public input[type="checkbox"] {
+    accent-color: var(--ink);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+  .uf-row-public .uf-public-label { color: var(--ink); }
+  /* Public-state pill for the block modal head */
+  .block-public-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    margin-left: 8px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
   .feed-group {
     margin-bottom: 80px;
     text-align: center;
@@ -3527,13 +3631,16 @@
         <ul class="feed-list" id="feedList"></ul>
       </div>
 
-      <!-- EXPLORE — visitors across the courtyard (cross-user profiles) -->
+      <!-- EXPLORE — visitors across the courtyard (cross-user profiles + public blocks) -->
       <div class="modal-pane pane-explore" data-pane="explore">
         <div class="pane-head">
           <h3 id="paneExploreHead"><em>Explore</em></h3>
           <span class="pane-meta" id="paneExploreMeta">— other tenants of the courtyard</span>
         </div>
+        <h4 class="explore-section-head" id="exploreResidentsHead">— residents</h4>
         <ul class="explore-list" id="exploreList"></ul>
+        <h4 class="explore-section-head" id="explorePublicHead">— public blocks</h4>
+        <ul class="explore-blocks" id="explorePublicList"></ul>
       </div>
 
       <!-- TRACES -->
@@ -4163,6 +4270,8 @@
       blockHome:       'home',
       blockMetaPlaced: 'placed',
       blockMetaEdited: 'edited',
+      blockVisibilityHint: 'show on Explore (other residents can see)',
+      blockPublicBadge:    'public',
       // confirm dialog
       confirmCancel:   '— cancel',
       confirmProceed:  '— proceed',
@@ -4349,6 +4458,8 @@
       blockHome:       'ホーム',
       blockMetaPlaced: '追加',
       blockMetaEdited: '編集',
+      blockVisibilityHint: 'Explore に公開する (他の住人から見える)',
+      blockPublicBadge:    '公開中',
       confirmCancel:   '— キャンセル',
       confirmProceed:  '— 実行',
       confirmSaveChannel: 'チャンネルの変更を保存しますか？',
@@ -5132,11 +5243,13 @@
         if ('sourceAudioUrl' in patch) blocks[i].sourceAudioUrl = patch.sourceAudioUrl;
         if ('imageUrl' in patch) blocks[i].imageUrl = patch.imageUrl;
         if ('support' in patch)  blocks[i].support = patch.support;
+        if ('isPublic' in patch) blocks[i].isPublic = patch.isPublic;
         blocks[i].editedAt = Date.now();
         saveBlocks(blocks);
         injectBlocksIntoTracks();
         applyTrackEditsToArray();
         hydrateTrackConnections();
+        try { atelierPublic?.sync(blocks[i]); } catch (e) {}
       }
     } else {
       const stamped = { ...patch, editedAt: Date.now() };
@@ -5154,6 +5267,7 @@
       injectBlocksIntoTracks();
       applyTrackEditsToArray();
       hydrateTrackConnections();
+      try { atelierPublic?.remove(id); } catch (e) {}
     } else {
       const idx = TRACKS.findIndex(x => x.id === id);
       if (idx >= 0) TRACKS.splice(idx, 1);
@@ -5171,10 +5285,13 @@
     if (i >= 0) {
       Object.assign(blocks[i], patch, { editedAt: Date.now() });
       saveBlocks(blocks);
+      // Phase C-1: keep public_blocks index in sync (fire-and-forget)
+      try { atelierPublic?.sync(blocks[i]); } catch (e) {}
     }
   }
   function deleteBlock(id) {
     saveBlocks(loadBlocks().filter(b => b.id !== id));
+    try { atelierPublic?.remove(id); } catch (e) {}
   }
 
   // ──────────────── BLOCK ⇄ CHANNEL CONNECTIONS (Are.na "Connect") ────────────────
@@ -6023,6 +6140,23 @@
   }
 
   // ──────────────── INLINE EDIT FORMS (replaces prompt() chains) ────────────────
+  // Phase C-1: "show on Explore" toggle — per-block visibility flag.
+  // Hidden for seed audio (non-ownLocal) since those aren't user content
+  // and shouldn't be published as if they were.
+  function _publicToggleHtml(r) {
+    if (!r || !r.obj) return '';
+    if (r.kind === 'audio' && !r.obj.ownLocal) return '';
+    const checked = r.obj.isPublic ? 'checked' : '';
+    return `
+      <label class="uf-row uf-row-public">
+        <span class="sp-k">visibility</span>
+        <span class="uf-public-toggle">
+          <input type="checkbox" id="ef-public" ${checked}>
+          <span class="uf-public-label">${t('blockVisibilityHint')}</span>
+        </span>
+      </label>
+    `;
+  }
   function openEditForm(id) {
     const r = _resolveBlockOrTrack(id);
     if (!r) return;
@@ -6064,6 +6198,7 @@
             <label class="uf-row"><span class="sp-k">audio url</span><input class="uf-input" type="url" id="ef-audioUrl" placeholder=".mp3 — Drive / Dropbox / direct url" value="${escapeHtml(obj.sourceAudioUrl || obj.audioUrl || '')}"><span class="uf-hint">.mp3 only. blocks without an audio url are not playable.</span></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" placeholder="https://…" value="${escapeHtml(obj.imageUrl || '')}"></label>
             <label class="uf-row"><span class="sp-k">support</span><input class="uf-input" type="url" id="ef-support" value="${escapeHtml(obj.support || '')}"></label>
+            ${_publicToggleHtml(r)}
           </div>
         </div>
       `;
@@ -6090,6 +6225,7 @@
                 </div>
               ` : '' }
             </label>
+            ${_publicToggleHtml(r)}
           </div>
         </div>
       `;
@@ -6118,6 +6254,7 @@
                 </div>
               ` : '' }
             </label>
+            ${_publicToggleHtml(r)}
           </div>
         </div>
       `;
@@ -6144,6 +6281,7 @@
                 </div>
               ` : '' }
             </label>
+            ${_publicToggleHtml(r)}
           </div>
         </div>
       `;
@@ -6172,6 +6310,8 @@
     });
   }
   function _saveEditFormApply(id, kind) {
+    const publicEl = document.getElementById('ef-public');
+    const isPublicPatch = publicEl ? { isPublic: !!publicEl.checked } : {};
     if (kind === 'audio') {
       const newTitle    = ($('#ef-title')?.value || '').trim();
       const newArtist   = ($('#ef-artist')?.value || '').trim();
@@ -6202,6 +6342,7 @@
         sourceAudioUrl: newAudioUrl,
         imageUrl: convertImageUrl(newImageUrl),
         support: newSupport,
+        ...isPublicPatch,
       });
     } else if (kind === 'image') {
       editBlock(id, {
@@ -6210,6 +6351,7 @@
         source:  ($('#ef-source')?.value || '').trim(),
         context: ($('#ef-context')?.value || '').trim(),
         description: ($('#ef-description')?.value || '').trim(),
+        ...isPublicPatch,
       });
     } else if (kind === 'text') {
       editBlock(id, {
@@ -6217,6 +6359,7 @@
         style: ($('#ef-style')?.value === 'prose') ? 'prose' : 'lyric',
         context: ($('#ef-context')?.value || '').trim(),
         description: ($('#ef-description')?.value || '').trim(),
+        ...isPublicPatch,
       });
     } else if (kind === 'url') {
       editBlock(id, {
@@ -6225,6 +6368,7 @@
         source: ($('#ef-source')?.value || '').trim(),
         context: ($('#ef-context')?.value || '').trim(),
         description: ($('#ef-description')?.value || '').trim(),
+        ...isPublicPatch,
       });
     }
     refreshAllViews();  // re-renders modal back to viewing state
@@ -7396,7 +7540,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === track.channelId), kindLabel: t('modalLabelAudio'), label: track.title })}
+      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === track.channelId), kindLabel: t('modalLabelAudio'), label: track.title, block: track })}
       <div class="piece-modal-art">
         ${escapeHtml(track.artist)}<span class="dur">${fmtDur(track.sec)}</span>
         ${ trackIsPlayable(track)
@@ -7784,7 +7928,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: t('modalLabelImage'), label: block.caption || '(image)' })}
+      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: t('modalLabelImage'), label: block.caption || '(image)', block })}
       ${ block.source ? `<div class="piece-modal-art">${escapeHtml(block.source)}</div>` : '' }
       ${_blockMetaHtml(block)}
       <div class="piece-modal-image" style="aspect-ratio: 4/3;">
@@ -7820,7 +7964,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: t('modalLabelUrl') || '— url', label: block.title || block.url || '(url)' })}
+      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: t('modalLabelUrl') || '— url', label: block.title || block.url || '(url)', block })}
       <div class="piece-modal-art" style="display:flex; flex-wrap:wrap; align-items:baseline; gap:12px 18px;">
         <span style="text-transform:uppercase; letter-spacing:0.18em;">${escapeHtml(domain)}</span>
         ${ block.source && block.source !== domain ? `<span class="dur">${escapeHtml(block.source)}</span>` : '' }
@@ -7856,7 +8000,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: styleLabel, label: (block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : '') })}
+      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: styleLabel, label: (block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : ''), block })}
       <div class="piece-modal-art" style="font-size: clamp(20px, 3vw, 32px); line-height: 1.5; margin-bottom: 32px; color: var(--ink); letter-spacing: 0; text-transform: none;">
         ${ block.style === 'lyric' ? `<em style="font-style: italic;">${escapeHtml(block.text)}</em>` : escapeHtml(block.text).replace(/\n/g, '<br>') }
       </div>
@@ -8111,7 +8255,7 @@
   // (title block on left, share icon + edit/delete text actions on right,
   // meta + meta-times below). Each block modal calls this so SHARE/EDIT/DELETE
   // sit in the same place as in channel detail.
-  function _blockModalHeadHtml({ channel, kindLabel, label }) {
+  function _blockModalHeadHtml({ channel, kindLabel, label, block }) {
     const iconSearch = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><circle cx="6" cy="6" r="4.2"/><line x1="9.2" y1="9.2" x2="12.4" y2="12.4" stroke-linecap="round"/></svg>`;
     const iconShare = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>`;
     const items = (typeof _itemsInChannel === 'function' && channel) ? _itemsInChannel(channel.id) : [];
@@ -8121,11 +8265,12 @@
     const lastActivityTs = channel ? Math.max(channel.updatedAt || 0, ...(itemTs.length ? itemTs : [0])) : 0;
     const createdLabel = channel?.createdAt ? ageString(channel.createdAt) : '—';
     const editedLabel  = lastActivityTs ? ageString(lastActivityTs) : '—';
+    const publicPill = block?.isPublic ? `<span class="block-public-pill">${t('blockPublicBadge')}</span>` : '';
     return `
       <div class="ch-detail-head">
         <div class="ch-head-title">
           <div style="min-width:0; flex:1;">
-            <div class="piece-modal-num">${escapeHtml(kindLabel)}</div>
+            <div class="piece-modal-num">${escapeHtml(kindLabel)}${publicPill}</div>
             <h2 class="piece-modal-title">${_blockTitleHtml({ channel, label })}</h2>
           </div>
           <div class="ch-head-right">
@@ -8217,6 +8362,55 @@
             <span class="explore-card-handle">@${escapeHtml(handle)}</span>
             <span class="explore-card-meta">joined ${escapeHtml(joined)}</span>
           </span>
+        </li>
+      `;
+    }).join('');
+    // Phase C-1: also render public blocks across users.
+    renderExplorePublicBlocks();
+  }
+  async function renderExplorePublicBlocks() {
+    const list = document.getElementById('explorePublicList');
+    if (!list) return;
+    list.innerHTML = '<li class="explore-empty">読み込み中…</li>';
+    const rows = await atelierPublic.list(60);
+    if (rows == null) {
+      list.innerHTML = '<li class="explore-empty">読み込みエラー</li>';
+      return;
+    }
+    if (rows.length === 0) {
+      list.innerHTML = '<li class="explore-empty">まだ公開されている block はありません。</li>';
+      return;
+    }
+    list.innerHTML = rows.map(r => {
+      const p = r.payload || {};
+      const handle = (r.owner_handle || 'visitor').replace(/^@+/, '');
+      const ago = r.ts ? ageString(r.ts) : '';
+      let thumbHtml = '';
+      let title = '';
+      if (r.kind === 'image' || (r.kind === 'audio' && p.imageUrl)) {
+        const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
+        thumbHtml = src
+          ? `<span class="explore-block-thumb" style="background-image:url('${src}');"></span>`
+          : `<span class="explore-block-thumb">${r.kind}</span>`;
+        title = (r.kind === 'audio' ? p.title : p.caption) || '(untitled)';
+      } else if (r.kind === 'text') {
+        const txt = (p.text || '').slice(0, 80);
+        thumbHtml = `<span class="explore-block-thumb is-text">${escapeHtml(txt)}${(p.text || '').length > 80 ? '…' : ''}</span>`;
+        title = (p.text || '').slice(0, 40) + ((p.text || '').length > 40 ? '…' : '');
+      } else if (r.kind === 'url') {
+        let domain = '';
+        try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
+        thumbHtml = `<span class="explore-block-thumb">${escapeHtml(domain || 'url')}</span>`;
+        title = p.title || p.url || '(untitled)';
+      } else if (r.kind === 'audio') {
+        thumbHtml = `<span class="explore-block-thumb">audio · ${fmtDur(p.sec || 0)}</span>`;
+        title = p.title || '(untitled)';
+      }
+      return `
+        <li class="explore-block-card" data-pb-id="${escapeHtml(r.id)}" data-kind="${escapeHtml(r.kind)}">
+          ${thumbHtml}
+          <div class="explore-block-title">${escapeHtml(title)}</div>
+          <div class="explore-block-by">— by <span class="by-handle">@${escapeHtml(handle)}</span> · ${escapeHtml(ago)}</div>
         </li>
       `;
     }).join('');
@@ -8940,6 +9134,113 @@
     });
 
     return { pull, push, pushDebounced };
+  })();
+
+  // ──────────────── PUBLISH — atelierPublic (Phase C-1) ────────────────
+  // Mirrors a block into public_blocks when the user marks it `isPublic: true`.
+  // canonical block データは引き続き user_state JSONB に居続ける;
+  // public_blocks は cross-user 検索のためのフラットな index に過ぎない。
+  const atelierPublic = (() => {
+    function _accessToken() {
+      try {
+        const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        const tokenData = tokenKey ? JSON.parse(localStorage.getItem(tokenKey) || 'null') : null;
+        return tokenData?.access_token || null;
+      } catch (e) { return null; }
+    }
+    function _ownHandle() {
+      const el = document.getElementById('userHandle');
+      return (el?.textContent || '').replace(/^@+/, '').trim() || null;
+    }
+    function _channelLabel(channelId) {
+      const c = (typeof CHANNELS !== 'undefined' ? CHANNELS : []).find(x => x.id === channelId);
+      return c?.label || '';
+    }
+    async function upsert(block) {
+      if (!currentUser || !block || !block.id) return false;
+      const token = _accessToken();
+      if (!token) return false;
+      const row = {
+        id: block.id,
+        owner_id: currentUser.id,
+        owner_handle: _ownHandle(),
+        kind: block.kind,
+        channel_id: block.channelId || null,
+        channel_label: _channelLabel(block.channelId),
+        payload: block,
+        ts: block.ts || Date.now(),
+      };
+      try {
+        const res = await Promise.race([
+          fetch(`${SUPABASE_URL}/rest/v1/public_blocks?on_conflict=id`, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_PUB_KEY,
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates,return=minimal',
+            },
+            body: JSON.stringify(row),
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('publish upsert timeout')), 10000)),
+        ]);
+        if (!res.ok) {
+          const txt = await res.text().catch(() => `HTTP ${res.status}`);
+          throw new Error(`HTTP ${res.status}: ${txt}`);
+        }
+        return true;
+      } catch (e) {
+        console.warn('[atelierPublic] upsert error:', e);
+        return false;
+      }
+    }
+    async function remove(id) {
+      if (!currentUser || !id) return false;
+      const token = _accessToken();
+      if (!token) return false;
+      try {
+        const res = await Promise.race([
+          fetch(`${SUPABASE_URL}/rest/v1/public_blocks?id=eq.${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_PUB_KEY,
+              'Authorization': `Bearer ${token}`,
+              'Prefer': 'return=minimal',
+            },
+          }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('publish delete timeout')), 10000)),
+        ]);
+        // 404 (already absent) is treated as success.
+        return res.ok || res.status === 404;
+      } catch (e) {
+        console.warn('[atelierPublic] remove error:', e);
+        return false;
+      }
+    }
+    // Sync helper: push to public_blocks if isPublic, else ensure removed.
+    async function sync(block) {
+      if (!block) return;
+      if (block.isPublic) await upsert(block);
+      else await remove(block.id);
+    }
+    async function list(limit) {
+      const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&order=ts.desc&limit=${limit || 60}`;
+      try {
+        const headers = { 'apikey': SUPABASE_PUB_KEY };
+        const token = _accessToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await Promise.race([
+          fetch(url, { headers }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('public_blocks list timeout')), 10000)),
+        ]);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        console.warn('[atelierPublic] list error:', e);
+        return null;
+      }
+    }
+    return { upsert, remove, sync, list };
   })();
 
   // Validate an invite code against the Supabase `invites` table (read-only).
