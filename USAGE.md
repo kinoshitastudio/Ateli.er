@@ -1,6 +1,6 @@
 # Ateli.er 使い方マニュアル（日本語版）
 
-> 最終更新: 2026-04-28 / multi-user 稼働中（Phase B-3b + C-1 + C-2 完了）
+> 最終更新: 2026-04-28 / multi-user 稼働中（Phase B-3b + C-1 + C-2 + D-1 完了）
 > English version: [USAGE.en.md](./USAGE.en.md)
 
 ---
@@ -104,6 +104,34 @@
 - 上流 owner が edit / unpublish / delete しても、connect 済みの snapshot は変わらない
 - 利点: render が速い、network 不要、上流が消えても見える
 - 欠点: 上流の編集が反映されない（Phase C-3 で「refresh from upstream」追加予定）
+
+---
+
+## 0e. Cross-user コメント + 通知（Phase D-1）
+
+### コメント書く側
+- block を開いて下部のコメント欄に入力 → 確認 → submit
+- ローカルにキャッシュ + Supabase の `traces` テーブルに insert
+  - external block へのコメントは `block_owner_id` を上流 owner に向ける
+  - 自分の block へのコメントは `block_owner_id` = 自分
+
+### 通知を受ける側 (block の owner)
+- 自分の block に他ユーザーが新規コメント → 3 箇所に **● 濃紺 pulse**:
+  1. **topbar の `@taka` の隣** (全体気付き)
+  2. **モーダル上部の Comment タブ** (タブ単位の気付き、block modal 内 tab strip にも)
+  3. **Comment タブを開いた時の `— incoming` セクション**で、未読の各行の左に小さい ●
+- ● を **pill (一番上)** でクリック → toast `既読にしました` → 全部消える
+- 既読の watermark は localStorage の `atelier_traces_watermark_v1` に保存
+  (per-device。`user_state` には sync しない、各端末で独立した既読状態)
+
+### `— incoming` セクション
+- 自分の block への他ユーザーコメントが新しい順に並ぶ
+- 各行: `@handle  コメント本文  ↗ block_id  X分前`
+- 行クリック → 該当 block を開く
+
+### 既読 timing 仕様
+- 既読 watermark は markAllRead 時に `max(server max(ts), Date.now()) + 1` に。
+  client/server の clock 差分を吸収する設計
 
 ---
 

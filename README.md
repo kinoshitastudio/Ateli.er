@@ -10,20 +10,21 @@ A single-file prototype of a music platform built around the metaphor of a close
 
 ## 状態
 
-🟢 **MULTI-USER 稼働中 — Phase B-3b + C-1 + C-2 完了**
+🟢 **MULTI-USER 稼働中 — Phase B-3b + C-1 + C-2 + D-1 完了**
 最終更新: 2026-04-28
 
 | | |
 |---|---|
-| 段階 | プロトタイプ（vanilla HTML 単一ファイル） + Supabase 多端末同期 + 公開／接続 |
+| 段階 | プロトタイプ（vanilla HTML 単一ファイル） + Supabase 多端末同期 + 公開／接続／コメント |
 | 本番 | <https://kinoshitastudio.github.io/Ateli.er/>（手動アップロード予定） |
 | 開発リポ | この `projects/Ateli.er/` 配下（独立 git） |
-| バックエンド | **Supabase 無料枠** — auth + profiles + user_state (JSONB) + public_blocks |
+| バックエンド | **Supabase 無料枠** — auth + profiles + user_state (JSONB) + public_blocks + traces |
 | 招待 | 限定招待制（invite-only）。課金プラン無し |
-| Auth 方式 | magic link（パスワード不要、Supabase 実送信） |
+| Auth 方式 | magic link（パスワード不要、Supabase 実送信。Custom SMTP via Resend 設定済） |
 | データ | localStorage を一次キャッシュ、`user_state` JSONB 1 行に丸ごと sync（端末横断） |
 | 公開 | block 単位で `isPublic` フラグ → `public_blocks` に index → Explore で閲覧可能 |
 | 接続 | 他ユーザーの公開 block を自分の channel に snapshot として attach（Connect） |
+| コメント | `traces` テーブルで cross-user。新着は pill + Comment タブ + 個別行に ● で通知 |
 
 ---
 
@@ -122,6 +123,21 @@ projects/Ateli.er/
 - snapshot 戦略: 上流 owner の編集／削除が下流に伝播しない（Are.na 流）。
   代わりに renderer は常に local データを読むので high-perf + offline 耐性
 
+### Cross-user コメント + 通知（Phase D-1 完了）
+- `traces` テーブル（共有）に commit。author_id / author_handle / block_id /
+  block_owner_id / text / ts。RLS は誰でも read、authed user は自分の row を
+  insert / update / delete
+- block modal のコメント欄は local FP + remote traces を merge 表示。同 id は
+  remote が canonical。`@handle` で帰属が見える
+- 通知 UI 3 段:
+  1. **topbar pill** `@taka` の隣に ● 濃紺 pulse（全体気付き）
+  2. **Comment タブ**にも同じ ●（タブ単位の気付き）
+  3. **Comment ペイン上部**に `— incoming` セクション、各行に未読 ● + クリックで
+     該当 block へジャンプ
+- 既読管理は `atelier_traces_watermark_v1`（per-device localStorage、
+  user_state には sync しない）。pill ● クリックで `markAllRead()` →
+  watermark を server max(ts) + 1 にセット（client/server 時計ずれ吸収）
+
 ---
 
 ## 技術構成
@@ -167,12 +183,15 @@ projects/Ateli.er/
 - [x] **Phase B-3b: 端末横断同期**（user_state JSONB + monkey-patch sync layer）
 - [x] **Phase C-1: Explore + 公開 block index**（profiles 一覧 + public_blocks）
 - [x] **Phase C-2: 他ユーザー block の Connect**（snapshot, attribution, disconnect）
-- [ ] **launch 準備**: 新 GitHub アカウント / 新 Supabase project / Custom SMTP
+- [x] **Phase D-1: cross-user コメント + 通知**（traces table, ● badge 3 段）
+- [x] **Custom SMTP**: Resend 設定済 (Resend account email 宛のみ送信可)
+- [ ] **launch 準備**: 新 GitHub アカウント / 新 Supabase project / Resend ドメイン認証
 - [ ] アーティスト別ポートフォリオページ
 - [ ] iframe 埋め込み（外部記事を Ateli.er 内で展開）
 - [ ] 過去 Issue（−01）に風化された実データを置く
 - [ ] iCloud URL 解決ロジック
 - [ ] Phase C-3: external block の「refresh from upstream」アフォーダンス
+- [ ] Phase D-2: trace の email push 通知 (Database Webhook → Resend)
 
 ---
 

@@ -1,6 +1,6 @@
 # Ateli.er — User Manual (English)
 
-> Last updated: 2026-04-28 / Multi-user live (Phase B-3b + C-1 + C-2 complete)
+> Last updated: 2026-04-28 / Multi-user live (Phase B-3b + C-1 + C-2 + D-1 complete)
 > 日本語版: [USAGE.md](./USAGE.md)
 
 ---
@@ -100,6 +100,39 @@ Implementation note: Supabase JS SDK's query builder hangs in this environment, 
 - Edits / unpublish / delete by the upstream owner do **not** propagate
 - Pros: fast renders, no network calls per render, robust to upstream removal
 - Cons: connector's copy can drift. Phase C-3 will add a "refresh from upstream" affordance
+
+---
+
+## 0e. Cross-user Comments + Notifications (Phase D-1)
+
+### Posting a comment
+- Open a block, type into the comment composer at the bottom, confirm, submit
+- Cached locally and inserted into the shared `traces` table on Supabase
+  - On an external block, `block_owner_id` is set to the upstream owner
+  - On your own block, `block_owner_id` is yourself
+
+### Receiving notifications (block owner side)
+- When another user comments on one of your blocks, three places light up
+  with a small pulsing ink-blue **●**:
+  1. **Next to the `@handle` pill** in the topbar (global awareness)
+  2. **The Comment tab** in the modal-tabs strip (and in the per-block-modal
+     tabs at the top of every block modal)
+  3. **The `— incoming` section** at the top of the Comment pane, with a
+     dot on each unread row
+- Click the **pill ●** → `既読にしました` toast → all three dots clear
+- The read watermark lives in `atelier_traces_watermark_v1` (localStorage,
+  per device — intentionally NOT synced via `user_state` so each device
+  tracks its own read state)
+
+### `— incoming` section
+- Lists every cross-user comment on your blocks, newest first
+- Each row: `@handle | comment text | ↗ block_id | age`
+- Clicking a row closes the modal and opens the source block
+
+### Mark-as-read timing
+- markAllRead sets the watermark to `max(server max(ts), Date.now()) + 1`,
+  absorbing any client/server clock skew so the dot stays cleared after
+  reload (the previous Date.now()-only version had a clock-skew bug)
 
 ---
 
