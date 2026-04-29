@@ -4942,13 +4942,30 @@
     };
     const row1Html = row1Repeated.map(row1ItemHtml).join('');
 
-    // ─── ROW 2 (title lane) — track title + artist (unchanged) ───
-    const titleHtml = TRACKS.map(t => `
-      <span class="title-item" data-kind="phrase" data-tid="${t.id}">
-        <span class="ti-name">${escapeHtml(t.title)}</span>
-        <span class="ti-art">— ${escapeHtml(t.artist)}</span>
-      </span>
-    `).join('');
+    // ─── ROW 2 (title lane) — own TRACKS + cross-user audio blocks ───
+    // Phase E-prep: previously rendered TRACKS only (own audio). For new
+    // users with no own audio, the lane was empty. Now it also pulls from
+    // crossUserBlocksCache where kind='audio' so the lane carries community
+    // audio titles too. Click → external-block path → block modal.
+    const _row2Items = [];
+    TRACKS.forEach(t => _row2Items.push({ kind: 'own-track', t }));
+    (crossUserBlocksCache || []).forEach(b => {
+      if (b.kind === 'audio') _row2Items.push({ kind: 'x-audio', b });
+    });
+    const titleHtml = _row2Items.map(it => {
+      if (it.kind === 'own-track') {
+        return `<span class="title-item" data-kind="phrase" data-tid="${escapeHtml(it.t.id)}">
+          <span class="ti-name">${escapeHtml(it.t.title || '')}</span>
+          <span class="ti-art">— ${escapeHtml(it.t.artist || '')}</span>
+        </span>`;
+      }
+      // Cross-user audio: external-block click flow.
+      const b = it.b;
+      return `<span class="title-item" data-kind="external-block" data-bid="${escapeHtml(b.id)}">
+        <span class="ti-name">${escapeHtml(b.title || '(untitled)')}</span>
+        <span class="ti-art">— ${escapeHtml(b.artist || b.ownerHandle || '')}</span>
+      </span>`;
+    }).join('');
 
     // ─── ROW 3 (bottom phrase lane) — pure #tag stream ───
     // Collects every tag across blocks (seed metadata.tags + user-entered
@@ -5011,9 +5028,28 @@
           const blk = _findBroadcastBlock(el.dataset.bid);
           if (blk) openImageModal(blk);
         } else if (kind === 'external-block') {
-          // Phase E-prep: cross-user phrase (Row 1) → open the source block
-          // via the existing external-from-cache flow (read-only modal).
-          openExternalFromCache(el.dataset.bid);
+          // Phase E-prep: cross-user phrase (Row 1) → open the source block.
+          // Look up first in _explorePublicCache (populated when Explore tab
+          // is visited), then fall back to crossUserBlocksCache (populated
+          // on signin via refreshCrossUserBlocks). The latter covers cases
+          // where the user hasn't opened Explore yet but the marquee already
+          // has cross-user content drifting.
+          const bid = el.dataset.bid;
+          if (_explorePublicCache[bid]) {
+            openExternalFromCache(bid);
+          } else {
+            const cross = (crossUserBlocksCache || []).find(b => b.id === bid);
+            if (cross) {
+              openExternalBlock({
+                id: cross.id,
+                kind: cross.kind,
+                payload: { ...cross },
+                ownerHandle: cross.ownerHandle || cross._ownerHandle || '',
+                ownerId: cross.ownerId || cross._ownerId || '',
+                channelLabel: cross.channelLabel || cross._externalChannelLabel || '',
+              });
+            }
+          }
         }
       });
       // Hover preview only for audio tracks
