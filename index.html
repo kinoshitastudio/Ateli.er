@@ -6337,20 +6337,26 @@
       state,
       isPublic: newIsPublic,
     });
-    // Phase E-prep symmetric cascade:
-    //   public → draft : every block in the channel becomes draft, removed
-    //                    from public_blocks (courtyard hides them).
-    //   draft → public : every draft block in the channel becomes public,
-    //                    synced to public_blocks (channel surfaces in portfolio).
-    // Owner retains fine-grained control via block-edit form: between channel
-    // saves, individual blocks can still be demoted/promoted independently.
-    if (wasPublic && !newIsPublic) {
+    // Phase E-prep cascade rules (asymmetric for strict consistency):
+    //   any save with channel draft : every block FORCED to draft, removed
+    //     from public_blocks (folder permission absolute — no individual
+    //     "public block in draft channel" loophole). This fires on every
+    //     save when isPublic=false, including draft→draft (no transition),
+    //     to clean up legacy data where blocks were left in public_blocks
+    //     after the channel went draft.
+    //   draft → public transition : every draft block becomes public + synced
+    //     (cascade up). Subsequent saves on a public channel do NOT re-cascade
+    //     (preserves individual block-level draft choices made via block edit).
+    if (!newIsPublic) {
       const blocks = loadBlocks();
       let mutated = false;
       blocks.forEach(b => {
         if (b.channelId === cid && b.isPublic === true) {
           b.isPublic = false;
           mutated = true;
+        }
+        // Always remove from public_blocks if channel is draft (idempotent).
+        if (b.channelId === cid) {
           try { atelierPublic?.remove(b.id); } catch (e) {}
         }
       });
@@ -6367,10 +6373,6 @@
       });
       if (mutated) saveBlocks(blocks);
     }
-    // Save-reaffirms intentionally NOT applied (would override block-level
-    // draft choices on every channel save). Use the "publish all blocks now"
-    // button for one-shot legacy migration, or toggle channel draft → public
-    // to trigger the up-cascade.
     if (c.userCreated) {
       const list = loadUserChannels();
       const i = list.findIndex(x => x.id === cid);
@@ -9156,8 +9158,12 @@
     if (!ownerId) return;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
-    // Initial frame mirrors the channel-grid head layout (handle, channels meta).
+    // Phase E-prep: include the standard block-modal tabs + back row so
+    // the visitor can jump back to Channel / Feed / Explore / Comment /
+    // Upload from inside the portfolio (matches block-modal navigation).
     inner.innerHTML = `
+      ${_blockTabsHtml()}
+      ${_backBtnHtml()}
       <div class="atelier-channels" style="padding-top:6px;">
         <div class="ch-head" style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
           ${ avatarUrl
@@ -9282,7 +9288,11 @@
     const inner = $('#pieceModalInner');
     // Build the head — mirrors ch-detail-head structure with visitor-mode
     // breadcrumb (@handle / channelLabel) and counts. No edit/delete buttons.
+    // Tabs + back row at top so visitor can jump back to other tabs from
+    // deep inside the portfolio drill-in.
     const headHtml = `
+      ${_blockTabsHtml()}
+      ${_backBtnHtml()}
       <div class="ch-detail-head">
         <div style="font-family:var(--mono); font-size:10.5px; color:var(--gray-2); padding-bottom:6px;">
           <a href="#" id="ucBack" style="color:var(--ink); text-decoration:underline;">← back to portfolio</a>
