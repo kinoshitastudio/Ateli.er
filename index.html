@@ -10449,7 +10449,11 @@
   })();
 
   // ──────────────── INIT ────────────────
-  seedDemoBlocks();
+  // Phase E-prep (2026-04-29): seed demo blocks disabled for new users.
+  // Existing users (Taka) keep their data via user_state pull on SIGNED_IN.
+  // New users see empty state, building their own from scratch.
+  // To re-enable for debug, uncomment the next line.
+  // seedDemoBlocks();
   migrateBlockOwnership();  // backfill `seed: true` on existing localStorage data
   applyUserChannels();
   applyChannelEditsToArray();
