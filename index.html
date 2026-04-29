@@ -8818,6 +8818,21 @@
     // Cache profiles for portfolio rendering.
     _exploreProfilesCache = {};
     data.forEach(p => { _exploreProfilesCache[p.id] = p; });
+    // Phase E-prep: residents click → user portfolio overlay (idempotent).
+    if (!list._wiredEprep) {
+      list.addEventListener('click', (e) => {
+        const card = e.target.closest('.explore-card[data-uid]');
+        if (!card) return;
+        e.preventDefault();
+        openUserPortfolio({
+          id: card.dataset.uid,
+          handle: card.dataset.handle,
+          avatarUrl: card.dataset.avatar,
+          joinedLabel: card.dataset.joined,
+        });
+      });
+      list._wiredEprep = true;
+    }
     // Phase C-1: also render public blocks across users.
     renderExplorePublicBlocks();
   }
@@ -8928,22 +8943,6 @@
         openExternalFromCache(card.dataset.pbId);
       });
       list._wiredC2 = true;
-    }
-    // Phase E-prep: residents (above) get click-to-portfolio handler too.
-    const residentsList = document.getElementById('exploreList');
-    if (residentsList && !residentsList._wiredEprep) {
-      residentsList.addEventListener('click', (e) => {
-        const card = e.target.closest('.explore-card[data-uid]');
-        if (!card) return;
-        e.preventDefault();
-        openUserPortfolio({
-          id: card.dataset.uid,
-          handle: card.dataset.handle,
-          avatarUrl: card.dataset.avatar,
-          joinedLabel: card.dataset.joined,
-        });
-      });
-      residentsList._wiredEprep = true;
     }
   }
   // ──────────────── USER PORTFOLIO (Phase E-prep, 2026-04-29) ────────────────
