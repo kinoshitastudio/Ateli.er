@@ -9269,55 +9269,104 @@
     });
   }
   // Drill into a specific channel of another user (read-only).
+  // Uses the same polished ch-detail-head + ix-list HTML / classes as the
+  // owner's openChannelDetail, minus owner-only affordances (cbox, reorder,
+  // edit/delete buttons). The visitor only sees public blocks (rows in
+  // public_blocks), and clicks open the existing block modal in external
+  // / read-only mode (with a "+ connect to my channel" action).
   function openUserChannel({ ownerId, handle, channelId, channelLabel }) {
-    const items = Object.values(_explorePublicCache)
+    const rows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId && r.channel_id === channelId)
       .sort((a, b) => (b.ts || 0) - (a.ts || 0));
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
-    inner.innerHTML = `
-      <div class="user-channel">
-        <div style="padding:14px 0 4px;font-family:var(--mono);font-size:10.5px;color:var(--gray-2);">
-          <a href="#" id="ucBack" style="color:var(--ink);text-decoration:underline;">← back to portfolio</a>
+    // Build the head — mirrors ch-detail-head structure with visitor-mode
+    // breadcrumb (@handle / channelLabel) and counts. No edit/delete buttons.
+    const headHtml = `
+      <div class="ch-detail-head">
+        <div style="font-family:var(--mono); font-size:10.5px; color:var(--gray-2); padding-bottom:6px;">
+          <a href="#" id="ucBack" style="color:var(--ink); text-decoration:underline;">← back to portfolio</a>
         </div>
-        <h2 style="margin:0;font-family:var(--mono);font-size:14px;color:var(--ink);">
-          <span style="color:var(--gray-2);">@${escapeHtml(handle)} / </span>${escapeHtml(channelLabel)}
-        </h2>
-        <div style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin:6px 0 18px;">
-          ${items.length} blocks · read-only (visitor view)
+        <div class="ch-head-title">
+          <div style="min-width:0; flex:1;">
+            <h4>
+              <a class="bc-h4-user bc-external" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>
+              <span class="bc-h4-sep">/</span>
+              <span class="bc-h4-channel">${escapeHtml(channelLabel)}</span>
+            </h4>
+          </div>
         </div>
-        <ul class="uc-blocks" style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
-          ${items.map(r => {
-            const p = r.payload || {};
-            let thumbHtml = '';
-            let label = '';
-            if (r.kind === 'image' || (r.kind === 'audio' && p.imageUrl)) {
-              const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
-              thumbHtml = src
-                ? `<span class="uc-thumb" style="aspect-ratio:1;background-image:url('${src}');background-size:cover;background-position:center;display:block;"></span>`
-                : `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--gray-2);">${r.kind}</span>`;
-              label = (r.kind === 'audio' ? p.title : p.caption) || '(untitled)';
-            } else if (r.kind === 'text') {
-              const txt = (p.text || '').slice(0, 80);
-              thumbHtml = `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);padding:14px;display:flex;align-items:center;justify-content:center;font-style:italic;color:var(--ink);font-size:11px;line-height:1.4;">${escapeHtml(txt)}</span>`;
-              label = (p.text || '').slice(0, 40);
-            } else if (r.kind === 'url') {
-              let domain = '';
-              try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
-              thumbHtml = `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--gray-2);font-size:11px;">${escapeHtml(domain || 'url')}</span>`;
-              label = p.title || p.url || '(url)';
-            } else if (r.kind === 'audio') {
-              thumbHtml = `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--gray-2);font-size:11px;">audio · ${fmtDur(p.sec || 0)}</span>`;
-              label = p.title || '(untitled)';
-            }
-            return `<li class="uc-block-card" data-pb-id="${escapeHtml(r.id)}" style="cursor:pointer;display:flex;flex-direction:column;gap:6px;">
-              ${thumbHtml}
-              <span style="font-family:var(--mono);font-size:10.5px;color:var(--ink);">${escapeHtml(label)}</span>
-            </li>`;
-          }).join('')}
-        </ul>
+        <span class="meta">${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>
+        <span class="meta meta-times" style="color:var(--gray-2);">— visitor view (read-only)</span>
       </div>
     `;
+    // Build the body — ix-list with ix-* classes mirroring the owner's
+    // channel detail. Each li is clickable to open the block modal.
+    const bodyHtml = rows.length === 0
+      ? `<p style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); padding: 22px 0;">— このチャンネルには まだ公開 block がありません</p>`
+      : `<ol class="ix-list">${
+          rows.map(r => {
+            const p = r.payload || {};
+            const id = r.id;
+            if (r.kind === 'audio') {
+              const tr = { ...p, id, kind: 'audio' };
+              return `<li data-kind="audio" data-tid="${escapeHtml(id)}" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
+                <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(id.slice(0, 6))}</span>
+                <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
+                <span class="ix-mid">
+                  <span class="ix-title">${escapeHtml(p.title || '(untitled)')}</span>
+                  <span class="ix-phrase">— ${escapeHtml((p.phrases && p.phrases[0]) || p.catchphrase || '')} —</span>
+                </span>
+                <span class="ix-art">${escapeHtml(p.artist || '')}</span>
+                <span class="ix-time">${fmtDur(p.sec || 0)}</span>
+              </li>`;
+            }
+            if (r.kind === 'image') {
+              const b = { ...p, id, kind: 'image' };
+              return `<li data-kind="image" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
+                <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(id.slice(0, 6))}</span>
+                <span class="ix-thumb">${buildBlockImage(b, 160, 110)}</span>
+                <span class="ix-mid">
+                  <span class="ix-title">${escapeHtml(p.caption || '(image)')}</span>
+                  <span class="ix-phrase">${escapeHtml(p.source || '')}</span>
+                </span>
+                <span class="ix-art">image</span>
+                <span class="ix-time">↗</span>
+              </li>`;
+            }
+            if (r.kind === 'text') {
+              const preview = (p.text || '').slice(0, 160);
+              const styleLabel = p.style === 'lyric' ? 'lyric' : 'prose';
+              return `<li data-kind="text" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
+                <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(id.slice(0, 6))}</span>
+                <span class="ix-thumb"><span class="ix-thumb-text">${styleLabel}</span></span>
+                <span class="ix-mid">
+                  <span class="ix-title">${escapeHtml(preview)}${(p.text || '').length > 160 ? '…' : ''}</span>
+                  <span class="ix-phrase">— ${escapeHtml(p.style || 'text')} —</span>
+                </span>
+                <span class="ix-art">text</span>
+                <span class="ix-time">↗</span>
+              </li>`;
+            }
+            if (r.kind === 'url') {
+              let domain = '';
+              try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
+              if (!domain) domain = 'link';
+              return `<li data-kind="url" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
+                <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(id.slice(0, 6))}</span>
+                <span class="ix-thumb"><span class="ix-thumb-url">${escapeHtml(domain)}</span></span>
+                <span class="ix-mid">
+                  <span class="ix-title">${escapeHtml(p.title || p.url || '(url)')}</span>
+                  <span class="ix-phrase">— ${escapeHtml(p.source || '')} —</span>
+                </span>
+                <span class="ix-art">link</span>
+                <span class="ix-time">↗</span>
+              </li>`;
+            }
+            return '';
+          }).join('')
+        }</ol>`;
+    inner.innerHTML = headHtml + bodyHtml;
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     document.getElementById('ucBack').addEventListener('click', (e) => {
       e.preventDefault();
@@ -9326,7 +9375,7 @@
       const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
       openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
     });
-    inner.querySelectorAll('.uc-block-card[data-pb-id]').forEach(el => {
+    inner.querySelectorAll('.ix-list li[data-pb-id]').forEach(el => {
       el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
     });
   }
