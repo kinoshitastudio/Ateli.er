@@ -8947,24 +8947,18 @@
   // — handle and channel are linked, block title is the current location.
   // Phase C-2: when `ownerHandle` is given, the breadcrumb shows the upstream
   // owner instead of the viewer (used for external blocks from Explore).
-  // Phase E-prep: visibility pill (public/draft) right after the handle
-  // gives at-a-glance status for the block.
-  function _blockTitleHtml({ channel, label, ownerHandle, channelLabel, block } = {}) {
+  // Phase E-prep: visibility pill removed from the breadcrumb per user
+  // feedback — it was redundant next to the user handle (looked like a
+  // user-level status). Block public/draft state is shown elsewhere
+  // (channel detail block-list pill, ix-art column).
+  function _blockTitleHtml({ channel, label, ownerHandle, channelLabel } = {}) {
     const handle = ownerHandle ? String(ownerHandle).replace(/^@+/, '') : _currentHandle();
     const cid = channel?.id || '';
     const cLabel = channelLabel || channel?.label || '';
     const channelPart = ownerHandle
       ? `<span class="bc-h4-channel">${escapeHtml(cLabel)}</span>`  // not linkable for external
       : `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
-    // Pill: skip for external (visitor) blocks since they're inherently public.
-    // For own blocks, show the effective visibility (block.isPublic, which is
-    // already clamped by channel.isPublic via _enforceVisibilityConsistency).
-    const visPillHtml = (!ownerHandle && block)
-      ? (block.isPublic
-          ? `<span class="ch-vis-pill ch-vis-public">public</span>`
-          : `<span class="ch-vis-pill ch-vis-draft">draft</span>`)
-      : '';
-    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>${visPillHtml}`
+    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`
       + `<span class="bc-h4-sep">/</span>`
       + channelPart
       + `<span class="bc-h4-sep">/</span>`
