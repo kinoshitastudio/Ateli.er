@@ -6330,19 +6330,28 @@
         const ok = await customConfirm('このチャンネル内の全 block を publish しますか?');
         if (!ok) return;
         const blocks = loadBlocks();
-        let count = 0;
+        let promotedCount = 0;
+        let syncedCount = 0;
+        // Idempotent: always re-sync every block in this channel to
+        // public_blocks. Handles legacy data where block.isPublic was
+        // already true locally but never made it to the server (e.g.,
+        // upload-time sync was skipped or failed silently).
         blocks.forEach(b => {
-          if (b.channelId === cid && b.isPublic !== true) {
+          if (b.channelId !== cid) return;
+          if (b.isPublic !== true) {
             b.isPublic = true;
-            count += 1;
-            try { atelierPublic?.sync(b); } catch (e) {}
+            promotedCount += 1;
           }
+          try { atelierPublic?.sync(b); syncedCount += 1; } catch (e) {}
         });
-        if (count > 0) {
+        if (syncedCount > 0) {
           saveBlocks(blocks);
-          showToast(`${count} blocks を publish しました`);
+          const msg = promotedCount > 0
+            ? `${syncedCount} blocks を publish しました (${promotedCount} 個を draft → public)`
+            : `${syncedCount} blocks を再同期しました`;
+          showToast(msg);
         } else {
-          showToast('全 block は既に public です');
+          showToast('このチャンネルには block がありません');
         }
       });
     }
@@ -6420,11 +6429,15 @@
       const blocks = loadBlocks();
       let mutated = false;
       blocks.forEach(b => {
-        if (b.channelId === cid && b.isPublic !== true) {
+        if (b.channelId !== cid) return;
+        if (b.isPublic !== true) {
           b.isPublic = true;
           mutated = true;
-          try { atelierPublic?.sync(b); } catch (e) {}
         }
+        // Always sync regardless of whether we just promoted or it was
+        // already true — covers legacy blocks that were public locally
+        // but never made it to public_blocks.
+        try { atelierPublic?.sync(b); } catch (e) {}
       });
       if (mutated) saveBlocks(blocks);
     }
