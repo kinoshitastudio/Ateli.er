@@ -9174,7 +9174,15 @@
     });
     if (name === 'feed') renderFeed();
     if (name === 'explore') renderExplore();
-    if (name === 'traces') renderIncomingTraces();
+    if (name === 'traces') {
+      renderIncomingTraces();
+      // Phase A-refactor 2 (2026-04-29): opening the Comment tab counts as
+      // "seen" — clear the blue unread dot immediately. Previously the
+      // user had to find each unread row and click into it (and if the
+      // commenter had been deleted, the row didn't navigate anywhere,
+      // leaving the badge stuck on).
+      try { atelierTraces?.markAllRead?.(); } catch (e) {}
+    }
   }
 
   // ──────────────── BREADCRUMB helpers ────────────────
