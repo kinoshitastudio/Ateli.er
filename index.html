@@ -7724,7 +7724,8 @@
         channelId: b.channelId,
         ts: b.ts || 0,
         block: b,
-        ownerHandle: b.ownerHandle,
+        ownerHandle: b.ownerHandle || b._ownerHandle,
+        ownerId: b.ownerId || b._ownerId,
         crossUser: !!b._crossUser,
       });
     });
@@ -7839,6 +7840,10 @@
       const firstItem = g.items[0];
       const actorHandle = firstItem?.ownerHandle || _currentHandle() || 'visitor';
       const actorIsExternal = !!firstItem?.crossUser;
+      // Phase A-refactor 2: emit data-uid on the actor link when the feed
+      // group is cross-user, so the global breadcrumb click handler routes
+      // to the visitor portfolio instead of the viewer's own My Channel.
+      const actorOwnerId = actorIsExternal ? (firstItem?.ownerId || '') : '';
 
       const cards = g.items.slice(0, 9).map(it => {
         const caption = _feedCardCaption(it);
@@ -7856,7 +7861,7 @@
 
       return `
         <li class="feed-group" data-cid="${escapeHtml(g.channelId)}">
-          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}" style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> connected ${escapeHtml(summary)} to </span><span class="target" data-cid="${escapeHtml(g.channelId)}">${escapeHtml(chLabel)}</span></div>
+          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> connected ${escapeHtml(summary)} to </span><span class="target" data-cid="${escapeHtml(g.channelId)}">${escapeHtml(chLabel)}</span></div>
           <div class="feed-group-time">${escapeHtml(when)}</div>
           <div class="feed-group-grid">${cards}</div>
         </li>
@@ -7877,11 +7882,16 @@
         const profile = Object.values(_exploreProfilesCache).find(p =>
           (p.handle || '').replace(/^@+/, '') === handle.replace(/^@+/, '')
         );
-        const ownerId = profile?.id || (handle === _currentHandle() ? currentUser?.id : null);
+        const ownerId = profile?.id || actorEl.dataset.uid || (handle === _currentHandle() ? currentUser?.id : null);
         if (!ownerId) return;
         const avatarUrl = profile?.avatar_url ? convertImageUrl(profile.avatar_url) : '';
         const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
         openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
+        // Phase A-refactor 2: stop bubbling so the global [data-bc="user"]
+        // handler doesn't fire on the same click and re-route to own My
+        // Channel (or worse, close-then-reopen pieceModal causing flicker).
+        e.stopPropagation();
+        e.preventDefault();
         return;
       }
       const target = e.target.closest('.feed-group-header .target');
