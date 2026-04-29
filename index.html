@@ -4872,13 +4872,16 @@
       </span>
     `).join('');
 
-    // ─── IMAGE LANE (4th row, unchanged role) ───
-    const userBlocks = loadBlocks();
+    // ─── IMAGE LANE (4th row) ───
+    // Phase E-prep: pool now includes cross-user public images so the lane
+    // drifts both own + community work. Click → block modal (read-only for
+    // cross-user, owner can edit own).
     const imageItems = [];
     TRACKS.forEach(t => imageItems.push(
       `<span class="image-item" data-kind="phrase" data-tid="${t.id}">${buildPieceImage(t)}</span>`
     ));
-    userBlocks.filter(b => b.kind === 'image').forEach(b => {
+    const broadcastForImage = _broadcastBlocks();
+    broadcastForImage.filter(b => b.kind === 'image').forEach(b => {
       imageItems.push(
         `<span class="image-item" data-kind="image" data-bid="${b.id}">
           ${ buildBlockImage(b, 480, 320) }
@@ -4909,7 +4912,8 @@
           const cid = el.dataset.cid;
           if (cid) openChannelDetail(cid);
         } else if (kind === 'image') {
-          const blk = loadBlocks().find(x => x.id === el.dataset.bid);
+          // Phase E-prep: lookup unified across own + cross-user broadcast.
+          const blk = _findBroadcastBlock(el.dataset.bid);
           if (blk) openImageModal(blk);
         }
       });
@@ -7313,12 +7317,18 @@
         track: t,
       });
     });
-    // Non-audio blocks
-    loadBlocks().filter(b => b.kind !== 'audio').forEach(b => {
-      const title = b.kind === 'image' ? (b.caption || '(image)')
+    // Phase E-prep: include cross-user public blocks so Feed becomes a courtyard
+    // discovery view (own + others' public). Each item carries owner_handle for
+    // attribution display in the feed group header.
+    const broadcast = _broadcastBlocks();
+    broadcast.forEach(b => {
+      const isAudio = b.kind === 'audio';
+      const title = isAudio ? (b.title || '(untitled)')
+                  : b.kind === 'image' ? (b.caption || '(image)')
                   : b.kind === 'text'  ? (b.text || '(text)').slice(0, 60)
                   : (b.title || b.url || '(link)');
-      const sub = b.kind === 'image' ? (b.source || '')
+      const sub = isAudio ? `${b.artist || ''}${b.sec ? ' · ' + fmtDur(b.sec) : ''}`
+                : b.kind === 'image' ? (b.source || '')
                 : b.kind === 'text'  ? (b.style === 'lyric' ? 'lyric' : 'prose')
                 : (b.source || '');
       items.push({
@@ -7329,11 +7339,17 @@
         channelId: b.channelId,
         ts: b.ts || 0,
         block: b,
+        ownerHandle: b.ownerHandle,
+        crossUser: !!b._crossUser,
       });
     });
+    // Dedupe by id (cross-user injection may overlap with own)
+    const seen = new Set();
+    const deduped = [];
+    items.forEach(it => { if (!seen.has(it.id)) { seen.add(it.id); deduped.push(it); } });
     // Newest first; ties go to id (stable-ish)
-    items.sort((a, b) => (b.ts - a.ts) || (a.id < b.id ? 1 : -1));
-    return items;
+    deduped.sort((a, b) => (b.ts - a.ts) || (a.id < b.id ? 1 : -1));
+    return deduped;
   }
   function _kindIcon(kind) {
     return ({ audio: '♪', image: '▣', text: '¶', url: '↗' })[kind] || '';
@@ -7571,9 +7587,17 @@
       idx.get(k).items.push(item);
     };
     TRACKS.forEach(tr => tagsForTrack(tr).forEach(tag => add(tag, { kind: 'audio', track: tr })));
-    loadBlocks().forEach(b => {
-      if (b.kind === 'audio') return;   // audio is already in TRACKS via injectBlocksIntoTracks
-      tagsForBlock(b).forEach(tag => add(tag, { kind: b.kind, block: b }));
+    // Phase E-prep: tags pool includes cross-user public blocks so the
+    // hashtag marquee row (Row 3) drifts community tags too.
+    _broadcastBlocks().forEach(b => {
+      if (b.kind === 'audio') {
+        // own user audio is already in TRACKS via injectBlocksIntoTracks; only
+        // process cross-user audio here to avoid double counting.
+        if (!b._crossUser) return;
+        tagsForTrack(b).forEach(tag => add(tag, { kind: 'audio', track: b }));
+      } else {
+        tagsForBlock(b).forEach(tag => add(tag, { kind: b.kind, block: b }));
+      }
     });
     return idx;
   }
@@ -9729,6 +9753,64 @@
     return { upsert, remove, sync, list };
   })();
 
+  // ──────────────── CROSS-USER BROADCAST (Phase E-prep, 2026-04-29) ────────────────
+  // Power TOP marquee Row 4 (image), Row 3 (tags), and Feed with content from
+  // across all residents. Blocks marked with "show on Explore" toggle (= rows
+  // in public_blocks) become discoverable in every signed-in user's view.
+  // Refreshed on SIGNED_IN, periodically (5 min), and after publish toggle.
+  let crossUserBlocksCache = [];
+  async function refreshCrossUserBlocks() {
+    try {
+      const rows = await atelierPublic.list(60);
+      if (!Array.isArray(rows)) return;
+      crossUserBlocksCache = rows
+        .filter(r => r && r.owner_id !== currentUser?.id)
+        .map(r => {
+          const payload = r.payload || {};
+          return {
+            ...payload,
+            id: r.id,
+            kind: r.kind,
+            channelId: r.channel_id || payload.channelId,
+            channelLabel: r.channel_label || payload.channelLabel,
+            ts: r.ts || 0,
+            ownerId: r.owner_id,
+            ownerHandle: r.owner_handle,
+            // Phase E-prep: tag cross-user blocks with the same _external flag
+            // used by Phase C-2 Connect snapshots so the existing block-modal
+            // header (owner attribution + "+ connect to my channel" action)
+            // works without UI changes. _crossUser distinguishes "discovered"
+            // (not yet connected) from "connected" (in external_blocks store).
+            _external: true,
+            _crossUser: true,
+            _ownerHandle: r.owner_handle,
+            _externalChannelLabel: r.channel_label || payload.channelLabel || '',
+          };
+        });
+      // Re-render TOP and Feed with new data
+      try { if (typeof renderMarquees === 'function') renderMarquees(); } catch (e) {}
+      try { if (typeof renderFeed === 'function') renderFeed(); } catch (e) {}
+    } catch (e) {
+      console.warn('[crossUser] refresh error:', e);
+    }
+  }
+  // Helper: return blocks that should drift in the TOP marquee + Feed.
+  // = own blocks (loadBlocks) + cross-user public blocks (deduped by id).
+  function _broadcastBlocks() {
+    const own = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const ownIds = new Set(own.map(b => b.id));
+    const cross = (crossUserBlocksCache || []).filter(b => !ownIds.has(b.id));
+    return [...own, ...cross];
+  }
+  // Lookup helper for click handlers — searches both own and cross-user pools.
+  function _findBroadcastBlock(id) {
+    if (!id) return null;
+    const own = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const found = own.find(b => b.id === id);
+    if (found) return found;
+    return (crossUserBlocksCache || []).find(b => b.id === id) || null;
+  }
+
   // ──────────────── TRACES — cross-user comments (Phase D-1) ────────────────
   // Comments live in a shared `traces` table so a comment on user A's block
   // by user B is visible to A and to anyone else viewing the block. The
@@ -10270,6 +10352,9 @@
         } catch (e) { console.warn('[atelierSync] sign-in pull failed:', e); }
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
+        // Phase E-prep: prime the cross-user broadcast pool so TOP marquee
+        // and Feed feel alive on first paint.
+        refreshCrossUserBlocks();
       } else if (event === 'SIGNED_OUT') {
         showLanding();
       }
@@ -10303,6 +10388,10 @@
     atelierTraces.refreshUnreadBadge();
     // Periodic refresh while the tab is open so notifications appear without reload.
     setInterval(() => atelierTraces.refreshUnreadBadge(), 60_000);
+    // Phase E-prep: prime cross-user broadcast pool, then refresh every 5 min
+    // so TOP marquee and Feed reflect new public posts without reload.
+    refreshCrossUserBlocks();
+    setInterval(() => refreshCrossUserBlocks(), 300_000);
   })();
 
   // ──────────────── INIT ────────────────
