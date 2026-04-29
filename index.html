@@ -4950,8 +4950,11 @@
     const _r1ChannelIds = new Set(_userBlocksForR1.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _r1ChannelIds.add(t.channelId); });
     const _r1UserChIds = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
+    // Phase A-refactor 2 (2026-04-29): also exclude draft channels — a
+    // channel.mainPhrase shouldn't drift in the courtyard if the channel
+    // itself is unpublished, even though the viewer has content there.
     const channelsForRow = CHANNELS.filter(c =>
-      c.mainPhrase && (_r1ChannelIds.has(c.id) || _r1UserChIds.has(c.id))
+      c.mainPhrase && c.isPublic !== false && (_r1ChannelIds.has(c.id) || _r1UserChIds.has(c.id))
     );
     const row1Pool = channelsForRow.map(c => ({ kind: 'own-ch', ch: c }));
     // Cross-user lyric/url phrases (from broadcast cache).
@@ -4999,8 +5002,18 @@
     // users with no own audio, the lane was empty. Now it also pulls from
     // crossUserBlocksCache where kind='audio' so the lane carries community
     // audio titles too. Click → external-block path → block modal.
+    // Phase A-refactor 2 (2026-04-29): only broadcast public own-tracks
+    // whose parent channel is also public. Draft audio (or audio in a draft
+    // channel) must not drift in the courtyard. Backward compat: tracks /
+    // channels missing isPublic are treated as public.
+    const _isOwnTrackBroadcastable = (t) => {
+      if (t.isPublic === false) return false;
+      const ch = CHANNELS.find(c => c.id === t.channelId);
+      if (ch && ch.isPublic === false) return false;
+      return true;
+    };
     const _row2Items = [];
-    TRACKS.forEach(t => _row2Items.push({ kind: 'own-track', t }));
+    TRACKS.filter(_isOwnTrackBroadcastable).forEach(t => _row2Items.push({ kind: 'own-track', t }));
     (crossUserBlocksCache || []).forEach(b => {
       if (b.kind === 'audio') _row2Items.push({ kind: 'x-audio', b });
     });
@@ -5040,8 +5053,13 @@
     // Phase E-prep: pool now includes cross-user public images so the lane
     // drifts both own + community work. Click → block modal (read-only for
     // cross-user, owner can edit own).
+    // Phase A-refactor 2 (2026-04-29): same broadcast-eligibility filter
+    // applied to Row 4 (image lane). Audio thumbnails count as images for
+    // this lane, but only when the underlying block is public (and its
+    // channel is public). Image kind is already filtered by
+    // _broadcastBlocks below.
     const imageItems = [];
-    TRACKS.forEach(t => imageItems.push(
+    TRACKS.filter(_isOwnTrackBroadcastable).forEach(t => imageItems.push(
       `<span class="image-item" data-kind="phrase" data-tid="${t.id}">${buildPieceImage(t)}</span>`
     ));
     const broadcastForImage = _broadcastBlocks();
