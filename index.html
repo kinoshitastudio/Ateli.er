@@ -6288,8 +6288,20 @@
         </div>
       </div>
       ${reorderHtml}
+      <div class="ch-edit-footer-actions" style="margin-top:32px; padding:18px 0 32px; display:flex; gap:14px; justify-content:flex-end; border-top:1px solid var(--gray-3);">
+        <button class="yu-action" id="chSaveBtnBottom">${t('blockSave')}</button>
+        <button class="yu-action" id="chCancelBtnBottom">${t('blockCancel')}</button>
+      </div>
     `;
     if (isFreshEntry) document.querySelector('.modal-shell').scrollTop = 0;
+    // Phase E-prep: bottom save/cancel buttons trigger the same handlers as
+    // the top-right pair (mobile UX — no scroll back to top to commit).
+    detail.querySelector('#chSaveBtnBottom')?.addEventListener('click', () => {
+      detail.querySelector('#chSaveBtn')?.click();
+    });
+    detail.querySelector('#chCancelBtnBottom')?.addEventListener('click', () => {
+      detail.querySelector('#chCancelBtn')?.click();
+    });
     // Phase E-prep: "publish all blocks in this channel" — one-shot helper
     // for legacy data where many blocks are draft but the owner wants the
     // whole channel surfaced in their portfolio. Forces all blocks in the
@@ -6623,7 +6635,17 @@
         </div>
       `;
     }
-    inner.innerHTML = head + body;
+    // Phase E-prep: bottom save/cancel buttons mirror the head's pair so
+    // mobile users (and anyone with a tall edit form) don't have to scroll
+    // back up to commit changes. Same data-act handlers wire to the same
+    // delegated listener — no extra logic needed.
+    const footerActions = `
+      <div class="piece-edit-footer-actions" style="margin-top:32px; padding:18px 0 32px; display:flex; gap:14px; justify-content:flex-end; border-top:1px solid var(--gray-3);">
+        <button class="pm-close" data-act="save">${t('blockSave')}</button>
+        <button class="pm-close" data-act="cancel">${t('blockCancel')}</button>
+      </div>
+    `;
+    inner.innerHTML = head + body + footerActions;
     $('#pieceModal').classList.add('is-open');
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     // Mark tag-suggest chips that are already present in the textarea.
