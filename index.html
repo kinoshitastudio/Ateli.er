@@ -4914,9 +4914,12 @@
     if (src) {
       return `<img src="${src}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
     }
-    const seed = block.id || 'block';
-    const picsum = `https://picsum.photos/seed/atelier-${encodeURIComponent(seed)}/${w * 2}/${h * 2}`;
-    return `<img src="${picsum}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
+    // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
+    // as buildPieceImage. Image blocks should always have imageUrl, but if
+    // one slips through without it (or fails to resolve) we want a clean
+    // "— image —" instead of a random picsum nature photo that misleads
+    // the viewer into thinking that's the block's actual content.
+    return `<span class="ix-thumb-text" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--paper-2);color:var(--gray);font-family:var(--mono);font-size:11px;letter-spacing:0.12em;">— image —</span>`;
   }
 
   // ──────────────── MARQUEES ────────────────
