@@ -10494,17 +10494,27 @@
           if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
           const rows = await res.json();
           if (!Array.isArray(rows) || rows.length === 0) {
-            // CRITICAL fix: no user_state row = new user (or first ever
-            // signin). DO NOT push current localStorage to seed DB —
-            // localStorage may contain stale data from a previous user
-            // who used this browser. Wipe local atelier_* keys so the
-            // new user starts genuinely empty (no Taka-on-DDD leak).
-            SYNC_KEYS.forEach(k => localStorage.removeItem(k));
-            // Phase A-refactor: also reset in-memory CHANNELS/TRACKS that
-            // were populated at module-load time from the previous user's
-            // localStorage. Without this, render functions still read the
-            // stale arrays even though localStorage is clean.
-            if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
+            // Phase A-refactor 2.7 (2026-04-29): two distinct sub-cases.
+            //
+            // (a) Different user signed in on this browser (lastUserId !=
+            //     currentUser.id). Treat as new user — wipe localStorage so
+            //     the previous user's data doesn't leak into this session.
+            //     Phase 1.5 already wiped pre-pull; we re-wipe defensively.
+            //
+            // (b) SAME user as before but server has no row. This means the
+            //     row was deleted server-side (e.g., auth user delete with
+            //     CASCADE, or a manual SQL cleanup that took out more than
+            //     intended). The viewer's localStorage IS still their own
+            //     data — we must NOT wipe. Push it back up to recreate the
+            //     row so the next session pulls a real state.
+            if (lastUserId !== currentUser.id) {
+              SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+              if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
+            } else {
+              // Known user, missing server row → restore from localStorage.
+              if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
+              try { await push(true); } catch (e) { /* fire and continue */ }
+            }
             lastPushedJson = JSON.stringify(_snapshot());
             localStorage.setItem(LAST_USER_KEY, currentUser.id);
             isPulling = false;
