@@ -7687,13 +7687,19 @@
     });
     const groups = [...groupsMap.values()].sort((a, b) => b.ts - a.ts);
 
-    const ACTOR = 'kinoshita studio';
-
+    // Phase E-prep: use the current user's @handle as the feed actor (not the
+    // hardcoded "kinoshita studio" string from the prototype era). The handle
+    // is rendered as an underlined link so visitors can click through to the
+    // user's portfolio.
     list.innerHTML = groups.map(g => {
       const ch = CHANNELS.find(c => c.id === g.channelId);
       const chLabel = ch ? ch.label : '—';
       const when = g.ts ? ageString(g.ts) : '';
       const summary = _summarizeFeedItems(g.items);
+      // Determine actor: own handle for own items, owner_handle for cross-user.
+      const firstItem = g.items[0];
+      const actorHandle = firstItem?.ownerHandle || _currentHandle() || 'visitor';
+      const actorIsExternal = !!firstItem?.crossUser;
 
       const cards = g.items.slice(0, 9).map(it => {
         const caption = _feedCardCaption(it);
@@ -7711,7 +7717,7 @@
 
       return `
         <li class="feed-group" data-cid="${escapeHtml(g.channelId)}">
-          <div class="feed-group-header"><span class="actor">${escapeHtml(ACTOR)}</span><span class="connector"> connected ${escapeHtml(summary)} to </span><span class="target" data-cid="${escapeHtml(g.channelId)}">${escapeHtml(chLabel)}</span></div>
+          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}" style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> connected ${escapeHtml(summary)} to </span><span class="target" data-cid="${escapeHtml(g.channelId)}">${escapeHtml(chLabel)}</span></div>
           <div class="feed-group-time">${escapeHtml(when)}</div>
           <div class="feed-group-grid">${cards}</div>
         </li>
@@ -7723,6 +7729,22 @@
     const list = document.getElementById('feedList');
     if (!list) return;
     list.addEventListener('click', (e) => {
+      // Phase E-prep: actor handle click → user portfolio overlay.
+      const actorEl = e.target.closest('.feed-group-header .actor[data-handle]');
+      if (actorEl) {
+        const handle = actorEl.dataset.handle;
+        if (!handle) return;
+        // Look up the profile from the explore cache to fill the portfolio header.
+        const profile = Object.values(_exploreProfilesCache).find(p =>
+          (p.handle || '').replace(/^@+/, '') === handle.replace(/^@+/, '')
+        );
+        const ownerId = profile?.id || (handle === _currentHandle() ? currentUser?.id : null);
+        if (!ownerId) return;
+        const avatarUrl = profile?.avatar_url ? convertImageUrl(profile.avatar_url) : '';
+        const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
+        openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
+        return;
+      }
       const target = e.target.closest('.feed-group-header .target');
       if (target) {
         const cid = target.dataset.cid;
@@ -8899,14 +8921,24 @@
   // — handle and channel are linked, block title is the current location.
   // Phase C-2: when `ownerHandle` is given, the breadcrumb shows the upstream
   // owner instead of the viewer (used for external blocks from Explore).
-  function _blockTitleHtml({ channel, label, ownerHandle, channelLabel } = {}) {
+  // Phase E-prep: visibility pill (public/draft) right after the handle
+  // gives at-a-glance status for the block.
+  function _blockTitleHtml({ channel, label, ownerHandle, channelLabel, block } = {}) {
     const handle = ownerHandle ? String(ownerHandle).replace(/^@+/, '') : _currentHandle();
     const cid = channel?.id || '';
     const cLabel = channelLabel || channel?.label || '';
     const channelPart = ownerHandle
       ? `<span class="bc-h4-channel">${escapeHtml(cLabel)}</span>`  // not linkable for external
       : `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
-    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`
+    // Pill: skip for external (visitor) blocks since they're inherently public.
+    // For own blocks, show the effective visibility (block.isPublic, which is
+    // already clamped by channel.isPublic via _enforceVisibilityConsistency).
+    const visPillHtml = (!ownerHandle && block)
+      ? (block.isPublic
+          ? `<span class="ch-vis-pill ch-vis-public">public</span>`
+          : `<span class="ch-vis-pill ch-vis-draft">draft</span>`)
+      : '';
+    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>${visPillHtml}`
       + `<span class="bc-h4-sep">/</span>`
       + channelPart
       + `<span class="bc-h4-sep">/</span>`
@@ -8950,8 +8982,8 @@
     const isExternal = !!block?._external;
     const ownerHandle = block?._ownerHandle || '';
     const titleArgs = isExternal
-      ? { channel, label, ownerHandle, channelLabel: block?._externalChannelLabel || channel?.label || '' }
-      : { channel, label };
+      ? { channel, label, ownerHandle, channelLabel: block?._externalChannelLabel || channel?.label || '', block }
+      : { channel, label, block };
     const externalPill = isExternal
       ? `<span class="block-public-pill" style="background: var(--gray); margin-left: 8px;">— by @${escapeHtml(ownerHandle)}</span>`
       : '';
