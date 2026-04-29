@@ -6479,6 +6479,16 @@
         });
         if (syncedCount > 0) {
           saveBlocks(blocks);
+          // Phase A-refactor 2 (2026-04-29): rebuild TRACKS so audio blocks
+          // pick up the new isPublic, then refresh views so My Channel /
+          // channel detail / block modal reflect the change without a
+          // page reload. Previously the user saw "✓ published" toast but
+          // the DRAFT pill stayed put until they navigated away and back.
+          if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
+          if (typeof refreshAllViews === 'function') refreshAllViews();
+          if (typeof refreshCurrentBlockModal === 'function') {
+            try { refreshCurrentBlockModal(); } catch (e) {}
+          }
           const msg = promotedCount > 0
             ? `${syncedCount} blocks を publish しました (${promotedCount} 個を draft → public)`
             : `${syncedCount} blocks を再同期しました`;
@@ -7118,9 +7128,18 @@
         }
         openUserPortfolio({ id: targetUid, handle: targetHandle });
       } else {
-        // Own user (or no uid attribute) — go to own channel grid
-        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
-          closePieceModal();
+        // Own user (or no uid attribute) — go to own channel grid.
+        // Phase A-refactor 2 (2026-04-29): hide pieceModal SILENTLY (no
+        // history.back) before opening #modal. Previously closePieceModal
+        // called navCloseExternal → history.back, and the popstate fired
+        // AFTER our subsequent openModal('pieces') pushed onto navStack,
+        // so popstate popped the just-opened #modal — landing the user on
+        // the home / TOP screen instead of My Channel.
+        if ($('#pieceModal').classList.contains('is-open')) {
+          $('#pieceModal').classList.remove('is-open');
+          const _idx = navStack.lastIndexOf('pieceModal');
+          if (_idx >= 0) navStack.splice(_idx, 1);
+          if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
         }
         if (typeof openModal === 'function') openModal('pieces');
         if (typeof backToChannelGrid === 'function') {
@@ -7457,6 +7476,15 @@
         support: b.support || '',
         layers: [],
         ownLocal: true,
+        // Phase A-refactor 2 (2026-04-29): propagate block-level fields the
+        // block modal head reads (visibility pill, timestamps). Without
+        // these, a freshly-uploaded audio always rendered as DRAFT even
+        // though loadBlocks() showed isPublic=true, because TRACKS — the
+        // source the audio modal uses — didn't carry the flag.
+        isPublic: b.isPublic,
+        ts: b.ts,
+        editedAt: b.editedAt,
+        seed: b.seed,
       });
     });
     rebuildVeinIndex();
