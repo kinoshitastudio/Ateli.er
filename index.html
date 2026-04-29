@@ -4096,19 +4096,30 @@
   // ──────────────── DATA ────────────────
   const TRACKS = [
     // Phase E-prep (2026-04-29): placeholder TRACKS removed for clean empty start.
-    // New users see 0 audio tracks. Owner curates real content via "+ atelier".
-    // Original 8 placeholder tracks preserved in git history.
+    // New users see 0 fictional placeholder audio. Owner curates real content
+    // via "+ atelier" upload. CHANNELS array restored separately so existing
+    // user data and polished block modals continue to resolve channel context.
   ];
 
   // Channels (Are.na-like boxes). Each holds blocks (audio/image/text/url).
   // mainPhrase is the headline that drifts in the top marquee row.
   const CHANNELS = [
-    // Phase E-prep (2026-04-29): seed CHANNELS removed for clean empty start.
-    // New users see 0 channels and create their own with "+ create new channel".
-    // Original 6 seed channels (Archive -01/00/01, ch-yoake, ch-studio, ch-tape)
-    // preserved in git history before this commit.
+    { id:'-01', label:'Archive −01', meta:'archived · weathered',   state:'past',    lang:'mixed',
+      mainPhrase:'these have weathered.' },
+    { id:'00',  label:'Archive 00',  meta:'now playing',            state:'current', lang:'mixed',
+      mainPhrase:'a courtyard, before anyone wakes.' },
+    { id:'01',  label:'Archive 01',  meta:'drafting · spring 2026', state:'future',  lang:'mixed',
+      mainPhrase:'drafting — see you in spring.' },
+
+    // Artist / curator channels
+    { id:'ch-yoake',  label:'夜更けの中庭',  meta:'curated by 仮田 涼',                   state:'current', lang:'ja',
+      mainPhrase:'夜更け、誰もいない中庭に置いておく。' },
+    { id:'ch-studio', label:'Studio Notes', meta:'kinoshita studio · process notes',     state:'current', lang:'mixed',
+      mainPhrase:'制作の余白、思考の断片。' },
+    { id:'ch-tape',   label:'Tape Letters', meta:'by lin · TASCAM portable, side B',     state:'current', lang:'en',
+      mainPhrase:'whispered into magnetic tape, kept as-is.' },
   ];
-  // Alias retained for any legacy references; not exposed in UI
+    // Alias retained for any legacy references; not exposed in UI
   const ISSUES = CHANNELS;
   // Stamp seed channels with believable createdAt/updatedAt so the detail
   // header can show "created N ago · last activity M ago" without missing data.
@@ -5602,7 +5613,17 @@
 
   function renderChannelGrid() {
     const grid = $('#channelGrid');
-    const visibleChannels = CHANNELS;
+    // Phase E-prep (2026-04-29): show only channels the viewer actually has
+    // content in (own blocks or own user-created channels). New users with
+    // 0 blocks see 0 channels (truly empty My Channel tab); existing users
+    // (e.g., Taka) keep their populated seed channels visible. CHANNELS
+    // stays as a global template registry so block modals continue to
+    // resolve channelId → label / mainPhrase for navigation context.
+    const _userBlocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const _channelsWithContent = new Set(_userBlocks.map(b => b.channelId).filter(Boolean));
+    TRACKS.forEach(t => { if (t.channelId) _channelsWithContent.add(t.channelId); });
+    const _userChannelIds = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
+    const visibleChannels = CHANNELS.filter(c => _channelsWithContent.has(c.id) || _userChannelIds.has(c.id));
     const cards = visibleChannels.map(c => {
       const items = _itemsInChannel(c.id);
       const stateClass = c.state === 'past' ? 'ch-card-state-past' : (c.state === 'future' ? 'ch-card-state-future' : '');
@@ -6600,7 +6621,14 @@
   // Lightweight overlay that lists the viewer's own active channels so they
   // can attach an external (other-user) block as a snapshot.
   function _userActiveChannels() {
-    return CHANNELS.filter(c => c.state !== 'past');
+    // Phase E-prep: only show channels the viewer has content in or has
+    // explicitly created. Avoids exposing seed-template channels they've
+    // never used as a connect target.
+    const _ub = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
+    TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
+    const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
+    return CHANNELS.filter(c => c.state !== 'past' && (_cwc.has(c.id) || _uci.has(c.id)));
   }
   function promptConnectExternal(blockId) {
     // Resolve the source — first try the Explore cache (fresh fetch),
@@ -7069,8 +7097,15 @@
     const sel = document.getElementById('bChannel');
     if (!sel) return;
     const prev = sel.value;
-    // Past channels are read-only — only current and future accept new blocks
-    const writeable = CHANNELS.filter(c => c.state !== 'past');
+    // Past channels are read-only — only current and future accept new blocks.
+    // Phase E-prep: ALSO filter to channels the viewer has content in (or
+    // user-created). New users see only "+ create new channel" — no seed
+    // template list cluttering the upload form.
+    const _ub = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
+    TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
+    const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
+    const writeable = CHANNELS.filter(c => c.state !== 'past' && (_cwc.has(c.id) || _uci.has(c.id)));
     sel.innerHTML = writeable.map(c => `<option value="${c.id}">${escapeHtml(c.label)} — ${escapeHtml(c.meta)}</option>`).join('')
                    + `<option value="__new__">+ create new channel…</option>`;
     // Preserve previous selection if still valid; otherwise default to current
