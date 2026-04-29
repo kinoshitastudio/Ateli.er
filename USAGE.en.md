@@ -33,7 +33,7 @@ On first visit, the **landing screen** is shown.
 3. Click `— send magic link` → check inbox → click → session restored
 
 ### Settings (the `@handle ⚙` pill bottom-right)
-- **avatar URL**: Direct image URL (same conversion logic as image blocks)
+- **avatar URL**: Direct image URL (Drive / Dropbox share URLs work; **Google Photos URLs do NOT work** — see 4-B below)
 - Edit **handle**
 - **email** is read-only
 - **log out** (red, with a confirm dialog → reload)
@@ -301,6 +301,14 @@ Movie stills, texture photos, image essays from elsewhere — independent blocks
 - Input: `https://www.dropbox.com/s/xxx/img.jpg?dl=0`
 - Conversion: `https://dl.dropboxusercontent.com/s/xxx/img.jpg?raw=1`
 
+##### Google Photos (★ NOT supported ★)
+- Input: shared links like `https://photos.app.goo.gl/...`
+- ❌ **Will not work**. Reasons:
+  - Share link points to a viewer page, not the image itself
+  - No public API to derive a stable direct image URL
+  - CORS / hotlink protection blocks `<img src>` loading
+- **Workaround**: re-upload the image to Drive and use the Drive share link
+
 → Floats in the main image lane. Click for fullscreen preview.
 
 ---
@@ -494,6 +502,7 @@ A block can belong to multiple channels.
 |---|---|
 | Drive audio URL doesn't play | Drive's CORP blocks external playback. **Use Dropbox** (spec-level, not bypassable) |
 | Drive image URL doesn't load | Legacy `uc?id=` is unstable. Latest version auto-converts to `lh3.googleusercontent.com` |
+| Google Photos share URL doesn't load | Photos share links point to a viewer page, not the image. No `<img>` access. **Workaround: re-upload to Drive and use the Drive share link** |
 | iCloud URL doesn't play | Move to Drive/Dropbox |
 | Marquee stops after reload | iOS Safari battery saver. Scroll/tap to wake |
 | Tapping the slit zooms on iPhone | Fixed (16px input font + viewport `user-scalable=no`) |
