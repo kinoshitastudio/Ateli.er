@@ -11396,25 +11396,6 @@
         showLanding();
       }
     });
-
-    // Phase A-refactor 2 (2026-04-29): explicit cross-tab auth sync.
-    // When a user opens a magic link, the email client launches a NEW tab
-    // (Tab B) — the original tab (Tab A, where the user typed their email)
-    // stays on the "magic link sent" status. Supabase SDK's
-    // onAuthStateChange is supposed to fire across tabs via the localStorage
-    // 'storage' event, but in practice Tab A often stays stuck. Listen
-    // explicitly: when the sb-*-auth-token key appears (sign-in elsewhere)
-    // or disappears (sign-out elsewhere), reload Tab A so it picks up the
-    // new session through the normal gateAppByAuth flow.
-    window.addEventListener('storage', (e) => {
-      if (!e.key) return;
-      if (!e.key.startsWith('sb-') || !e.key.endsWith('-auth-token')) return;
-      const tokenAppeared = !!e.newValue && !e.oldValue;
-      const tokenRemoved  = !e.newValue && !!e.oldValue;
-      if (tokenAppeared || tokenRemoved) {
-        location.reload();
-      }
-    });
   }
 
   // Gate first paint by Supabase session.
