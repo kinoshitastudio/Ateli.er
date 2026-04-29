@@ -597,9 +597,11 @@
   }
   .explore-block-card:hover { border-color: var(--ink); }
   .explore-block-card:active { transform: translateY(1px); }
-  /* Phase C-2: external (other-user) marker in breadcrumb */
-  .bc-h4-user.bc-external { font-style: italic; }
-  .bc-owner-text.bc-external { font-style: italic; }
+  /* Phase C-2: external (other-user) marker in breadcrumb. Italic removed
+     2026-04-29 per Taka feedback — visual noise, attribution is already
+     clear from the @handle text and breadcrumb structure. */
+  .bc-h4-user.bc-external { font-style: normal; }
+  .bc-owner-text.bc-external { font-style: normal; }
   /* Phase C-2: "— by @handle" attribution under channel-detail items */
   .ix-by {
     font-family: var(--mono);
