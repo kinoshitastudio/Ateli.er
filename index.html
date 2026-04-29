@@ -9018,27 +9018,28 @@
   }
   // ──────────────── USER PORTFOLIO (Phase E-prep, 2026-04-29) ────────────────
   // Click on @user in Explore residents → opens this overlay: profile head +
-  // their public channels (grouped from public_blocks) + recent posts.
-  // Visitors browse read-only. Owner uses the same overlay to preview how
-  // their own work appears to others.
+  // their public channels rendered in the SAME polished ch-card grid style
+  // as the owner's own My Channel tab (visitor read-only mode).
+  // Owner can also open this overlay on themselves to preview the visitor view.
   async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel }) {
     if (!ownerId) return;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
+    // Initial frame mirrors the channel-grid head layout (handle, channels meta).
     inner.innerHTML = `
-      <div class="user-portfolio">
-        <div class="up-head" style="display:flex;align-items:center;gap:14px;padding:18px 0 10px;">
+      <div class="atelier-channels" style="padding-top:6px;">
+        <div class="ch-head" style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
           ${ avatarUrl
-            ? `<span class="up-avatar" style="width:64px;height:64px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;"></span>`
-            : `<span class="up-avatar" style="width:64px;height:64px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:block;"></span>` }
-          <div>
-            <h2 style="margin:0;font-family:var(--mono);font-size:14px;color:var(--ink);">@${escapeHtml(handle || 'visitor')}</h2>
-            <div style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin-top:4px;">joined ${escapeHtml(joinedLabel || '')}</div>
+            ? `<span style="width:60px;height:60px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;"></span>`
+            : `<span style="width:60px;height:60px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:block;"></span>` }
+          <div style="flex:1;">
+            <h2 class="ch-head-name" style="margin:0;font-family:var(--mono);font-size:18px;color:var(--ink);">@${escapeHtml(handle || 'visitor')}</h2>
+            <div class="ch-head-meta" id="upMeta" style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin-top:6px;">読み込み中…</div>
+            <div class="ch-head-time" style="font-family:var(--mono);font-size:10px;color:var(--gray-3);margin-top:4px;">joined ${escapeHtml(joinedLabel || '')}</div>
           </div>
         </div>
-        <div class="up-body" style="padding-top:8px;font-family:var(--mono);font-size:10.5px;color:var(--gray-2);">
-          <div id="upBody">読み込み中…</div>
-        </div>
+        <div class="ch-grid" id="upGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;"></div>
+        <div id="upRecentSection" style="margin-top:32px;"></div>
       </div>
     `;
     $('#pieceModal').classList.add('is-open');
@@ -9059,18 +9060,21 @@
     } catch (e) { console.warn('[portfolio] fetch error:', e); }
     // Cache rows so block click can open them via openExternalBlock.
     rows.forEach(r => { _explorePublicCache[r.id] = r; });
-    const upBody = document.getElementById('upBody');
-    if (!upBody) return;
+    const grid = document.getElementById('upGrid');
+    const meta = document.getElementById('upMeta');
+    const recentSection = document.getElementById('upRecentSection');
+    if (!grid || !meta) return;
     if (!rows || rows.length === 0) {
-      upBody.innerHTML = '<p style="padding:14px 0;">— このユーザーは まだ何も公開していません。</p>';
+      meta.textContent = '0 channels · 0 blocks · まだ何も公開していません';
+      grid.innerHTML = '';
       return;
     }
-    // Group blocks by channel_id (or '_unkn' if missing).
+    // Group blocks by channel_id.
     const byChannel = new Map();
     rows.forEach(r => {
       const cid = r.channel_id || '_unkn';
       if (!byChannel.has(cid)) {
-        byChannel.set(cid, { channelId: cid, channelLabel: r.channel_label || '(untitled channel)', items: [] });
+        byChannel.set(cid, { channelId: cid, channelLabel: r.channel_label || '(untitled channel)', channelLang: 'mixed', items: [] });
       }
       byChannel.get(cid).items.push(r);
     });
@@ -9079,33 +9083,36 @@
       const bTs = Math.max(...b.items.map(r => r.ts || 0));
       return bTs - aTs;
     });
-    // Build channels grid + recent posts list.
-    const channelsHtml = channels.map(c => {
-      const thumbs = c.items.slice(0, 4).map(r => {
-        const p = r.payload || {};
-        const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
-        return src
-          ? `<span class="up-ch-thumb" style="width:46px;height:46px;background-image:url('${src}');background-size:cover;background-position:center;border-radius:2px;display:block;"></span>`
-          : `<span class="up-ch-thumb" style="width:46px;height:46px;background:var(--paper-2);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray-2);">${r.kind}</span>`;
-      }).join('');
+    // Update meta line.
+    meta.textContent = `${channels.length} channels · ${rows.length} blocks`;
+    // Build ch-card grid using the same HTML structure / classes as
+    // renderChannelGrid (visitor mode — no edit affordances).
+    function _publicRowToItem(r) {
+      const p = r.payload || {};
+      if (r.kind === 'audio') {
+        return { kind: 'audio', track: { ...p, id: r.id, kind: 'audio' } };
+      }
+      return { kind: r.kind, block: { ...p, id: r.id, kind: r.kind } };
+    }
+    grid.innerHTML = channels.map(c => {
+      const items = c.items.map(_publicRowToItem);
+      const cells = [items[0] || null, items[1] || null, items[2] || null, items[3] || null];
       return `
-        <li class="up-channel" data-cid="${escapeHtml(c.channelId)}" data-clabel="${escapeHtml(c.channelLabel)}" style="padding:14px 0;border-bottom:1px solid var(--gray-3);cursor:pointer;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
-            <div style="flex:1;">
-              <h3 style="margin:0 0 4px;font-family:var(--mono);font-size:13px;color:var(--ink);">${escapeHtml(c.channelLabel)}</h3>
-              <span style="font-size:10.5px;color:var(--gray-2);">${c.items.length} blocks</span>
-            </div>
-            <div style="display:flex;gap:4px;flex-shrink:0;">${thumbs}</div>
+        <div class="ch-card" data-pb-cid="${escapeHtml(c.channelId)}" data-pb-clabel="${escapeHtml(c.channelLabel)}" style="cursor:pointer;">
+          <div class="ch-card-thumb">
+            ${ cells.map(_miniCellHtml).join('') }
           </div>
-        </li>
+          <div class="ch-card-info">
+            <span class="ch-card-name">${escapeHtml(c.channelLabel)}</span>
+          </div>
+        </div>
       `;
     }).join('');
-    upBody.innerHTML = `
-      <h4 style="margin:14px 0 4px;color:var(--ink);">— channels (${channels.length})</h4>
-      <ul class="up-channels" style="list-style:none;padding:0;margin:0;">${channelsHtml}</ul>
-      <h4 style="margin:22px 0 4px;color:var(--ink);">— recent posts (${rows.length})</h4>
-      <ul class="up-recent" style="list-style:none;padding:0;margin:0;">
-        ${rows.slice(0, 24).map(r => {
+    // Recent posts section — keep as a compact list under the grid.
+    recentSection.innerHTML = `
+      <h4 style="margin:0 0 8px;font-family:var(--mono);font-size:11px;color:var(--ink);">— recent posts (${rows.length})</h4>
+      <ul style="list-style:none;padding:0;margin:0;font-family:var(--mono);font-size:10.5px;">
+        ${rows.slice(0, 16).map(r => {
           const p = r.payload || {};
           const ago = r.ts ? ageString(r.ts) : '';
           let label = '';
@@ -9113,22 +9120,20 @@
           else if (r.kind === 'image') label = p.caption || '(image)';
           else if (r.kind === 'text') label = (p.text || '(text)').slice(0, 60);
           else if (r.kind === 'url') label = p.title || p.url || '(url)';
-          return `<li class="up-recent-item" data-pb-id="${escapeHtml(r.id)}" style="padding:8px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;justify-content:space-between;gap:14px;">
+          return `<li class="up-recent-item" data-pb-id="${escapeHtml(r.id)}" style="padding:6px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;justify-content:space-between;gap:14px;">
             <span style="flex:1;color:var(--ink);">${_kindIcon(r.kind)} ${escapeHtml(label)}</span>
             <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;">${escapeHtml(r.channel_label || '')} · ${escapeHtml(ago)}</span>
           </li>`;
         }).join('')}
       </ul>
     `;
-    // Wire click handlers (idempotent on this overlay).
-    upBody.querySelectorAll('.up-channel').forEach(el => {
+    // Wire click handlers.
+    grid.querySelectorAll('.ch-card[data-pb-cid]').forEach(el => {
       el.addEventListener('click', () => {
-        const cid = el.dataset.cid;
-        const clabel = el.dataset.clabel;
-        openUserChannel({ ownerId, handle, channelId: cid, channelLabel: clabel });
+        openUserChannel({ ownerId, handle, channelId: el.dataset.pbCid, channelLabel: el.dataset.pbClabel });
       });
     });
-    upBody.querySelectorAll('.up-recent-item[data-pb-id]').forEach(el => {
+    recentSection.querySelectorAll('.up-recent-item[data-pb-id]').forEach(el => {
       el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
     });
   }
