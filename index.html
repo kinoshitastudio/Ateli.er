@@ -3135,6 +3135,8 @@
     position: relative;
     max-width: 480px;
     width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
     background: var(--paper);
     border: 1px solid var(--ink);
     padding: 32px 28px 28px;
@@ -9333,10 +9335,22 @@
       }
       byChannel.get(cid).items.push(r);
     });
+    // Phase E-prep: sort visitor portfolio in the same order as the owner's
+    // My Channel grid. Owner uses CHANNELS array order = seed order then
+    // appended user-created. Visitor doesn't have access to the owner's
+    // CHANNELS array, so we hardcode the seed order here and append other
+    // (user-created) channels alphabetically by id at the end.
+    const _SEED_ORDER = ['-01', '00', '01', 'ch-yoake', 'ch-studio', 'ch-tape'];
+    const _channelSortIndex = (cid) => {
+      const i = _SEED_ORDER.indexOf(cid);
+      return i >= 0 ? i : 1000 + (cid || '').localeCompare(' ');
+    };
     const channels = [...byChannel.values()].sort((a, b) => {
-      const aTs = Math.max(...a.items.map(r => r.ts || 0));
-      const bTs = Math.max(...b.items.map(r => r.ts || 0));
-      return bTs - aTs;
+      const aIdx = _channelSortIndex(a.channelId);
+      const bIdx = _channelSortIndex(b.channelId);
+      if (aIdx !== bIdx) return aIdx - bIdx;
+      // Tiebreak: localCompare on id for stable order across user-created.
+      return (a.channelId || '').localeCompare(b.channelId || '');
     });
     // Update meta line.
     meta.textContent = `${channels.length} channels · ${rows.length} blocks`;
