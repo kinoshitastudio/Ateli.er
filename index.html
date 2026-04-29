@@ -5285,6 +5285,31 @@
       if (e) Object.assign(CHANNELS[i], e);
     }
   }
+  // Phase E-prep: auto-cleanup of any visibility inconsistency between a
+  // channel's isPublic flag and its blocks' isPublic flags. Folder permission
+  // is absolute — when channel is draft, ALL of its blocks must be draft and
+  // NOT in public_blocks, regardless of whether the user re-saved the channel.
+  // Runs on app init and after each user_state pull so legacy data heals
+  // without explicit user action.
+  function _enforceVisibilityConsistency() {
+    const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    let mutated = false;
+    blocks.forEach(b => {
+      const ch = CHANNELS.find(c => c.id === b.channelId);
+      if (!ch) return;
+      if (ch.isPublic === false && b.isPublic === true) {
+        // Inconsistency: channel draft but block public → force draft.
+        b.isPublic = false;
+        mutated = true;
+        try { atelierPublic?.remove(b.id); } catch (e) {}
+      } else if (ch.isPublic === false) {
+        // Channel draft + block already draft. Still ensure no leftover row
+        // in public_blocks (idempotent, safe).
+        try { atelierPublic?.remove(b.id); } catch (e) {}
+      }
+    });
+    if (mutated) saveBlocks(blocks);
+  }
   function applyTrackEditsToArray() {
     const edits = loadTrackEdits();
     for (let i = TRACKS.length - 1; i >= 0; i--) {
@@ -5793,9 +5818,8 @@
                 <span class="ix-title">${escapeHtml(tr.title)}</span>
                 <span class="ix-phrase">— ${escapeHtml((tr.phrases && tr.phrases[0]) || '')} —</span>
                 ${byLine}
-                ${publicMark}
               </span>
-              <span class="ix-art">${escapeHtml(tr.artist)}</span>
+              <span class="ix-art">${escapeHtml(tr.artist)} ${publicMark}</span>
               <span class="ix-time">${fmtDur(tr.sec)}</span>
               ${reord}
             </li>`;
@@ -5810,9 +5834,8 @@
                 <span class="ix-title">${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
                 ${byLine}
-                ${publicMark}
               </span>
-              <span class="ix-art">image</span>
+              <span class="ix-art">image ${publicMark}</span>
               <span class="ix-time">↗</span>
               ${reord}
             </li>`;
@@ -5829,9 +5852,8 @@
                 <span class="ix-title">${escapeHtml(preview)}${(b.text || '').length > 160 ? '…' : ''}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
                 ${byLine}
-                ${publicMark}
               </span>
-              <span class="ix-art">text</span>
+              <span class="ix-art">text ${publicMark}</span>
               <span class="ix-time">↗</span>
               ${reord}
             </li>`;
@@ -5849,9 +5871,8 @@
                 <span class="ix-title">${escapeHtml(b.title || b.url || '(url)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.source || '')} —</span>
                 ${byLine}
-                ${publicMark}
               </span>
-              <span class="ix-art">link</span>
+              <span class="ix-art">link ${publicMark}</span>
               <span class="ix-time">↗</span>
               ${reord}
             </li>`;
@@ -10835,7 +10856,12 @@
         // currentUser is set by updateUserMenu above so atelierSync has identity.
         try {
           const ok = await atelierSync.pull();
-          if (ok) refreshAllViews();
+          if (ok) {
+            // Phase E-prep: heal any visibility inconsistency after pull
+            // (channel draft + block public is impossible by design).
+            try { _enforceVisibilityConsistency(); } catch (e) {}
+            refreshAllViews();
+          }
         } catch (e) { console.warn('[atelierSync] sign-in pull failed:', e); }
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
@@ -10869,7 +10895,11 @@
     // Existing session on reload: pull latest state from DB before rendering.
     try {
       const ok = await atelierSync.pull();
-      if (ok) refreshAllViews();
+      if (ok) {
+        // Phase E-prep: heal any visibility inconsistency after pull.
+        try { _enforceVisibilityConsistency(); } catch (e) {}
+        refreshAllViews();
+      }
     } catch (e) { console.warn('[atelierSync] reload pull failed:', e); }
     // Phase D-1: refresh the unread-traces badge once per app load.
     atelierTraces.refreshUnreadBadge();
