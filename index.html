@@ -10138,6 +10138,12 @@
     'atelier_lang_v1',
     'atelier_seeded_v2',
   ];
+  // Phase A-refactor 1.5: per-browser marker of the last successfully-synced
+  // user_id. Used to detect "different user signed in on this browser" and
+  // wipe SYNC_KEYS pre-emptively, even if the subsequent pull fails (401,
+  // network error, etc.). Intentionally NOT in SYNC_KEYS so it never ends up
+  // in user_state and never round-trips between accounts.
+  const LAST_USER_KEY = 'atelier_last_synced_user_id';
   function _b64UrlEncode(str) {
     return btoa(unescape(encodeURIComponent(str)))
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -10315,8 +10321,28 @@
       if (pullPromise) return pullPromise;
       pullPromise = (async () => {
         if (!currentUser) return false;
+        // Phase A-refactor 1.5 (2026-04-29): defensive wipe on user switch.
+        // Runs BEFORE any network call so 401/timeout/network failures cannot
+        // leave a previous user's data in localStorage. The original wipe
+        // (inside the try block below) only fires on a successful response;
+        // if the magic link is expired and the user_state request 401s, that
+        // path is skipped and stale data leaks into the new user's session.
+        // LAST_USER_KEY is intentionally not in SYNC_KEYS so it never round
+        // trips through user_state — it's a per-browser marker.
+        const lastUserId = localStorage.getItem(LAST_USER_KEY);
+        if (lastUserId !== currentUser.id) {
+          SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+          if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
+          if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
+        }
         const token = _accessToken();
-        if (!token) return false;
+        if (!token) {
+          // No token — but we already wiped above if user switched, so the
+          // session is at least clean. Mark this user as the active one so
+          // subsequent retries don't re-wipe the user's own (newly empty) state.
+          localStorage.setItem(LAST_USER_KEY, currentUser.id);
+          return false;
+        }
         isPulling = true;
         try {
           const url = `${SUPABASE_URL}/rest/v1/user_state?user_id=eq.${encodeURIComponent(currentUser.id)}&select=state`;
@@ -10340,6 +10366,7 @@
             if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
             if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
             lastPushedJson = JSON.stringify(_snapshot());
+            localStorage.setItem(LAST_USER_KEY, currentUser.id);
             isPulling = false;
             return true;
           }
@@ -10360,6 +10387,7 @@
           if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
           if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
           lastPushedJson = JSON.stringify(_snapshot());
+          localStorage.setItem(LAST_USER_KEY, currentUser.id);
           return true;
         } catch (e) {
           console.warn('[atelierSync] pull error:', e);
