@@ -8936,7 +8936,7 @@
   // `ch-detail-back` styling and the text mirrors the channel's "← back to channels".
   function _backBtnHtml() {
     return `<div class="ch-detail-back-row">
-      <button class="ch-detail-back" type="button" id="pieceClose">${t('backToChannels')}</button>
+      <button class="ch-detail-back" type="button" id="pieceClose">${t('blockBack')}</button>
     </div>`;
   }
   // Tabs strip at the top of every block modal — mirrors the modal-tabs in
@@ -9292,10 +9292,11 @@
     openExternalBlock({
       id: r.id, kind: r.kind, payload: r.payload || {},
       ownerHandle: r.owner_handle || '', ownerId: r.owner_id || '',
+      channelId: r.channel_id || '',
       channelLabel: r.channel_label || '',
     });
   }
-  function openExternalBlock({ id, kind, payload, ownerHandle, ownerId, channelLabel }) {
+  function openExternalBlock({ id, kind, payload, ownerHandle, ownerId, channelId, channelLabel }) {
     // Defensive: if the caller hands us a block we actually own, drop the
     // external markers and open it in normal owner mode so edit/delete come
     // back. Prevents a Phase C-2 footgun where a stale Explore cache row of
@@ -9317,6 +9318,10 @@
       _ownerHandle: ownerHandle || '',
       _ownerId: ownerId || '',
       _externalChannelLabel: channelLabel || '',
+      // Phase A-refactor 2 (2026-04-29): the host channel id, kept apart
+      // from `channelId` so the head meta-skip stays intact but back-nav
+      // can still drill into the owner's channel detail.
+      _externalHostChannelId: channelId || '',
     };
     if (kind === 'audio') openPieceModal(ext);
     else if (kind === 'image') openImageModal(ext);
@@ -10157,10 +10162,41 @@
   function backToChannelFromBlock() {
     const id = currentBlockModalId;
     const r = id ? _resolveBlockOrTrack(id) : null;
-    const cid = r ? r.obj.channelId : null;
+    let obj = r?.obj;
+    // Phase A-refactor 2 (2026-04-29): cross-user blocks viewed in visitor
+    // mode aren't in TRACKS / loadBlocks, so _resolveBlockOrTrack returns
+    // null. Look them up in the broadcast caches so we can navigate one
+    // level up — back to the OWNER's channel detail, not the viewer's
+    // own My Channel.
+    if (!obj && id) {
+      if (_explorePublicCache[id]) {
+        const cr = _explorePublicCache[id];
+        obj = {
+          _external: true,
+          _ownerId: cr.owner_id, _ownerHandle: cr.owner_handle,
+          channelId: cr.channel_id, _externalChannelLabel: cr.channel_label,
+        };
+      } else {
+        const cross = (crossUserBlocksCache || []).find(b => b.id === id);
+        if (cross) obj = cross;
+      }
+    }
     closePieceModal();
+    if (obj && obj._external && obj._ownerId) {
+      const cid = obj.channelId || obj._externalHostChannelId || obj._hostChannelId;
+      if (cid && typeof openUserChannel === 'function') {
+        openUserChannel({
+          ownerId: obj._ownerId,
+          handle: obj._ownerHandle || '',
+          channelId: cid,
+          channelLabel: obj._externalChannelLabel || '',
+        });
+      }
+      return;
+    }
+    const cid = obj?.channelId;
     if (cid) {
-      // Open My Channel modal at drill-in for this block's primary channel
+      // Own block: drill-in to the viewer's own channel detail.
       openModal('pieces');
       setTimeout(() => openChannelDetail(cid), 50);
     }
