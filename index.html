@@ -9719,19 +9719,21 @@
   // public_blocks), and clicks open the existing block modal in external
   // / read-only mode (with a "+ connect to my channel" action).
   function openUserChannel({ ownerId, handle, channelId, channelLabel }) {
-    // Phase E-prep: match the owner's _itemsInChannel default ordering —
-    //   1. audio kind first
-    //   2. then image, text, url
-    //   3. within each kind, ts ascending (chronological, oldest first)
-    // Owner's order ultimately falls back to insertion order which is roughly
-    // ts-ascending; matching this gives visitor and owner the same flow.
-    const _kindWeight = { audio: 0, image: 1, text: 2, url: 3 };
+    // Phase A-refactor 2 (2026-04-29): match the OWNER's _itemsInChannel
+    // ordering exactly — owner is the canonical "正". Owner pushes audio
+    // (from TRACKS in insertion = ts-ASC order) first, then non-audio
+    // (from loadBlocks in insertion = ts-ASC order) interleaved by ts.
+    // Previous visitor sort grouped non-audio by kind weight (image →
+    // text → url), which broke the order whenever a text block was
+    // uploaded before an image — owner showed [audio, text, image]
+    // while visitor showed [audio, image, text]. Now both surfaces use
+    // the same key: audio-first boolean, then ts ascending.
     const rows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId && r.channel_id === channelId)
       .sort((a, b) => {
-        const aw = _kindWeight[a.kind] ?? 9;
-        const bw = _kindWeight[b.kind] ?? 9;
-        if (aw !== bw) return aw - bw;
+        const aIsAudio = a.kind === 'audio';
+        const bIsAudio = b.kind === 'audio';
+        if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
         return (a.ts || 0) - (b.ts || 0);
       });
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
