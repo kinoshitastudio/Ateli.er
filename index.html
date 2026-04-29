@@ -4884,22 +4884,63 @@
 
   // ──────────────── MARQUEES ────────────────
   function renderMarquees() {
-    // ─── ROW 1 (top phrase lane) — Channel main phrases ───
-    // Data source: each Channel's mainPhrase + label.
-    // Repeat the channel set so a sparse list (1–3 channels) still fills the lane.
-    const channelsForRow = CHANNELS.filter(c => c.mainPhrase);
-    const row1Pool = [];
-    const REPEAT = Math.max(1, Math.ceil(8 / Math.max(1, channelsForRow.length)));
+    // ─── ROW 1 (top phrase lane) — own visible channel mainPhrases + cross-user
+    //                              lyric/url phrases ───
+    // Phase E-prep: previously this row pulled CHANNELS.mainPhrase directly,
+    // showing seed channel phrases ("drafting — see you in spring") to every
+    // user including new ones with no own channels — clicking opened that
+    // user's own (empty) channel detail, which was misleading.
+    // Now: own data = channels the viewer has content in (visibleChannels),
+    // plus cross-user phrases pulled from public_blocks (lyric / url kinds)
+    // so the courtyard mix actually carries community work. Click on a
+    // cross-user phrase opens the source block via openExternalFromCache.
+    const _userBlocksForR1 = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const _r1ChannelIds = new Set(_userBlocksForR1.map(b => b.channelId).filter(Boolean));
+    TRACKS.forEach(t => { if (t.channelId) _r1ChannelIds.add(t.channelId); });
+    const _r1UserChIds = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
+    const channelsForRow = CHANNELS.filter(c =>
+      c.mainPhrase && (_r1ChannelIds.has(c.id) || _r1UserChIds.has(c.id))
+    );
+    const row1Pool = channelsForRow.map(c => ({ kind: 'own-ch', ch: c }));
+    // Cross-user lyric/url phrases (from broadcast cache).
+    (crossUserBlocksCache || []).forEach(b => {
+      if (b.kind === 'text' && b.style === 'lyric' && b.text) {
+        row1Pool.push({ kind: 'x-text', block: b });
+      } else if (b.kind === 'url' && (b.title || b.url)) {
+        row1Pool.push({ kind: 'x-url', block: b });
+      }
+    });
+    const REPEAT = Math.max(1, Math.ceil(8 / Math.max(1, row1Pool.length)));
+    const row1Repeated = [];
     for (let r = 0; r < REPEAT; r++) {
-      channelsForRow.forEach(c => row1Pool.push({ ch: c }));
+      row1Pool.forEach(p => row1Repeated.push(p));
     }
-    const row1ItemHtml = ({ ch }) => `
-      <span class="phrase-item" data-kind="channel" data-cid="${ch.id}">
-        <span class="pi-text">${escapeHtml(ch.mainPhrase)}</span>
-        <span class="pi-art">${escapeHtml(ch.label)}</span>
-      </span>
-    `;
-    const row1Html = row1Pool.map(row1ItemHtml).join('');
+    const row1ItemHtml = (p) => {
+      if (p.kind === 'own-ch') {
+        const ch = p.ch;
+        return `<span class="phrase-item" data-kind="channel" data-cid="${escapeHtml(ch.id)}">
+          <span class="pi-text">${escapeHtml(ch.mainPhrase)}</span>
+          <span class="pi-art">${escapeHtml(ch.label)}</span>
+        </span>`;
+      }
+      if (p.kind === 'x-text') {
+        const b = p.block;
+        const txt = (b.text || '').slice(0, 80);
+        return `<span class="phrase-item" data-kind="external-block" data-bid="${escapeHtml(b.id)}">
+          <span class="pi-text">${escapeHtml(txt)}</span>
+          <span class="pi-art">— @${escapeHtml(b.ownerHandle || '')}</span>
+        </span>`;
+      }
+      if (p.kind === 'x-url') {
+        const b = p.block;
+        return `<span class="phrase-item" data-kind="external-block" data-bid="${escapeHtml(b.id)}">
+          <span class="pi-text">${escapeHtml(b.title || b.url || '')}</span>
+          <span class="pi-art">— @${escapeHtml(b.ownerHandle || '')} ↗</span>
+        </span>`;
+      }
+      return '';
+    };
+    const row1Html = row1Repeated.map(row1ItemHtml).join('');
 
     // ─── ROW 2 (title lane) — track title + artist (unchanged) ───
     const titleHtml = TRACKS.map(t => `
@@ -4969,6 +5010,10 @@
           // Phase E-prep: lookup unified across own + cross-user broadcast.
           const blk = _findBroadcastBlock(el.dataset.bid);
           if (blk) openImageModal(blk);
+        } else if (kind === 'external-block') {
+          // Phase E-prep: cross-user phrase (Row 1) → open the source block
+          // via the existing external-from-cache flow (read-only modal).
+          openExternalFromCache(el.dataset.bid);
         }
       });
       // Hover preview only for audio tracks
