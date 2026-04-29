@@ -8265,7 +8265,12 @@
       `;
     }).join('');
     // Connections via shared veins
-    const veins = [...track.texture, ...track.process];
+    // Phase A-refactor 2 (2026-04-29): defensive `|| []` — cross-user audio
+    // blocks pulled from public_blocks payload may not carry `texture` /
+    // `process` arrays. Without the fallback, `...undefined` throws and we
+    // bail out *after* navOpen('pieceModal'), leaving body.overlay-open=true
+    // (marquees hidden) but no modal showing → blank page.
+    const veins = [...(track.texture || []), ...(track.process || [])];
     const seen = new Set([track.id]);
     const conns = [];
     for (const v of veins) {
