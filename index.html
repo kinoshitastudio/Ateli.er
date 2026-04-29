@@ -11275,23 +11275,17 @@
       const tokenData = tokenKey ? JSON.parse(localStorage.getItem(tokenKey) || 'null') : null;
       const accessToken = tokenData?.access_token;
       if (!accessToken) throw new Error('access_token が見つかりません(localStorage)。再ログインしてください。');
-      // Phase A-refactor 2 (2026-04-29): UPSERT instead of PATCH so save
-      // works even if the on_auth_user_created trigger didn't fire (e.g.,
-      // user was created when the trigger was missing/broken). PATCH on a
-      // non-existent row silent-fails with 200 + empty array — that's how
-      // Taka discovered DDD's avatar wasn't persisting.
-      const restUrl = `${SUPABASE_URL}/rest/v1/profiles?on_conflict=id`;
+      const restUrl = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}`;
       const restRes = await withTimeout(
         fetch(restUrl, {
-          method: 'POST',
+          method: 'PATCH',
           headers: {
             'apikey': SUPABASE_PUB_KEY,
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=representation',
+            'Prefer': 'return=representation',
           },
           body: JSON.stringify({
-            id: user.id,
             handle: newHandle,
             display_name: newHandle,
             avatar_url: newAvatarUrl || null,
@@ -11300,7 +11294,7 @@
           }),
         }),
         10000,
-        'profiles UPSERT'
+        'profiles PATCH'
       );
       if (!restRes.ok) {
         const errText = await restRes.text().catch(() => `HTTP ${restRes.status}`);
