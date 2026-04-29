@@ -827,6 +827,27 @@
     text-transform: uppercase;
     vertical-align: middle;
   }
+  /* Phase E-prep: channel-level visibility pill (public/draft) — minimalist
+     mono styling matching the block-public-pill but with two states */
+  .ch-vis-pill {
+    display: inline-block;
+    padding: 1px 7px;
+    margin-left: 8px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    background: transparent;
+  }
+  .ch-vis-pill.ch-vis-public {
+    color: var(--ink);
+    border: 1px solid var(--ink);
+  }
+  .ch-vis-pill.ch-vis-draft {
+    color: var(--gray-2);
+    border: 1px dashed var(--gray-2);
+  }
   .feed-group {
     margin-bottom: 80px;
     text-align: center;
@@ -5637,13 +5658,19 @@
       ];
       const overflowCount = items.length > 4 ? items.length - 4 : 0;
       const lang = c.lang || 'mixed';
+      // Phase E-prep: visibility pill next to channel name in My Channel grid.
+      // Owner sees public/draft state at a glance; helps prevent accidentally
+      // leaving a channel in the wrong visibility mode.
+      const _visPill = c.isPublic !== false
+        ? `<span class="ch-vis-pill ch-vis-public">public</span>`
+        : `<span class="ch-vis-pill ch-vis-draft">draft</span>`;
       return `
         <div class="ch-card ${stateClass} ${emptyClass}" data-cid="${escapeHtml(c.id)}">
           <div class="ch-card-thumb">
             ${ cells.map(_miniCellHtml).join('') }
           </div>
           <div class="ch-card-info">
-            <span class="ch-card-name">${escapeHtml(c.label)}<span class="ch-card-lang">${_langBadge(lang)}</span></span>
+            <span class="ch-card-name">${escapeHtml(c.label)}<span class="ch-card-lang">${_langBadge(lang)}</span>${_visPill}</span>
           </div>
         </div>
       `;
@@ -6208,11 +6235,23 @@
             <option value="ja"${c.lang === 'ja' ? ' selected' : ''}>JP</option>
             <option value="en"${c.lang === 'en' ? ' selected' : ''}>EN</option>
           </select></label>
-          <label class="uf-row"><span class="sp-k">${t('fldStateCh')}</span><select class="uf-input" id="ch-state">
+          <label class="uf-row" style="display:none;"><span class="sp-k">${t('fldStateCh')}</span><select class="uf-input" id="ch-state">
             <option value="current"${c.state === 'current' ? ' selected' : ''}>${t('stateCurrent')}</option>
             <option value="future"${c.state === 'future' ? ' selected' : ''}>${t('stateFuture')}</option>
             <option value="past"${c.state === 'past' ? ' selected' : ''}>${t('statePast')}</option>
           </select></label>
+          <label class="uf-row"><span class="sp-k">visibility</span>
+            <span style="display:inline-flex; gap:18px; align-items:center; padding-top:6px;">
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="radio" name="ch-vis" value="public"${(c.isPublic !== false) ? ' checked' : ''} style="margin:0; accent-color:var(--ink);">
+                <span style="font-family:var(--mono); font-size:11px;">public</span>
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="radio" name="ch-vis" value="draft"${(c.isPublic === false) ? ' checked' : ''} style="margin:0; accent-color:var(--gray-2);">
+                <span style="font-family:var(--mono); font-size:11px; color:var(--gray-2);">draft (only you see this channel)</span>
+              </label>
+            </span>
+          </label>
         </div>
       </div>
       ${reorderHtml}
@@ -6250,20 +6289,41 @@
     const meta   = ($('#ch-meta')?.value || '').trim();
     const lang   = ($('#ch-lang')?.value || 'mixed');
     const state  = ($('#ch-state')?.value || 'current');
+    // Phase E-prep: read visibility radio (public/draft) and detect cascade.
+    const visMode = (document.querySelector('input[name="ch-vis"]:checked')?.value || 'public');
+    const newIsPublic = (visMode === 'public');
     const c = CHANNELS.find(x => x.id === cid);
     if (!c) return;
+    const wasPublic = c.isPublic !== false;  // missing field defaults to public
     editChannel(cid, {
       label: label || c.label,
       mainPhrase: phrase,
       meta: meta || c.meta,
       lang,
       state,
+      isPublic: newIsPublic,
     });
+    // Phase E-prep cascade: when a channel flips public → draft, force every
+    // block in it to draft and remove from public_blocks (so the courtyard
+    // doesn't keep displaying them). Reverse direction (draft → public) does
+    // NOT auto-promote blocks — owner can selectively re-publish each block.
+    if (wasPublic && !newIsPublic) {
+      const blocks = loadBlocks();
+      let mutated = false;
+      blocks.forEach(b => {
+        if (b.channelId === cid && b.isPublic === true) {
+          b.isPublic = false;
+          mutated = true;
+          try { atelierPublic?.remove(b.id); } catch (e) {}
+        }
+      });
+      if (mutated) saveBlocks(blocks);
+    }
     if (c.userCreated) {
       const list = loadUserChannels();
       const i = list.findIndex(x => x.id === cid);
       if (i >= 0) {
-        list[i] = { ...list[i], label: c.label, mainPhrase: c.mainPhrase, meta: c.meta, lang: c.lang, state: c.state };
+        list[i] = { ...list[i], label: c.label, mainPhrase: c.mainPhrase, meta: c.meta, lang: c.lang, state: c.state, isPublic: c.isPublic };
         saveUserChannels(list);
       }
     }
@@ -6326,12 +6386,22 @@
     if (!r || !r.obj) return '';
     if (r.kind === 'audio' && !r.obj.ownLocal) return '';
     const checked = r.obj.isPublic ? 'checked' : '';
+    // Phase E-prep: if the parent channel is draft, this toggle is disabled
+    // (channel-level cascade overrides block-level). Owner sees an inline
+    // hint explaining the gate, with a link-style cue to flip the channel.
+    const channelId = r.obj?.channelId;
+    const channel = channelId ? CHANNELS.find(c => c.id === channelId) : null;
+    const channelIsPublic = channel ? (channel.isPublic !== false) : true;
+    const disabledAttr = channelIsPublic ? '' : 'disabled';
+    const hintHtml = channelIsPublic
+      ? `<span class="uf-public-label">${t('blockVisibilityHint')}</span>`
+      : `<span class="uf-public-label" style="color:var(--gray-2);">channel is draft → block stays draft (flip channel to public first)</span>`;
     return `
       <label class="uf-row uf-row-public">
         <span class="sp-k">visibility</span>
         <span class="uf-public-toggle">
-          <input type="checkbox" id="ef-public" ${checked}>
-          <span class="uf-public-label">${t('blockVisibilityHint')}</span>
+          <input type="checkbox" id="ef-public" ${checked} ${disabledAttr}>
+          ${hintHtml}
         </span>
       </label>
     `;
@@ -7147,7 +7217,10 @@
       n += 1; id = 'ch-u' + String(n).padStart(2, '0');
     }
     const now = Date.now();
-    const c = { id, label, mainPhrase, lang: lang || 'mixed', meta: meta || 'now playing', state: 'current', userCreated: true, createdAt: now, updatedAt: now };
+    // Phase E-prep: new channels default to public visibility.
+    // Owner can flip to draft in channel edit form; cascade hides all
+    // contained blocks from courtyard view.
+    const c = { id, label, mainPhrase, lang: lang || 'mixed', meta: meta || 'now playing', state: 'current', isPublic: true, userCreated: true, createdAt: now, updatedAt: now };
     CHANNELS.push(c);
     // Persist via channel edits (treat user-created as a patch on a non-existent base + a marker).
     // Simpler: keep a separate localStorage list for user-created channels.
@@ -7289,7 +7362,12 @@
 
       if (!block) { submit.disabled = false; if (draftBtn) draftBtn.disabled = false; return; }
       // Phase E-prep: explicit public/draft choice from upload form.
-      block.isPublic = (submitMode === 'public');
+      // Cascade: if the parent channel is itself draft, this block is forced
+      // to draft regardless of which submit button was used. Owner can flip
+      // the channel to public first to actually publish a block.
+      const _channelObj = CHANNELS.find(c => c.id === channelId);
+      const _channelIsPublic = _channelObj?.isPublic !== false;  // default true
+      block.isPublic = (submitMode === 'public') && _channelIsPublic;
       const arr = loadBlocks();
       arr.push(block);
       const ok = saveBlocks(arr);
@@ -8706,7 +8784,14 @@
   // Both handle and channel name are linked (handle → user grid, channel → its detail).
   function _channelTitleH4({ channel } = {}) {
     const handle = _currentHandle();
-    return `<a class="bc-h4-user" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a><span class="bc-h4-sep">/</span><a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(channel?.id || '')}" title="${escapeHtml(channel?.label || '')}">${escapeHtml(channel?.label || '')}</a>`;
+    // Phase E-prep: visibility pill next to channel name. Skip if channel is
+    // not provided (defensive — should always have one in normal call sites).
+    const visPillHtml = channel
+      ? (channel.isPublic !== false
+          ? `<span class="ch-vis-pill ch-vis-public">public</span>`
+          : `<span class="ch-vis-pill ch-vis-draft">draft</span>`)
+      : '';
+    return `<a class="bc-h4-user" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a><span class="bc-h4-sep">/</span><a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(channel?.id || '')}" title="${escapeHtml(channel?.label || '')}">${escapeHtml(channel?.label || '')}</a>${visPillHtml}`;
   }
   // Plain handle underlined link (used in meta-times "by ..." line)
   function _ownerTextLink() {
@@ -10073,9 +10158,22 @@
     }
   }
   // Helper: return blocks that should drift in the TOP marquee + Feed.
-  // = own blocks (loadBlocks) + cross-user public blocks (deduped by id).
+  // = own PUBLIC blocks (loadBlocks filtered) + cross-user public blocks (deduped).
+  // Phase E-prep bug fix: own draft blocks should NOT appear in TOP/Feed —
+  // those are courtyard views, where only published work belongs.
+  // Drafts stay visible in My Channel (the owner's private workspace).
   function _broadcastBlocks() {
-    const own = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const ownAll = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    // Channel-level cascade: a block is broadcast-eligible only if its parent
+    // channel is also public (channel.isPublic !== false; default true for
+    // backward compat with older channels that don't carry the flag).
+    const channelPublic = new Map();
+    CHANNELS.forEach(c => channelPublic.set(c.id, c.isPublic !== false));
+    const own = ownAll.filter(b => {
+      if (b.isPublic !== true) return false;
+      const cPub = channelPublic.has(b.channelId) ? channelPublic.get(b.channelId) : true;
+      return cPub;
+    });
     const ownIds = new Set(own.map(b => b.id));
     const cross = (crossUserBlocksCache || []).filter(b => !ownIds.has(b.id));
     return [...own, ...cross];
