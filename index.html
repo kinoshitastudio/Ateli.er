@@ -8802,8 +8802,11 @@
       const avatarUrl = p.avatar_url ? convertImageUrl(p.avatar_url) : '';
       const avatarBg = avatarUrl ? `style="background-image:url('${escapeHtml(avatarUrl)}');"` : '';
       const joined = p.created_at ? ageString(new Date(p.created_at).getTime()) : '';
+      // Phase E-prep: residents clickable → user portfolio overlay.
+      // Self link is also valid; opens current user's own portfolio view
+      // (read-only mode preview of how others see their work).
       return `
-        <li class="explore-card">
+        <li class="explore-card" data-uid="${escapeHtml(p.id)}" data-handle="${escapeHtml(handle)}" data-avatar="${escapeHtml(avatarUrl)}" data-joined="${escapeHtml(joined)}" style="cursor:pointer;">
           <span class="explore-card-avatar" ${avatarBg}></span>
           <span class="explore-card-mid">
             <span class="explore-card-handle">@${escapeHtml(handle)}</span>
@@ -8812,9 +8815,15 @@
         </li>
       `;
     }).join('');
+    // Cache profiles for portfolio rendering.
+    _exploreProfilesCache = {};
+    data.forEach(p => { _exploreProfilesCache[p.id] = p; });
     // Phase C-1: also render public blocks across users.
     renderExplorePublicBlocks();
   }
+  // Cache of last-fetched profiles, keyed by id, so portfolio click can
+  // read the full profile without a second network round-trip.
+  let _exploreProfilesCache = {};
   // Cache of last-fetched public_blocks rows, keyed by id, so click on an
   // Explore card can read the full payload without a second network round-trip.
   let _explorePublicCache = {};
@@ -8920,6 +8929,200 @@
       });
       list._wiredC2 = true;
     }
+    // Phase E-prep: residents (above) get click-to-portfolio handler too.
+    const residentsList = document.getElementById('exploreList');
+    if (residentsList && !residentsList._wiredEprep) {
+      residentsList.addEventListener('click', (e) => {
+        const card = e.target.closest('.explore-card[data-uid]');
+        if (!card) return;
+        e.preventDefault();
+        openUserPortfolio({
+          id: card.dataset.uid,
+          handle: card.dataset.handle,
+          avatarUrl: card.dataset.avatar,
+          joinedLabel: card.dataset.joined,
+        });
+      });
+      residentsList._wiredEprep = true;
+    }
+  }
+  // ──────────────── USER PORTFOLIO (Phase E-prep, 2026-04-29) ────────────────
+  // Click on @user in Explore residents → opens this overlay: profile head +
+  // their public channels (grouped from public_blocks) + recent posts.
+  // Visitors browse read-only. Owner uses the same overlay to preview how
+  // their own work appears to others.
+  async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel }) {
+    if (!ownerId) return;
+    if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    const inner = $('#pieceModalInner');
+    inner.innerHTML = `
+      <div class="user-portfolio">
+        <div class="up-head" style="display:flex;align-items:center;gap:14px;padding:18px 0 10px;">
+          ${ avatarUrl
+            ? `<span class="up-avatar" style="width:64px;height:64px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;"></span>`
+            : `<span class="up-avatar" style="width:64px;height:64px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:block;"></span>` }
+          <div>
+            <h2 style="margin:0;font-family:var(--mono);font-size:14px;color:var(--ink);">@${escapeHtml(handle || 'visitor')}</h2>
+            <div style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin-top:4px;">joined ${escapeHtml(joinedLabel || '')}</div>
+          </div>
+        </div>
+        <div class="up-body" style="padding-top:8px;font-family:var(--mono);font-size:10.5px;color:var(--gray-2);">
+          <div id="upBody">読み込み中…</div>
+        </div>
+      </div>
+    `;
+    $('#pieceModal').classList.add('is-open');
+    document.querySelector('.piece-modal-shell').scrollTop = 0;
+    currentBlockModalId = null;
+    currentBlockModalKind = 'portfolio';
+    // Fetch all public_blocks for this owner.
+    const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&owner_id=eq.${encodeURIComponent(ownerId)}&order=ts.desc&limit=200`;
+    const headers = { 'apikey': SUPABASE_PUB_KEY };
+    const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+    const accessToken = tokenData?.access_token;
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    let rows = [];
+    try {
+      const res = await fetch(url, { headers });
+      if (res.ok) rows = await res.json();
+    } catch (e) { console.warn('[portfolio] fetch error:', e); }
+    // Cache rows so block click can open them via openExternalBlock.
+    rows.forEach(r => { _explorePublicCache[r.id] = r; });
+    const upBody = document.getElementById('upBody');
+    if (!upBody) return;
+    if (!rows || rows.length === 0) {
+      upBody.innerHTML = '<p style="padding:14px 0;">— このユーザーは まだ何も公開していません。</p>';
+      return;
+    }
+    // Group blocks by channel_id (or '_unkn' if missing).
+    const byChannel = new Map();
+    rows.forEach(r => {
+      const cid = r.channel_id || '_unkn';
+      if (!byChannel.has(cid)) {
+        byChannel.set(cid, { channelId: cid, channelLabel: r.channel_label || '(untitled channel)', items: [] });
+      }
+      byChannel.get(cid).items.push(r);
+    });
+    const channels = [...byChannel.values()].sort((a, b) => {
+      const aTs = Math.max(...a.items.map(r => r.ts || 0));
+      const bTs = Math.max(...b.items.map(r => r.ts || 0));
+      return bTs - aTs;
+    });
+    // Build channels grid + recent posts list.
+    const channelsHtml = channels.map(c => {
+      const thumbs = c.items.slice(0, 4).map(r => {
+        const p = r.payload || {};
+        const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
+        return src
+          ? `<span class="up-ch-thumb" style="width:46px;height:46px;background-image:url('${src}');background-size:cover;background-position:center;border-radius:2px;display:block;"></span>`
+          : `<span class="up-ch-thumb" style="width:46px;height:46px;background:var(--paper-2);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--gray-2);">${r.kind}</span>`;
+      }).join('');
+      return `
+        <li class="up-channel" data-cid="${escapeHtml(c.channelId)}" data-clabel="${escapeHtml(c.channelLabel)}" style="padding:14px 0;border-bottom:1px solid var(--gray-3);cursor:pointer;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;">
+            <div style="flex:1;">
+              <h3 style="margin:0 0 4px;font-family:var(--mono);font-size:13px;color:var(--ink);">${escapeHtml(c.channelLabel)}</h3>
+              <span style="font-size:10.5px;color:var(--gray-2);">${c.items.length} blocks</span>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0;">${thumbs}</div>
+          </div>
+        </li>
+      `;
+    }).join('');
+    upBody.innerHTML = `
+      <h4 style="margin:14px 0 4px;color:var(--ink);">— channels (${channels.length})</h4>
+      <ul class="up-channels" style="list-style:none;padding:0;margin:0;">${channelsHtml}</ul>
+      <h4 style="margin:22px 0 4px;color:var(--ink);">— recent posts (${rows.length})</h4>
+      <ul class="up-recent" style="list-style:none;padding:0;margin:0;">
+        ${rows.slice(0, 24).map(r => {
+          const p = r.payload || {};
+          const ago = r.ts ? ageString(r.ts) : '';
+          let label = '';
+          if (r.kind === 'audio') label = p.title || '(untitled audio)';
+          else if (r.kind === 'image') label = p.caption || '(image)';
+          else if (r.kind === 'text') label = (p.text || '(text)').slice(0, 60);
+          else if (r.kind === 'url') label = p.title || p.url || '(url)';
+          return `<li class="up-recent-item" data-pb-id="${escapeHtml(r.id)}" style="padding:8px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;justify-content:space-between;gap:14px;">
+            <span style="flex:1;color:var(--ink);">${_kindIcon(r.kind)} ${escapeHtml(label)}</span>
+            <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;">${escapeHtml(r.channel_label || '')} · ${escapeHtml(ago)}</span>
+          </li>`;
+        }).join('')}
+      </ul>
+    `;
+    // Wire click handlers (idempotent on this overlay).
+    upBody.querySelectorAll('.up-channel').forEach(el => {
+      el.addEventListener('click', () => {
+        const cid = el.dataset.cid;
+        const clabel = el.dataset.clabel;
+        openUserChannel({ ownerId, handle, channelId: cid, channelLabel: clabel });
+      });
+    });
+    upBody.querySelectorAll('.up-recent-item[data-pb-id]').forEach(el => {
+      el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
+    });
+  }
+  // Drill into a specific channel of another user (read-only).
+  function openUserChannel({ ownerId, handle, channelId, channelLabel }) {
+    const items = Object.values(_explorePublicCache)
+      .filter(r => r && r.owner_id === ownerId && r.channel_id === channelId)
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    const inner = $('#pieceModalInner');
+    inner.innerHTML = `
+      <div class="user-channel">
+        <div style="padding:14px 0 4px;font-family:var(--mono);font-size:10.5px;color:var(--gray-2);">
+          <a href="#" id="ucBack" style="color:var(--ink);text-decoration:underline;">← back to portfolio</a>
+        </div>
+        <h2 style="margin:0;font-family:var(--mono);font-size:14px;color:var(--ink);">
+          <span style="color:var(--gray-2);">@${escapeHtml(handle)} / </span>${escapeHtml(channelLabel)}
+        </h2>
+        <div style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin:6px 0 18px;">
+          ${items.length} blocks · read-only (visitor view)
+        </div>
+        <ul class="uc-blocks" style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+          ${items.map(r => {
+            const p = r.payload || {};
+            let thumbHtml = '';
+            let label = '';
+            if (r.kind === 'image' || (r.kind === 'audio' && p.imageUrl)) {
+              const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
+              thumbHtml = src
+                ? `<span class="uc-thumb" style="aspect-ratio:1;background-image:url('${src}');background-size:cover;background-position:center;display:block;"></span>`
+                : `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--gray-2);">${r.kind}</span>`;
+              label = (r.kind === 'audio' ? p.title : p.caption) || '(untitled)';
+            } else if (r.kind === 'text') {
+              const txt = (p.text || '').slice(0, 80);
+              thumbHtml = `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);padding:14px;display:flex;align-items:center;justify-content:center;font-style:italic;color:var(--ink);font-size:11px;line-height:1.4;">${escapeHtml(txt)}</span>`;
+              label = (p.text || '').slice(0, 40);
+            } else if (r.kind === 'url') {
+              let domain = '';
+              try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
+              thumbHtml = `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--gray-2);font-size:11px;">${escapeHtml(domain || 'url')}</span>`;
+              label = p.title || p.url || '(url)';
+            } else if (r.kind === 'audio') {
+              thumbHtml = `<span class="uc-thumb" style="aspect-ratio:1;background:var(--paper-2);display:flex;align-items:center;justify-content:center;color:var(--gray-2);font-size:11px;">audio · ${fmtDur(p.sec || 0)}</span>`;
+              label = p.title || '(untitled)';
+            }
+            return `<li class="uc-block-card" data-pb-id="${escapeHtml(r.id)}" style="cursor:pointer;display:flex;flex-direction:column;gap:6px;">
+              ${thumbHtml}
+              <span style="font-family:var(--mono);font-size:10.5px;color:var(--ink);">${escapeHtml(label)}</span>
+            </li>`;
+          }).join('')}
+        </ul>
+      </div>
+    `;
+    document.querySelector('.piece-modal-shell').scrollTop = 0;
+    document.getElementById('ucBack').addEventListener('click', (e) => {
+      e.preventDefault();
+      const profile = _exploreProfilesCache[ownerId];
+      const avatarUrl = profile?.avatar_url ? convertImageUrl(profile.avatar_url) : '';
+      const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
+      openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
+    });
+    inner.querySelectorAll('.uc-block-card[data-pb-id]').forEach(el => {
+      el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
+    });
   }
   document.querySelectorAll('.triggers .trig[data-tab]').forEach(t => {
     t.addEventListener('click', () => openModal(t.dataset.tab));
