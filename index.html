@@ -9413,9 +9413,21 @@
   // public_blocks), and clicks open the existing block modal in external
   // / read-only mode (with a "+ connect to my channel" action).
   function openUserChannel({ ownerId, handle, channelId, channelLabel }) {
+    // Phase E-prep: match the owner's _itemsInChannel default ordering —
+    //   1. audio kind first
+    //   2. then image, text, url
+    //   3. within each kind, ts ascending (chronological, oldest first)
+    // Owner's order ultimately falls back to insertion order which is roughly
+    // ts-ascending; matching this gives visitor and owner the same flow.
+    const _kindWeight = { audio: 0, image: 1, text: 2, url: 3 };
     const rows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId && r.channel_id === channelId)
-      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      .sort((a, b) => {
+        const aw = _kindWeight[a.kind] ?? 9;
+        const bw = _kindWeight[b.kind] ?? 9;
+        if (aw !== bw) return aw - bw;
+        return (a.ts || 0) - (b.ts || 0);
+      });
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
     // Build the head — mirrors ch-detail-head structure with visitor-mode
