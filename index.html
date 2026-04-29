@@ -5766,11 +5766,17 @@
           const byLine = it.external
             ? `<span class="ix-by">— by @${escapeHtml(it.ownerHandle || '')}</span>`
             : '';
-          // Phase C polish: publish indicator on the viewer's own blocks.
+          // Phase E-prep: visibility pill on each block in channel detail.
+          // Owner sees public/draft state at a glance for every item, even
+          // when the channel itself is public (individual blocks may be
+          // demoted to draft via block edit). External (other-user) blocks
+          // don't carry this — they're inherently public to be discoverable.
           const sourceObj = it.kind === 'audio' ? it.track : it.block;
-          const publicMark = (!it.external && sourceObj?.isPublic)
-            ? `<span class="ix-public-mark">${t('blockPublicBadge')}</span>`
-            : '';
+          const publicMark = it.external
+            ? ''
+            : (sourceObj?.isPublic
+                ? `<span class="ch-vis-pill ch-vis-public">public</span>`
+                : `<span class="ch-vis-pill ch-vis-draft">draft</span>`);
           if (it.kind === 'audio') {
             const tr = it.track;
             return `<li class="${ownClass}" data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
