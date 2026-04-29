@@ -1905,6 +1905,18 @@
     color: var(--ink);
     letter-spacing: 0.04em;
   }
+  /* Phase A-refactor 2 (2026-04-29): visual required-field marker.
+     Used on .sp-k (upload form), <label> (auth / settings), and any
+     element carrying the .is-required class. Renders a red asterisk
+     so users can tell at a glance which fields they must fill. */
+  .sp-k.is-required::after,
+  label.is-required::after,
+  .is-required::after {
+    content: ' *';
+    color: #c00;
+    font-weight: 600;
+    margin-left: 1px;
+  }
   .upload-form .uf-input {
     background: transparent;
     border: none;
@@ -3621,15 +3633,15 @@
     <p class="auth-modal-sub">招待コードと email を入力してください。マジックリンクで入室確認を行います。</p>
     <form class="auth-form" id="signupForm" autocomplete="off">
       <div class="auth-form-row">
-        <label for="suInvite">invite code</label>
+        <label for="suInvite" class="is-required">invite code</label>
         <input type="text" id="suInvite" placeholder="…" autocomplete="off" required>
       </div>
       <div class="auth-form-row">
-        <label for="suEmail">email</label>
+        <label for="suEmail" class="is-required">email</label>
         <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="off" required>
       </div>
       <div class="auth-form-row">
-        <label for="suHandle">handle</label>
+        <label for="suHandle" class="is-required">handle</label>
         <input type="text" id="suHandle" placeholder="あなたの呼び名（英数 / 日本語可）" autocomplete="off" required>
         <span class="auth-form-hint">Ateli.er 内での表示名。後から変更可能。</span>
       </div>
@@ -3653,7 +3665,7 @@
     <p class="auth-modal-sub">email を入力すると、マジックリンクが届きます。リンクから入室してください。</p>
     <form class="auth-form" id="loginForm" autocomplete="off">
       <div class="auth-form-row">
-        <label for="liEmail">email</label>
+        <label for="liEmail" class="is-required">email</label>
         <input type="email" id="liEmail" placeholder="you@example.com" autocomplete="email" required>
       </div>
       <div class="auth-form-status" id="loginStatus"></div>
@@ -3720,7 +3732,7 @@
 
     <!-- Handle -->
     <div class="settings-row">
-      <label class="settings-label" for="settingsHandle">handle</label>
+      <label class="settings-label is-required" for="settingsHandle">handle</label>
       <input type="text" id="settingsHandle" class="settings-input" placeholder="あなたの呼び名(英数 / 日本語可)">
       <span class="settings-hint">Ateli.er 内での表示名。後から変更可能。</span>
     </div>
@@ -3963,20 +3975,20 @@
               <!-- AUDIO fields -->
               <div class="bf-fields" data-kind="audio">
                 <label class="uf-row">
-                  <span class="sp-k">title</span>
+                  <span class="sp-k is-required">title</span>
                   <input class="uf-input" type="text" id="bTitle" placeholder="a quiet name…" maxlength="80">
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k">artist</span>
+                  <span class="sp-k is-required">artist</span>
                   <input class="uf-input" type="text" id="bArtist" placeholder="your alias" maxlength="40">
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k">audio url</span>
+                  <span class="sp-k is-required">audio url</span>
                   <input class="uf-input" type="url" id="bAudioUrl" placeholder="paste Drive / Dropbox / direct mp3 url">
                   <span class="uf-hint">⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams.</span>
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k" data-i18n="fldPhrase">catchphrase</span>
+                  <span class="sp-k is-required" data-i18n="fldPhrase">catchphrase</span>
                   <input class="uf-input" type="text" id="bPhrase" data-i18n-placeholder="phrasePh" placeholder="≤ 40 chars · a single catchphrase" maxlength="40">
                 </label>
                 <label class="uf-row">
@@ -3996,7 +4008,7 @@
               <!-- IMAGE fields -->
               <div class="bf-fields" data-kind="image" hidden>
                 <label class="uf-row">
-                  <span class="sp-k">image url</span>
+                  <span class="sp-k is-required">image url</span>
                   <input class="uf-input" type="url" id="iUrl" placeholder="https://… (drive / dropbox / direct image url)">
                 </label>
                 <label class="uf-row">
@@ -4020,7 +4032,7 @@
               <!-- TEXT fields -->
               <div class="bf-fields" data-kind="text" hidden>
                 <label class="uf-row">
-                  <span class="sp-k">text</span>
+                  <span class="sp-k is-required">text</span>
                   <textarea class="uf-input" id="tText" rows="3" placeholder="a fragment, a thought, a half-lyric" maxlength="240"></textarea>
                 </label>
                 <label class="uf-row">
@@ -4043,7 +4055,7 @@
               <!-- URL fields -->
               <div class="bf-fields" data-kind="url" hidden>
                 <label class="uf-row">
-                  <span class="sp-k">url</span>
+                  <span class="sp-k is-required">url</span>
                   <input class="uf-input" type="url" id="uUrl" placeholder="https://note.com/… or any external article">
                 </label>
                 <label class="uf-row">
@@ -10107,7 +10119,12 @@
           setTimeout(() => openModal(pane), 30);
           return;
         }
-        const actBtn = e.target.closest('.piece-modal-head [data-act], .ch-detail-head [data-act], [data-act="piece-close"]');
+        // Phase A-refactor 2 (2026-04-29): include .piece-edit-footer-actions
+        // so the bottom save/cancel pair (mirror of the head buttons for tall
+        // edit forms) actually fires. Without this entry the bottom SAVE
+        // looked tappable but did nothing — Taka had to scroll back to the
+        // top SAVE every time.
+        const actBtn = e.target.closest('.piece-modal-head [data-act], .ch-detail-head [data-act], .piece-edit-footer-actions [data-act], [data-act="piece-close"]');
         if (actBtn) {
           e.preventDefault();
           const act = actBtn.dataset.act;
