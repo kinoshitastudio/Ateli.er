@@ -9475,13 +9475,14 @@
         <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by <a class="bc-owner-text" data-bc="user" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a></span>
       </div>
     `;
-    // Build the body — ix-list with ix-* classes mirroring the owner's
-    // channel detail. Each li is clickable to open the block modal.
-    // Wrapped in .pane-index .ix-list-shell so the existing scoped CSS
-    // (.pane-index .ix-mid etc.) applies to the visitor view too.
+    // Build the body — uses .pane-index directly on the OL (the same
+    // structure as owner's openChannelDetail body). The .pane-index is
+    // a CSS Grid with grid-template-columns, so li MUST be direct
+    // children for the 3-column desktop layout to apply. Wrapping in
+    // a div would break the grid (li becomes grandchild).
     const bodyHtml = rows.length === 0
       ? `<p style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); padding: 22px 0;">— このチャンネルには まだ公開 block がありません</p>`
-      : `<div class="pane-index"><ol class="ix-list">${
+      : `<ol class="pane-index">${
           rows.map(r => {
             const p = r.payload || {};
             const id = r.id;
@@ -9542,7 +9543,7 @@
             }
             return '';
           }).join('')
-        }</ol></div>`;
+        }</ol>`;
     inner.innerHTML = headHtml + bodyHtml;
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     const _backToPortfolio = () => {
@@ -9579,7 +9580,7 @@
         bar.focus();
         bar.addEventListener('input', () => {
           const q = bar.value.trim().toLowerCase();
-          inner.querySelectorAll('.ix-list li').forEach(li => {
+          inner.querySelectorAll('.pane-index li').forEach(li => {
             const text = (li.textContent || '').toLowerCase();
             li.style.display = (!q || text.includes(q)) ? '' : 'none';
           });
@@ -9601,7 +9602,7 @@
         } catch (e) { /* user cancelled or permission denied */ }
       });
     }
-    inner.querySelectorAll('.ix-list li[data-pb-id]').forEach(el => {
+    inner.querySelectorAll('.pane-index li[data-pb-id]').forEach(el => {
       el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
     });
   }
