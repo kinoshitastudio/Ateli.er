@@ -6241,7 +6241,7 @@
             <option value="past"${c.state === 'past' ? ' selected' : ''}>${t('statePast')}</option>
           </select></label>
           <label class="uf-row"><span class="sp-k">visibility</span>
-            <span style="display:inline-flex; gap:18px; align-items:center; padding-top:6px;">
+            <span style="display:inline-flex; gap:18px; align-items:center; padding-top:6px; flex-wrap:wrap;">
               <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
                 <input type="radio" name="ch-vis" value="public"${(c.isPublic !== false) ? ' checked' : ''} style="margin:0; accent-color:var(--ink);">
                 <span style="font-family:var(--mono); font-size:11px;">public</span>
@@ -6250,6 +6250,7 @@
                 <input type="radio" name="ch-vis" value="draft"${(c.isPublic === false) ? ' checked' : ''} style="margin:0; accent-color:var(--gray-2);">
                 <span style="font-family:var(--mono); font-size:11px; color:var(--gray-2);">draft (only you see this channel)</span>
               </label>
+              <button type="button" id="ch-publish-all" style="margin-left:auto; padding:4px 10px; border:1px solid var(--ink); background:transparent; color:var(--ink); font-family:var(--mono); font-size:10px; cursor:pointer;">↳ publish all blocks in this channel</button>
             </span>
           </label>
         </div>
@@ -6257,6 +6258,34 @@
       ${reorderHtml}
     `;
     if (isFreshEntry) document.querySelector('.modal-shell').scrollTop = 0;
+    // Phase E-prep: "publish all blocks in this channel" — one-shot helper
+    // for legacy data where many blocks are draft but the owner wants the
+    // whole channel surfaced in their portfolio. Forces all blocks in the
+    // channel to isPublic: true and syncs to public_blocks. Does NOT change
+    // the channel's own isPublic flag.
+    const pubAllBtn = detail.querySelector('#ch-publish-all');
+    if (pubAllBtn) {
+      pubAllBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ok = await customConfirm('このチャンネル内の全 block を publish しますか?');
+        if (!ok) return;
+        const blocks = loadBlocks();
+        let count = 0;
+        blocks.forEach(b => {
+          if (b.channelId === cid && b.isPublic !== true) {
+            b.isPublic = true;
+            count += 1;
+            try { atelierPublic?.sync(b); } catch (e) {}
+          }
+        });
+        if (count > 0) {
+          saveBlocks(blocks);
+          showToast(`${count} blocks を publish しました`);
+        } else {
+          showToast('全 block は既に public です');
+        }
+      });
+    }
     // Wire reorder buttons (pending state — no localStorage write until save)
     detail.querySelectorAll('.ch-reorder-list .ix-reorder-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -6303,10 +6332,13 @@
       state,
       isPublic: newIsPublic,
     });
-    // Phase E-prep cascade: when a channel flips public → draft, force every
-    // block in it to draft and remove from public_blocks (so the courtyard
-    // doesn't keep displaying them). Reverse direction (draft → public) does
-    // NOT auto-promote blocks — owner can selectively re-publish each block.
+    // Phase E-prep symmetric cascade:
+    //   public → draft : every block in the channel becomes draft, removed
+    //                    from public_blocks (courtyard hides them).
+    //   draft → public : every draft block in the channel becomes public,
+    //                    synced to public_blocks (channel surfaces in portfolio).
+    // Owner retains fine-grained control via block-edit form: between channel
+    // saves, individual blocks can still be demoted/promoted independently.
     if (wasPublic && !newIsPublic) {
       const blocks = loadBlocks();
       let mutated = false;
@@ -6318,7 +6350,22 @@
         }
       });
       if (mutated) saveBlocks(blocks);
+    } else if (!wasPublic && newIsPublic) {
+      const blocks = loadBlocks();
+      let mutated = false;
+      blocks.forEach(b => {
+        if (b.channelId === cid && b.isPublic !== true) {
+          b.isPublic = true;
+          mutated = true;
+          try { atelierPublic?.sync(b); } catch (e) {}
+        }
+      });
+      if (mutated) saveBlocks(blocks);
     }
+    // Save-reaffirms intentionally NOT applied (would override block-level
+    // draft choices on every channel save). Use the "publish all blocks now"
+    // button for one-shot legacy migration, or toggle channel draft → public
+    // to trigger the up-cascade.
     if (c.userCreated) {
       const list = loadUserChannels();
       const i = list.findIndex(x => x.id === cid);
@@ -6385,23 +6432,31 @@
   function _publicToggleHtml(r) {
     if (!r || !r.obj) return '';
     if (r.kind === 'audio' && !r.obj.ownLocal) return '';
-    const checked = r.obj.isPublic ? 'checked' : '';
-    // Phase E-prep: if the parent channel is draft, this toggle is disabled
-    // (channel-level cascade overrides block-level). Owner sees an inline
-    // hint explaining the gate, with a link-style cue to flip the channel.
+    // Phase E-prep: explicit Draft / Public radio buttons (mirrors the
+    // channel edit form for consistency). The parent channel acts as a
+    // permission gate — if the channel is draft, the block can't be
+    // public regardless of this radio (folder-level permission overrides).
+    const isPublic = !!r.obj.isPublic;
     const channelId = r.obj?.channelId;
     const channel = channelId ? CHANNELS.find(c => c.id === channelId) : null;
     const channelIsPublic = channel ? (channel.isPublic !== false) : true;
     const disabledAttr = channelIsPublic ? '' : 'disabled';
-    const hintHtml = channelIsPublic
-      ? `<span class="uf-public-label">${t('blockVisibilityHint')}</span>`
-      : `<span class="uf-public-label" style="color:var(--gray-2);">channel is draft → block stays draft (flip channel to public first)</span>`;
+    const lockHint = channelIsPublic
+      ? ''
+      : `<span style="margin-left:14px; font-family:var(--mono); font-size:10px; color:var(--gray-2);">— channel is draft, block locked to draft (flip channel to public first)</span>`;
     return `
       <label class="uf-row uf-row-public">
         <span class="sp-k">visibility</span>
-        <span class="uf-public-toggle">
-          <input type="checkbox" id="ef-public" ${checked} ${disabledAttr}>
-          ${hintHtml}
+        <span class="uf-public-toggle" style="display:inline-flex; gap:18px; align-items:center; flex-wrap:wrap;">
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:${channelIsPublic ? 'pointer' : 'not-allowed'};">
+            <input type="radio" name="ef-vis" value="public" id="ef-public" ${isPublic && channelIsPublic ? 'checked' : ''} ${disabledAttr} style="margin:0; accent-color:var(--ink);">
+            <span style="font-family:var(--mono); font-size:11px;">public</span>
+          </label>
+          <label style="display:inline-flex; align-items:center; gap:6px; cursor:${channelIsPublic ? 'pointer' : 'not-allowed'};">
+            <input type="radio" name="ef-vis" value="draft" ${(!isPublic || !channelIsPublic) ? 'checked' : ''} ${disabledAttr} style="margin:0; accent-color:var(--gray-2);">
+            <span style="font-family:var(--mono); font-size:11px; color:var(--gray-2);">draft (only you see this block)</span>
+          </label>
+          ${lockHint}
         </span>
       </label>
     `;
@@ -6559,8 +6614,18 @@
     });
   }
   function _saveEditFormApply(id, kind) {
-    const publicEl = document.getElementById('ef-public');
-    const isPublicPatch = publicEl ? { isPublic: !!publicEl.checked } : {};
+    // Phase E-prep: read from radio (public/draft) instead of legacy checkbox.
+    // Channel-level cascade also applies here: if parent channel is draft,
+    // force isPublic to false regardless of selection.
+    const visEl = document.querySelector('input[name="ef-vis"]:checked');
+    const r = _resolveBlockOrTrack(id);
+    const channelId = r?.obj?.channelId;
+    const channel = channelId ? CHANNELS.find(c => c.id === channelId) : null;
+    const channelIsPublic = channel ? (channel.isPublic !== false) : true;
+    const wantsPublic = visEl ? (visEl.value === 'public') : false;
+    const isPublicPatch = visEl
+      ? { isPublic: wantsPublic && channelIsPublic }
+      : {};
     if (kind === 'audio') {
       const newTitle    = ($('#ef-title')?.value || '').trim();
       const newArtist   = ($('#ef-artist')?.value || '').trim();
