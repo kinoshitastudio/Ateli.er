@@ -4042,8 +4042,7 @@
             </div>
 
             <div class="uf-actions">
-              <button type="submit" id="bSubmit" data-mode="public">↳ place in channel</button>
-              <button type="button" id="bDraftSubmit" data-mode="draft" style="background:transparent;border:1px solid var(--ink);color:var(--ink);margin-left:8px;">— keep draft</button>
+              <button type="submit" id="bSubmit">↳ place in channel</button>
               <span class="uf-status" id="bStatus"></span>
             </div>
           </form>
@@ -6432,10 +6431,9 @@
   function _publicToggleHtml(r) {
     if (!r || !r.obj) return '';
     if (r.kind === 'audio' && !r.obj.ownLocal) return '';
-    // Phase E-prep: explicit Draft / Public radio buttons (mirrors the
-    // channel edit form for consistency). The parent channel acts as a
-    // permission gate — if the channel is draft, the block can't be
-    // public regardless of this radio (folder-level permission overrides).
+    // Phase E-prep: explicit Public / Draft radio buttons for individual
+    // block override. The parent channel acts as a permission gate — if
+    // the channel is draft, the block is locked to draft regardless.
     const isPublic = !!r.obj.isPublic;
     const channelId = r.obj?.channelId;
     const channel = channelId ? CHANNELS.find(c => c.id === channelId) : null;
@@ -6614,9 +6612,8 @@
     });
   }
   function _saveEditFormApply(id, kind) {
-    // Phase E-prep: read from radio (public/draft) instead of legacy checkbox.
-    // Channel-level cascade also applies here: if parent channel is draft,
-    // force isPublic to false regardless of selection.
+    // Phase E-prep: read from radio (public/draft).
+    // Channel-level cascade: if parent channel is draft, force isPublic=false.
     const visEl = document.querySelector('input[name="ef-vis"]:checked');
     const r = _resolveBlockOrTrack(id);
     const channelId = r?.obj?.channelId;
@@ -7336,31 +7333,12 @@
   });
 
   const blockForm = document.getElementById('blockForm');
-  // Phase E-prep: capture which button initiated submit so we can choose
-  // public vs draft. The draft button submits the form via dispatchEvent.
-  let _bSubmitMode = 'public';
-  const _bDraftBtn = document.getElementById('bDraftSubmit');
-  if (_bDraftBtn) {
-    _bDraftBtn.addEventListener('click', () => {
-      _bSubmitMode = 'draft';
-      // Trigger native form submit (validates required fields).
-      blockForm.requestSubmit
-        ? blockForm.requestSubmit()
-        : blockForm.dispatchEvent(new Event('submit', { cancelable: true }));
-    });
-  }
   if (blockForm) {
     blockForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const status = document.getElementById('bStatus');
       const submit = document.getElementById('bSubmit');
-      const draftBtn = document.getElementById('bDraftSubmit');
       const channelId = document.getElementById('bChannel').value || '00';
-      // Determine mode (public vs draft) from which button was clicked.
-      // _bSubmitMode is set by the draft button's click handler. The default
-      // path (Enter key on form / clicking primary button) keeps 'public'.
-      const submitMode = _bSubmitMode;
-      _bSubmitMode = 'public';  // reset for next submit
       status.className = 'uf-status'; status.textContent = '';
 
       let block = null;
@@ -7425,14 +7403,13 @@
         };
       }
 
-      if (!block) { submit.disabled = false; if (draftBtn) draftBtn.disabled = false; return; }
-      // Phase E-prep: explicit public/draft choice from upload form.
-      // Cascade: if the parent channel is itself draft, this block is forced
-      // to draft regardless of which submit button was used. Owner can flip
-      // the channel to public first to actually publish a block.
+      if (!block) { submit.disabled = false; return; }
+      // Phase E-prep: new block inherits its parent channel's visibility.
+      // Owner can demote individual blocks to draft afterward via block edit
+      // (only when channel is public; channel-draft locks all blocks to draft).
       const _channelObj = CHANNELS.find(c => c.id === channelId);
       const _channelIsPublic = _channelObj?.isPublic !== false;  // default true
-      block.isPublic = (submitMode === 'public') && _channelIsPublic;
+      block.isPublic = _channelIsPublic;
       const arr = loadBlocks();
       arr.push(block);
       const ok = saveBlocks(arr);
@@ -7440,11 +7417,10 @@
         status.textContent = '— storage full. remove a block first.';
         status.className = 'uf-status err';
         submit.disabled = false;
-        if (draftBtn) draftBtn.disabled = false;
         return;
       }
-      // If user chose "place in channel" (public), mirror to public_blocks
-      // so it becomes visible across the courtyard immediately.
+      // Channel public → block public, immediately mirror to public_blocks.
+      // Channel draft → block draft, no sync (stays private).
       if (block.isPublic) {
         try { atelierPublic?.sync(block); } catch (e) { console.warn('[publish] sync error:', e); }
       }
@@ -7457,11 +7433,10 @@
       populateChannelSelect();
       const channelLabel = CHANNELS.find(c => c.id === channelId)?.label || channelId;
       status.textContent = block.isPublic
-        ? '— placed. ✓ in ' + channelLabel + ' (公開)'
-        : '— saved as draft. ✓ in ' + channelLabel;
+        ? '— placed. ✓ in ' + channelLabel + ' (public)'
+        : '— placed as draft. ✓ in ' + channelLabel + ' (channel is draft)';
       status.className = 'uf-status ok';
       submit.disabled = false;
-      if (draftBtn) draftBtn.disabled = false;
     });
   }
 
