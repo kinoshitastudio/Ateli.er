@@ -9131,9 +9131,11 @@
     const titleArgs = isExternal
       ? { channel, label, ownerHandle, ownerId: block?._ownerId || '', channelLabel: block?._externalChannelLabel || channel?.label || '', block }
       : { channel, label, block };
-    const externalPill = isExternal
-      ? `<span class="block-public-pill" style="background: var(--gray); margin-left: 8px;">— by @${escapeHtml(ownerHandle)}</span>`
-      : '';
+    // Phase A-refactor 2 (2026-04-29): "— by @handle" pill removed per user
+    // feedback. The breadcrumb (@user / channel / block) shown in the title
+    // line already attributes the block to its owner; the extra pill made
+    // the kind/public/by triple cluster too visually heavy.
+    const externalPill = '';
     let actionsHtml;
     if (isExternal) {
       const alreadyHere = !!findExternalBlock(block.id);
