@@ -4021,7 +4021,8 @@
             </div>
 
             <div class="uf-actions">
-              <button type="submit" id="bSubmit">↳ place in channel</button>
+              <button type="submit" id="bSubmit" data-mode="public">↳ place in channel</button>
+              <button type="button" id="bDraftSubmit" data-mode="draft" style="background:transparent;border:1px solid var(--ink);color:var(--ink);margin-left:8px;">— keep draft</button>
               <span class="uf-status" id="bStatus"></span>
             </div>
           </form>
@@ -7197,12 +7198,31 @@
   });
 
   const blockForm = document.getElementById('blockForm');
+  // Phase E-prep: capture which button initiated submit so we can choose
+  // public vs draft. The draft button submits the form via dispatchEvent.
+  let _bSubmitMode = 'public';
+  const _bDraftBtn = document.getElementById('bDraftSubmit');
+  if (_bDraftBtn) {
+    _bDraftBtn.addEventListener('click', () => {
+      _bSubmitMode = 'draft';
+      // Trigger native form submit (validates required fields).
+      blockForm.requestSubmit
+        ? blockForm.requestSubmit()
+        : blockForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    });
+  }
   if (blockForm) {
     blockForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const status = document.getElementById('bStatus');
       const submit = document.getElementById('bSubmit');
+      const draftBtn = document.getElementById('bDraftSubmit');
       const channelId = document.getElementById('bChannel').value || '00';
+      // Determine mode (public vs draft) from which button was clicked.
+      // _bSubmitMode is set by the draft button's click handler. The default
+      // path (Enter key on form / clicking primary button) keeps 'public'.
+      const submitMode = _bSubmitMode;
+      _bSubmitMode = 'public';  // reset for next submit
       status.className = 'uf-status'; status.textContent = '';
 
       let block = null;
@@ -7267,13 +7287,23 @@
         };
       }
 
-      if (!block) { submit.disabled = false; return; }
+      if (!block) { submit.disabled = false; if (draftBtn) draftBtn.disabled = false; return; }
+      // Phase E-prep: explicit public/draft choice from upload form.
+      block.isPublic = (submitMode === 'public');
       const arr = loadBlocks();
       arr.push(block);
       const ok = saveBlocks(arr);
       if (!ok) {
         status.textContent = '— storage full. remove a block first.';
-        status.className = 'uf-status err'; submit.disabled = false; return;
+        status.className = 'uf-status err';
+        submit.disabled = false;
+        if (draftBtn) draftBtn.disabled = false;
+        return;
+      }
+      // If user chose "place in channel" (public), mirror to public_blocks
+      // so it becomes visible across the courtyard immediately.
+      if (block.isPublic) {
+        try { atelierPublic?.sync(block); } catch (e) { console.warn('[publish] sync error:', e); }
       }
       // Refresh
       injectBlocksIntoTracks();
@@ -7282,9 +7312,13 @@
       renderYourBlocks();
       blockForm.reset();
       populateChannelSelect();
-      status.textContent = '— placed. ✓ in ' + (CHANNELS.find(c => c.id === channelId)?.label || channelId);
+      const channelLabel = CHANNELS.find(c => c.id === channelId)?.label || channelId;
+      status.textContent = block.isPublic
+        ? '— placed. ✓ in ' + channelLabel + ' (公開)'
+        : '— saved as draft. ✓ in ' + channelLabel;
       status.className = 'uf-status ok';
       submit.disabled = false;
+      if (draftBtn) draftBtn.disabled = false;
     });
   }
 
