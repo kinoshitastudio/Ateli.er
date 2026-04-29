@@ -9694,6 +9694,13 @@
           }).join('')
         }</ol>`;
     inner.innerHTML = headHtml + bodyHtml;
+    // Phase A-refactor 2 (2026-04-29): explicitly add is-open. The function
+    // previously assumed pieceModal was already open (caller flow:
+    // openUserPortfolio → openUserChannel keeps the modal up). When called
+    // from backToChannelFromBlock, closePieceModal() runs first, removing
+    // is-open — without this re-add the modal stayed invisible while
+    // body.overlay-open kept the marquees hidden, producing a blank page.
+    $('#pieceModal').classList.add('is-open');
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     const _backToPortfolio = () => {
       const profile = _exploreProfilesCache[ownerId];
@@ -10706,6 +10713,13 @@
             _externalChannelLabel: r.channel_label || payload.channelLabel || '',
           };
         });
+      // Phase A-refactor 2 (2026-04-29): also seed _explorePublicCache from
+      // the same fetch. Visitor flow (Explore tab → portfolio → channel)
+      // and the back-nav from a cross-user block both need full row data
+      // (owner_id, channel_id, channel_label) — without this the cache only
+      // populates after the user opens the Explore tab, so navigating from
+      // a TOP-marquee deep link landed on an empty visitor channel detail.
+      rows.forEach(r => { _explorePublicCache[r.id] = r; });
       // Re-render TOP and Feed with new data
       try { if (typeof renderMarquees === 'function') renderMarquees(); } catch (e) {}
       try { if (typeof renderFeed === 'function') renderFeed(); } catch (e) {}
