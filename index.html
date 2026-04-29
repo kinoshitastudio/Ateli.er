@@ -8919,14 +8919,11 @@
   // Both handle and channel name are linked (handle → user grid, channel → its detail).
   function _channelTitleH4({ channel } = {}) {
     const handle = _currentHandle();
-    // Phase E-prep: visibility pill next to channel name. Skip if channel is
-    // not provided (defensive — should always have one in normal call sites).
-    const visPillHtml = channel
-      ? (channel.isPublic !== false
-          ? `<span class="ch-vis-pill ch-vis-public">public</span>`
-          : `<span class="ch-vis-pill ch-vis-draft">draft</span>`)
-      : '';
-    return `<a class="bc-h4-user" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a><span class="bc-h4-sep">/</span><a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(channel?.id || '')}" title="${escapeHtml(channel?.label || '')}">${escapeHtml(channel?.label || '')}</a>${visPillHtml}`;
+    // Phase E-prep: visibility pill removed from the channel-detail header
+    // per user feedback — pill stays in the My Channel grid card (where
+    // owner sees it at a glance) but is unnecessary in the detail view
+    // where the owner is already deep into managing this specific channel.
+    return `<a class="bc-h4-user" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a><span class="bc-h4-sep">/</span><a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(channel?.id || '')}" title="${escapeHtml(channel?.label || '')}">${escapeHtml(channel?.label || '')}</a>`;
   }
   // Plain handle underlined link (used in meta-times "by ..." line)
   function _ownerTextLink() {
@@ -9430,10 +9427,21 @@
       });
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
-    // Build the head — mirrors ch-detail-head structure with visitor-mode
-    // breadcrumb (@handle / channelLabel) and counts. No edit/delete buttons.
-    // Tabs + back row at top so visitor can jump back to other tabs from
-    // deep inside the portfolio drill-in.
+    // Build the head — mirrors the owner's ch-detail-head exactly (search +
+    // share icons, meta + meta-times) but skips edit / delete / select-all
+    // affordances that only owners need. Visitor sees the same typography,
+    // spacing, and meta info as the owner of the channel.
+    const iconSearch = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><circle cx="6" cy="6" r="4.2"/><line x1="9.2" y1="9.2" x2="12.4" y2="12.4" stroke-linecap="round"/></svg>`;
+    const iconShare = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>`;
+    // Derive meta info from public_blocks rows (owner-side data isn't
+    // accessible to visitors, so we approximate from what's public).
+    const tsList = rows.map(r => r.ts || 0).filter(Boolean);
+    const createdTs = tsList.length ? Math.min(...tsList) : 0;
+    const editedTs = tsList.length ? Math.max(...tsList) : 0;
+    const createdLabel = createdTs ? ageString(createdTs) : '—';
+    const editedLabel = editedTs ? ageString(editedTs) : '—';
+    // mainPhrase / meta line: pull from any one block's channel_label (we
+    // don't have channel.meta or channel.mainPhrase from public_blocks).
     const headHtml = `
       ${_blockTabsHtml()}
       ${_backBtnHtml()}
@@ -9444,14 +9452,20 @@
         <div class="ch-head-title">
           <div style="min-width:0; flex:1;">
             <h4>
-              <a class="bc-h4-user bc-external" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>
+              <a class="bc-h4-user bc-external" data-bc="user" title="${escapeHtml(handle)}" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a>
               <span class="bc-h4-sep">/</span>
               <span class="bc-h4-channel">${escapeHtml(channelLabel)}</span>
             </h4>
           </div>
+          <div class="ch-head-right">
+            <div class="ch-head-icons">
+              <button class="ch-icon-btn" type="button" id="ucSearchBtn" title="search this channel" aria-label="search">${iconSearch}</button>
+              <button class="ch-icon-btn" type="button" id="ucShareBtn" title="share this channel" aria-label="share">${iconShare}</button>
+            </div>
+          </div>
         </div>
         <span class="meta">${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>
-        <span class="meta meta-times" style="color:var(--gray-2);">— visitor view (read-only)</span>
+        <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by <a class="bc-owner-text" data-bc="user" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a></span>
       </div>
     `;
     // Build the body — ix-list with ix-* classes mirroring the owner's
@@ -9524,13 +9538,62 @@
         }</ol></div>`;
     inner.innerHTML = headHtml + bodyHtml;
     document.querySelector('.piece-modal-shell').scrollTop = 0;
-    document.getElementById('ucBack').addEventListener('click', (e) => {
-      e.preventDefault();
+    const _backToPortfolio = () => {
       const profile = _exploreProfilesCache[ownerId];
       const avatarUrl = profile?.avatar_url ? convertImageUrl(profile.avatar_url) : '';
       const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
       openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
+    };
+    document.getElementById('ucBack').addEventListener('click', (e) => {
+      e.preventDefault();
+      _backToPortfolio();
     });
+    // @handle click in title or meta-times → back to portfolio.
+    inner.querySelectorAll('[data-uid][data-handle]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        _backToPortfolio();
+      });
+    });
+    // Search: filter visible blocks by title/caption/text/url. Live filter on input.
+    const searchBtn = document.getElementById('ucSearchBtn');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', () => {
+        // Toggle a simple search input above the list.
+        let bar = document.getElementById('ucSearchBar');
+        if (bar) { bar.remove(); return; }
+        bar = document.createElement('input');
+        bar.id = 'ucSearchBar';
+        bar.type = 'search';
+        bar.placeholder = 'search this channel…';
+        bar.style.cssText = 'width:100%; padding:8px 12px; margin:14px 0; font-family:var(--mono); font-size:12px; background:transparent; border:none; border-bottom:1px solid var(--ink); color:var(--ink); outline:none;';
+        const head = inner.querySelector('.ch-detail-head');
+        if (head) head.after(bar);
+        bar.focus();
+        bar.addEventListener('input', () => {
+          const q = bar.value.trim().toLowerCase();
+          inner.querySelectorAll('.ix-list li').forEach(li => {
+            const text = (li.textContent || '').toLowerCase();
+            li.style.display = (!q || text.includes(q)) ? '' : 'none';
+          });
+        });
+      });
+    }
+    // Share: copy a human-readable reference + the home URL to clipboard.
+    const shareBtn = document.getElementById('ucShareBtn');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', async () => {
+        const text = `Ateli.er — visit @${handle}'s ${channelLabel} on https://atelistudio.com/`;
+        try {
+          if (navigator.share) {
+            await navigator.share({ text, url: 'https://atelistudio.com/' });
+          } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+            showToast('link をコピーしました');
+          }
+        } catch (e) { /* user cancelled or permission denied */ }
+      });
+    }
     inner.querySelectorAll('.ix-list li[data-pb-id]').forEach(el => {
       el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
     });
