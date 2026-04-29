@@ -10647,6 +10647,11 @@
             _external: true,
             _crossUser: true,
             _ownerHandle: r.owner_handle,
+            // Phase A-refactor 2 (2026-04-29): _ownerId is required by
+            // _blockModalHeadHtml so the breadcrumb @user link gets a
+            // data-uid; without it, clicking "Taka" on a cross-user image
+            // opened from TOP marquee fell through to own My Channel route.
+            _ownerId: r.owner_id,
             _externalChannelLabel: r.channel_label || payload.channelLabel || '',
           };
         });
