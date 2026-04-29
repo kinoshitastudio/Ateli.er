@@ -7033,12 +7033,36 @@
   function promptDeleteBlock(id) {
     const r = _resolveBlockOrTrack(id);
     if (!r) return;
+    // Phase A-refactor 2 (2026-04-29): grab the channel id BEFORE deletion
+    // so we can navigate one level up (channel detail) afterwards.
+    // Without this, closePieceModal called history.back to whatever was
+    // under the piece modal — which on a marquee-deep-link was the home
+    // page, kicking the user all the way to TOP after a delete action.
+    const _hostChannelId = r.obj?.channelId || null;
     customConfirm(t('confirmDeleteBlock')).then(ok => {
       if (!ok) return;
       if (r.kind === 'audio') deleteTrack(id);
       else deleteBlock(id);
-      if (currentBlockModalId === id) closePieceModal();
+      // Close piece modal silently (no history.back) so the subsequent
+      // openModal/openChannelDetail can land cleanly without a popstate
+      // race popping the just-opened layer.
+      if (currentBlockModalId === id && $('#pieceModal').classList.contains('is-open')) {
+        $('#pieceModal').classList.remove('is-open');
+        const _idx = navStack.lastIndexOf('pieceModal');
+        if (_idx >= 0) navStack.splice(_idx, 1);
+        if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
+        currentBlockModalId = null;
+      }
       refreshAllViews();
+      // Navigate up to the channel detail (or grid if the channel has no
+      // content left).
+      if (_hostChannelId && typeof openModal === 'function') {
+        if (!$('#modal').classList.contains('is-open')) openModal('pieces');
+        else setTab('pieces');
+        setTimeout(() => {
+          if (typeof openChannelDetail === 'function') openChannelDetail(_hostChannelId);
+        }, 30);
+      }
     });
   }
 
