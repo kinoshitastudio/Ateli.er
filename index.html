@@ -4192,6 +4192,20 @@
     });
   })();
 
+  // Phase A-refactor (2026-04-29): freeze a deep-clone of the seed CHANNELS /
+  // TRACKS arrays so we can fully reset in-memory state on user switch.
+  // Without this, arrays populated from a previous user's localStorage stay
+  // in JS memory across sign-in/out and leak (e.g. DDD seeing Taka's audio).
+  const _SEED_CHANNELS = JSON.parse(JSON.stringify(CHANNELS));
+  const _SEED_TRACKS   = JSON.parse(JSON.stringify(TRACKS));
+  function _resetInMemoryToSeed() {
+    CHANNELS.length = 0;
+    _SEED_CHANNELS.forEach(c => CHANNELS.push(JSON.parse(JSON.stringify(c))));
+    TRACKS.length = 0;
+    _SEED_TRACKS.forEach(t => TRACKS.push(JSON.parse(JSON.stringify(t))));
+    if (typeof rebuildVeinIndex === 'function') rebuildVeinIndex();
+  }
+
   // Vein → tracks index (mutable; rebuilt when uploads change)
   const VEIN_INDEX = new Map();
   function rebuildVeinIndex() {
@@ -10319,6 +10333,12 @@
             // who used this browser. Wipe local atelier_* keys so the
             // new user starts genuinely empty (no Taka-on-DDD leak).
             SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+            // Phase A-refactor: also reset in-memory CHANNELS/TRACKS that
+            // were populated at module-load time from the previous user's
+            // localStorage. Without this, render functions still read the
+            // stale arrays even though localStorage is clean.
+            if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
+            if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
             lastPushedJson = JSON.stringify(_snapshot());
             isPulling = false;
             return true;
@@ -10334,6 +10354,11 @@
               localStorage.removeItem(k);
             }
           });
+          // Phase A-refactor: same reset for the existing-user path. CHANNELS
+          // and TRACKS still hold the previous session's in-memory state at
+          // this point — replay from the freshly-pulled localStorage.
+          if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
+          if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
           lastPushedJson = JSON.stringify(_snapshot());
           return true;
         } catch (e) {
@@ -11163,6 +11188,9 @@
         // and Feed feel alive on first paint.
         refreshCrossUserBlocks();
       } else if (event === 'SIGNED_OUT') {
+        // Phase A-refactor: wipe in-memory state so the next sign-in starts
+        // from a clean slate even before pull replays from server.
+        if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
         showLanding();
       }
     });
