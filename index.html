@@ -4901,9 +4901,13 @@
     if (src) {
       return `<img src="${src}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />`;
     }
-    const seed = track.imgSeed || track.id || 'default';
-    const picsum = `https://picsum.photos/seed/atelier-${encodeURIComponent(seed)}/${w * 2}/${h * 2}`;
-    return `<img src="${picsum}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />`;
+    // Phase A-refactor 2 (2026-04-29): no picsum fallback for audio. The
+    // random per-seed image was confusing — visitor saw mountain / lake /
+    // person photos for tracks that have no actual cover art, and the same
+    // track rendered with different images depending on which surface
+    // resolved its id first. Now: show a neutral placeholder, identical
+    // for every audio without imageUrl.
+    return `<span class="ix-thumb-text" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--paper-2);color:var(--gray);font-family:var(--mono);font-size:11px;letter-spacing:0.12em;">— audio —</span>`;
   }
   function buildBlockImage(block, w=240, h=240) {
     const src = block.imageUrl;
