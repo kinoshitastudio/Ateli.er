@@ -3727,6 +3727,20 @@
       <span id="settingsEmail" class="settings-readonly"></span>
       <span class="settings-hint">マジックリンクの送信先。現状は変更不可(backend での確認メール往復が必要なため)。</span>
     </div>
+
+    <!-- About (Phase E-prep) -->
+    <div class="settings-row">
+      <label class="settings-label" for="settingsAbout">about</label>
+      <textarea id="settingsAbout" class="settings-input" rows="3" placeholder="自己紹介・近況・関心など(任意)" style="resize:vertical; min-height:60px;"></textarea>
+      <span class="settings-hint">portfolio のページに表示されます(他ユーザーからも見える)。空欄でも可。</span>
+    </div>
+
+    <!-- SNS / personal URL (Phase E-prep) -->
+    <div class="settings-row">
+      <label class="settings-label" for="settingsSns">sns / link</label>
+      <input type="url" id="settingsSns" class="settings-input" placeholder="https://...(twitter / instagram / 個人サイト等、URL 1 つ)">
+      <span class="settings-hint">portfolio に clickable link として表示。1 つだけ(優先 SNS / 自分のサイト等)。</span>
+    </div>
     <div class="settings-status" id="settingsStatus"></div>
     <div class="settings-actions">
       <button type="button" id="settingsSave" class="settings-save">— save</button>
@@ -9058,7 +9072,7 @@
     const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
     const accessToken = tokenData?.access_token;
-    const url = `${SUPABASE_URL}/rest/v1/profiles?select=id,handle,display_name,avatar_url,created_at&order=created_at.desc&limit=120`;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?select=id,handle,display_name,avatar_url,bio,sns_url,created_at&order=created_at.desc&limit=120`;
     const headers = { 'apikey': SUPABASE_PUB_KEY };
     if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('profiles fetch timeout (10s)')), 10000));
@@ -9235,25 +9249,48 @@
   // their public channels rendered in the SAME polished ch-card grid style
   // as the owner's own My Channel tab (visitor read-only mode).
   // Owner can also open this overlay on themselves to preview the visitor view.
-  async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel }) {
+  async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel, bio, snsUrl }) {
     if (!ownerId) return;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
+    // Resolve bio/sns from cache if not passed (caller may know them already).
+    if (bio === undefined || snsUrl === undefined) {
+      const cached = _exploreProfilesCache[ownerId];
+      if (cached) {
+        if (bio === undefined) bio = cached.bio || '';
+        if (snsUrl === undefined) snsUrl = cached.sns_url || '';
+      }
+    }
     // Phase E-prep: include the standard block-modal tabs + back row so
     // the visitor can jump back to Channel / Feed / Explore / Comment /
     // Upload from inside the portfolio (matches block-modal navigation).
+    // Also: bio + sns link below the head meta (fetched from profiles).
+    const bioHtml = bio
+      ? `<p class="up-bio" style="font-family:var(--sans-jp); font-size:13px; line-height:1.6; color:var(--ink); margin:10px 0 0; white-space:pre-wrap;">${escapeHtml(bio)}</p>`
+      : '';
+    const snsHtml = snsUrl
+      ? (() => {
+          let domain = snsUrl;
+          try { domain = new URL(snsUrl).hostname.replace(/^www\./, ''); } catch (e) {}
+          return `<div class="up-sns" style="font-family:var(--mono); font-size:10.5px; margin-top:8px;">
+            <a href="${escapeHtml(snsUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--ink); text-decoration:underline;">${escapeHtml(domain)} ↗</a>
+          </div>`;
+        })()
+      : '';
     inner.innerHTML = `
       ${_blockTabsHtml()}
       ${_backBtnHtml()}
       <div class="atelier-channels" style="padding-top:6px;">
-        <div class="ch-head" style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
+        <div class="ch-head" style="display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;">
           ${ avatarUrl
-            ? `<span style="width:60px;height:60px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;"></span>`
-            : `<span style="width:60px;height:60px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:block;"></span>` }
-          <div style="flex:1;">
+            ? `<span style="width:60px;height:60px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;margin-top:2px;"></span>`
+            : `<span style="width:60px;height:60px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:block;margin-top:2px;"></span>` }
+          <div style="flex:1; min-width:0;">
             <h2 class="ch-head-name" style="margin:0;font-family:var(--mono);font-size:18px;color:var(--ink);">@${escapeHtml(handle || 'visitor')}</h2>
             <div class="ch-head-meta" id="upMeta" style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin-top:6px;">読み込み中…</div>
             <div class="ch-head-time" style="font-family:var(--mono);font-size:10px;color:var(--gray-3);margin-top:4px;">joined ${escapeHtml(joinedLabel || '')}</div>
+            ${bioHtml}
+            ${snsHtml}
           </div>
         </div>
         <div class="ch-grid" id="upGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;"></div>
@@ -9393,9 +9430,11 @@
     `;
     // Build the body — ix-list with ix-* classes mirroring the owner's
     // channel detail. Each li is clickable to open the block modal.
+    // Wrapped in .pane-index .ix-list-shell so the existing scoped CSS
+    // (.pane-index .ix-mid etc.) applies to the visitor view too.
     const bodyHtml = rows.length === 0
       ? `<p style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); padding: 22px 0;">— このチャンネルには まだ公開 block がありません</p>`
-      : `<ol class="ix-list">${
+      : `<div class="pane-index"><ol class="ix-list">${
           rows.map(r => {
             const p = r.payload || {};
             const id = r.id;
@@ -9456,7 +9495,7 @@
             }
             return '';
           }).join('')
-        }</ol>`;
+        }</ol></div>`;
     inner.innerHTML = headHtml + bodyHtml;
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     document.getElementById('ucBack').addEventListener('click', (e) => {
@@ -10743,10 +10782,15 @@
     if (handleInput) handleInput.value = cleanH(md.handle);
     if (avatarInput) avatarInput.value = '';
     _setSettingsAvatarPreview('');
+    // Pre-clear about/sns inputs so a slow fetch doesn't show stale prior values.
+    const aboutInput = document.getElementById('settingsAbout');
+    const snsInput = document.getElementById('settingsSns');
+    if (aboutInput) aboutInput.value = '';
+    if (snsInput) snsInput.value = '';
     // Then fetch canonical from profiles (best-effort, won't block UI)
     supabaseClient
       .from('profiles')
-      .select('handle, avatar_url')
+      .select('handle, avatar_url, bio, sns_url')
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data: profile }) => {
@@ -10754,6 +10798,8 @@
         if (handleInput && profile.handle) handleInput.value = cleanH(profile.handle);
         if (avatarInput) avatarInput.value = profile.avatar_url || '';
         _setSettingsAvatarPreview(profile.avatar_url || '');
+        if (aboutInput) aboutInput.value = profile.bio || '';
+        if (snsInput) snsInput.value = profile.sns_url || '';
       })
       .catch(err => console.warn('openSettingsModal profile fetch:', err));
   }
@@ -10777,14 +10823,18 @@
     if (e.target.closest('[data-act="settings-close"]')) closeSettingsModal();
   });
 
-  // Save settings (handle + avatar_url) — Settings → save button
+  // Save settings (handle + avatar_url + bio + sns_url) — Settings → save button
   document.getElementById('settingsSave')?.addEventListener('click', async () => {
     const handleInput = document.getElementById('settingsHandle');
     const avatarInput = document.getElementById('settingsAvatar');
+    const aboutInput  = document.getElementById('settingsAbout');
+    const snsInput    = document.getElementById('settingsSns');
     const status      = document.getElementById('settingsStatus');
     // Normalize: strip any leading @ so we never double-up the prefix.
     const newHandle   = (handleInput?.value || '').trim().replace(/^@+/, '');
     const newAvatarUrl = (avatarInput?.value || '').trim();
+    const newBio      = (aboutInput?.value || '').trim();
+    const newSnsUrl   = (snsInput?.value || '').trim();
     const setStatus = (msg, kind) => {
       if (!status) return;
       status.textContent = msg;
@@ -10830,6 +10880,8 @@
             handle: newHandle,
             display_name: newHandle,
             avatar_url: newAvatarUrl || null,
+            bio: newBio || null,
+            sns_url: newSnsUrl || null,
           }),
         }),
         10000,
