@@ -285,7 +285,7 @@
 
   /* Image marquee */
   .image-marquee {
-    --duration: 110s;
+    --duration: 85s;
     --gap: 32px;
     padding: 0;
   }
@@ -5012,11 +5012,20 @@
       if (ch && ch.isPublic === false) return false;
       return true;
     };
-    const _row2Items = [];
-    TRACKS.filter(_isOwnTrackBroadcastable).forEach(t => _row2Items.push({ kind: 'own-track', t }));
+    const _row2ItemsPool = [];
+    TRACKS.filter(_isOwnTrackBroadcastable).forEach(t => _row2ItemsPool.push({ kind: 'own-track', t }));
     (crossUserBlocksCache || []).forEach(b => {
-      if (b.kind === 'audio') _row2Items.push({ kind: 'x-audio', b });
+      if (b.kind === 'audio') _row2ItemsPool.push({ kind: 'x-audio', b });
     });
+    // Phase A-refactor 2 (2026-04-29): repeat-pad sparse pools so the lane
+    // fills the viewport. With only 1-2 items the duplicated track was
+    // shorter than the screen, so the -50% animation visually "stopped"
+    // mid-way and restarted. Same pattern Row 1 already uses.
+    const _row2Repeat = Math.max(1, Math.ceil(8 / Math.max(1, _row2ItemsPool.length)));
+    const _row2Items = [];
+    for (let r = 0; r < _row2Repeat; r++) {
+      _row2ItemsPool.forEach(p => _row2Items.push(p));
+    }
     const titleHtml = _row2Items.map(it => {
       if (it.kind === 'own-track') {
         return `<span class="title-item" data-kind="phrase" data-tid="${escapeHtml(it.t.id)}">
@@ -5058,18 +5067,24 @@
     // this lane, but only when the underlying block is public (and its
     // channel is public). Image kind is already filtered by
     // _broadcastBlocks below.
-    const imageItems = [];
-    TRACKS.filter(_isOwnTrackBroadcastable).forEach(t => imageItems.push(
+    const _row4Pool = [];
+    TRACKS.filter(_isOwnTrackBroadcastable).forEach(t => _row4Pool.push(
       `<span class="image-item" data-kind="phrase" data-tid="${t.id}">${buildPieceImage(t)}</span>`
     ));
     const broadcastForImage = _broadcastBlocks();
     broadcastForImage.filter(b => b.kind === 'image').forEach(b => {
-      imageItems.push(
+      _row4Pool.push(
         `<span class="image-item" data-kind="image" data-bid="${b.id}">
           ${ buildBlockImage(b, 480, 320) }
         </span>`
       );
     });
+    // Repeat-pad sparse pools (same fix as Row 1 and Row 2).
+    const _row4Repeat = Math.max(1, Math.ceil(6 / Math.max(1, _row4Pool.length)));
+    const imageItems = [];
+    for (let r = 0; r < _row4Repeat; r++) {
+      _row4Pool.forEach(s => imageItems.push(s));
+    }
     const imageHtml = imageItems.join('');
 
     // 2x duplicate for seamless loop
