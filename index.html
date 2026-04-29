@@ -9590,13 +9590,25 @@
     // spacing, and meta info as the owner of the channel.
     const iconSearch = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" aria-hidden="true"><circle cx="6" cy="6" r="4.2"/><line x1="9.2" y1="9.2" x2="12.4" y2="12.4" stroke-linecap="round"/></svg>`;
     const iconShare = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>`;
-    // Derive meta info from public_blocks rows (owner-side data isn't
-    // accessible to visitors, so we approximate from what's public).
-    const tsList = rows.map(r => r.ts || 0).filter(Boolean);
-    const createdTs = tsList.length ? Math.min(...tsList) : 0;
-    const editedTs = tsList.length ? Math.max(...tsList) : 0;
+    // Phase A-refactor 2 (2026-04-29): for seed channels, derive meta info
+    // from the local CHANNELS template — same source the owner uses, so
+    // the visitor sees identical createdAt / updatedAt / mainPhrase / meta
+    // values. Falls back to block-derived ts only for user-created channels
+    // that aren't in the seed (we have no other source for those).
+    const channel = (typeof CHANNELS !== 'undefined') ? CHANNELS.find(c => c.id === channelId) : null;
+    let createdTs, editedTs;
+    if (channel) {
+      createdTs = channel.createdAt || 0;
+      editedTs  = channel.updatedAt || channel.createdAt || 0;
+    } else {
+      const tsList = rows.map(r => r.ts || 0).filter(Boolean);
+      createdTs = tsList.length ? Math.min(...tsList) : 0;
+      editedTs  = tsList.length ? Math.max(...tsList) : 0;
+    }
     const createdLabel = createdTs ? ageString(createdTs) : '—';
-    const editedLabel = editedTs ? ageString(editedTs) : '—';
+    const editedLabel  = editedTs ? ageString(editedTs) : '—';
+    const channelMeta = channel?.meta || '';
+    const channelMainPhrase = channel?.mainPhrase || '';
     // mainPhrase / meta line: pull from any one block's channel_label (we
     // don't have channel.meta or channel.mainPhrase from public_blocks).
     const headHtml = `
@@ -9620,8 +9632,9 @@
             </div>
           </div>
         </div>
-        <span class="meta">${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>
-        <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by <a class="bc-owner-text" data-bc="user" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a></span>
+        ${ channelMainPhrase ? `<p class="ch-detail-mainphrase" style="font-family: var(--sans-jp); font-size: 14px; color: var(--ink-2); margin: 4px 0 8px; line-height: 1.55;">${escapeHtml(channelMainPhrase)}</p>` : '' }
+        ${ channelMeta ? `<span class="meta">${escapeHtml(channelMeta)} · ${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>` : `<span class="meta">${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>` }
+        ${ createdTs || editedTs ? `<span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by <a class="bc-owner-text" data-bc="user" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a></span>` : '' }
       </div>
     `;
     // Build the body — uses .pane-index directly on the OL (the same
