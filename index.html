@@ -289,6 +289,13 @@
     --gap: 32px;
     padding: 0;
   }
+  /* Phase A-refactor 2 (2026-04-29): 2x speed on mobile per Taka. The
+     image lane's relative width vs viewport is more compact on small
+     screens, so a slower drift felt sluggish — halving the duration
+     keeps the same gesture feel as desktop. */
+  @media (max-width: 720px) {
+    .image-marquee { --duration: 42s; }
+  }
   .image-item {
     width: 200px; height: 150px;
     flex-shrink: 0;
