@@ -8689,15 +8689,34 @@
     inner.querySelectorAll('.pane-index li[data-kind]').forEach(li => {
       const kind = li.dataset.kind;
       li.addEventListener('click', () => {
+        const id = li.dataset.tid || li.dataset.bid;
+        // Phase A-refactor 2 (2026-04-29): tag modal can list cross-user
+        // blocks (via _broadcastBlocks in buildTagIndex), but the click
+        // handler only looked in TRACKS / loadBlocks — viewer-owned data.
+        // For DDD viewing #仮田 these are all empty, so clicks did nothing.
+        // Fall back to the broadcast caches for cross-user resolution.
         if (kind === 'audio') {
-          const tr = TRACKS.find(x => x.id === li.dataset.tid);
-          if (tr) openPieceModal(tr);
+          const tr = TRACKS.find(x => x.id === id);
+          if (tr) { openPieceModal(tr); return; }
         } else {
-          const blk = loadBlocks().find(x => x.id === li.dataset.bid);
-          if (!blk) return;
-          if (kind === 'image') openImageModal(blk);
-          else if (kind === 'text') openTextModal(blk);
-          else if (kind === 'url') openUrlModal(blk);
+          const blk = loadBlocks().find(x => x.id === id);
+          if (blk) {
+            if (kind === 'image') openImageModal(blk);
+            else if (kind === 'text') openTextModal(blk);
+            else if (kind === 'url') openUrlModal(blk);
+            return;
+          }
+        }
+        if (_explorePublicCache[id]) {
+          openExternalFromCache(id);
+          return;
+        }
+        const cross = (crossUserBlocksCache || []).find(b => b.id === id);
+        if (cross) {
+          if (kind === 'audio') openPieceModal(cross);
+          else if (kind === 'image') openImageModal(cross);
+          else if (kind === 'text') openTextModal(cross);
+          else if (kind === 'url') openUrlModal(cross);
         }
       });
     });
