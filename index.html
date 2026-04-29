@@ -5649,7 +5649,9 @@
     }).join('');
     grid.innerHTML = cards;
 
-    const totalChannels = CHANNELS.length;
+    // Phase E-prep: meta count reflects what the viewer actually sees
+    // (filtered visibleChannels), not the global template registry.
+    const totalChannels = visibleChannels.length;
     const totalBlocks = TRACKS.length + loadBlocks().filter(b => b.kind !== 'audio').length;
 
     // Header — mirrors channel-detail head structure
