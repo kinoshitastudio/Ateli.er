@@ -248,6 +248,29 @@ drill-in 画面右上 **`— all delete`** → 確認ポップアップ。
 
 `— atelier` → 上部の 4 つのタブから種類を選んでフォームを書く → **`↳ place in channel`**。
 
+### ⚡ ホスティング決定早見表（迷ったらここ）
+
+| やりたいこと | 推奨ホスト | 使えるか |
+|---|---|---|
+| **音源（mp3 等）** をアップ | **Dropbox** ★ 一択 | Drive ❌（CORP で再生不可、仕様レベルの制約） |
+| | iCloud | △ 未検証、再生失敗多い |
+| | 自前サーバー | ✓（CORS が許可されてれば） |
+| **画像（jpg/png）** をアップ | **Drive 共有リンク** ✓ または **Dropbox** ✓ | どちらも自動変換あり、安定 |
+| | **Google Photos の共有リンク** ❌ | viewer ページの URL で画像直接取得不可、`<img>` 不可 |
+| | 任意の直リンク | ✓（CORS 制約あり） |
+| **テキスト** | （ホスト不要、本文を直接入力） | — |
+| **外部 URL** | （任意のサイト URL を貼るだけ） | — |
+| **avatar URL**（Settings） | **Drive** または **Dropbox** | Google Photos ❌ |
+
+#### 共通の落とし穴
+- ❌ **Google Photos の `https://photos.app.goo.gl/...` は使えない**（viewer ページで画像直 URL でない、CORS / hotlink 防止）
+- ❌ **Google Drive で audio** は再生不可（`Cross-Origin-Resource-Policy: same-site` ヘッダにより外部からの再生がブロックされる仕様）
+- 困ったら → **Dropbox に置く** が安全。画像は Drive でも OK。
+
+→ 詳細は各セクション（A/B/C/D）+ セクション 11（URL 変換ロジック早見表）。
+
+---
+
 ### A. Audio Link（音源）
 
 最も中核。曲を Drive 等にアップロードしてから来る。

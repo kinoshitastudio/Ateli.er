@@ -4095,161 +4095,18 @@
 <script>
   // ──────────────── DATA ────────────────
   const TRACKS = [
-    { id:'01', kind:'audio', channelId:'00',
-      title:'Aubade for an empty courtyard', artist:'kuroda',  sec:142, root:196.0, scale:[0,3,7,10],
-      phrases:[
-        'the courtyard, before anyone wakes.',
-        'first light. no one\'s awake yet.',
-        'kept the wind, lost the words.',
-      ],
-      context:'aubade, ambient, lo-fi, dawn, tokyo, courtyard, 早朝',
-      process:[
-        '2026.01.14, Tokyo · Kuramae. 5:42am, alone, before the upstairs starts. recorded with a single condenser into a portable interface, monitor off, no edits beyond a final fade. kept the breath at 0:14 and the distant truck at 0:42 because removing them killed the room.'
-      ],
-      metadata:{ date:'2026.01.14', location:'Tokyo · Kuramae',
-        environment:'5:42am · alone · upstairs asleep',
-        tags:['aubade','ambient','lo-fi'] },
-      imgSeed:11,
-      texture:['静電気','早朝の空気'],
-      support:'https://buymeacoffee.com/kuroda' },
-    { id:'02', kind:'audio', channelId:'00',
-      title:'雨に濡れる前の温度', artist:'mori_n', sec:98, root:220.0, scale:[0,2,5,7,10],
-      phrases:[
-        'before the rain ever touches.',
-        '雨が触れる前の、空気のかたち。',
-        'the air, kept indoors.',
-      ],
-      context:'humid, voice memo, domestic, kyoto, rain, 雨, 室内',
-      process:[
-        '2025.11.07, Kyoto · Nishijin、台所で火曜の午後に録音。隣の部屋で子供が遊んでいる音、時計、外を通る車の輪郭。雨が降る直前の湿度を残したくて、ノイズリダクションは一切かけていない。voice memo として始めて、そのまま作品にした。'
-      ],
-      metadata:{ date:'2025.11.07', location:'Kyoto · Nishijin',
-        environment:'kitchen · tuesday afternoon · kid next door',
-        tags:['humid','voice memo','domestic'] },
-      imgSeed:23,
-      texture:['濡れた紙','余韻'],
-      support:'https://buymeacoffee.com/morin' },
-    { id:'03', kind:'audio', channelId:'00',
-      title:'Lullaby for the unfinished', artist:'sera', sec:215, root:174.6, scale:[0,2,3,7,8],
-      phrases:[
-        'a song for the songs i did not finish.',
-        'kept the first take.',
-        '5 minutes, then i closed the file.',
-      ],
-      context:'lullaby, sketch, unfinished, berlin, first-take, 5-minute',
-      process:[
-        '2026.02.19, Berlin · Wedding. wrote it in 5 minutes on an upright that does not stay in tune past mid-october. kept the first take, did not fix the cracked low D, closed the file. a piece for everything i never finish — including this.'
-      ],
-      metadata:{ date:'2026.02.19', location:'Berlin · Wedding',
-        environment:'first take · 5-minute write · no edits',
-        tags:['lullaby','sketch','unfinished'] },
-      imgSeed:37,
-      texture:['余韻','木の節'],
-      support:'https://www.paypal.me/sera' },
-    { id:'04', kind:'audio', channelId:'00',
-      title:'Indigo passage', artist:'tanaka', sec:182, root:246.9, scale:[0,3,5,7],
-      phrases:[
-        'indigo — the colour of staying too late.',
-        'past midnight, alone.',
-        'this file had no name for months.',
-      ],
-      context:'improv, indigo, late night, nara, untitled, 即興',
-      process:[
-        '2025.12.03, Nara · Sakurai、深夜2時を回ってから録音。インディゴは「遅くまで残った人の色」だと思っている。即興一発、ファイル名は2ヶ月つかないままだった。命名した瞬間に作品が死ぬ気がして、untitled-final-final-2 のまま放置していた。'
-      ],
-      metadata:{ date:'2025.12.03', location:'Nara · Sakurai',
-        environment:'past midnight · improvised · untitled',
-        tags:['improv','indigo','late night'] },
-      imgSeed:51,
-      texture:['真冬の窓','半径3メートル'],
-      support:'https://buymeacoffee.com/tanaka' },
-    { id:'05', kind:'audio', channelId:'00',
-      title:'残光、または始まりの光', artist:'okamoto', sec:167, root:207.6, scale:[0,2,5,9],
-      phrases:[
-        'an afterglow, or the first light.',
-        'restored, with the noise still in it.',
-        '1998 reel, kept the grain.',
-      ],
-      context:'archive, restoration, grain, reel-to-reel, osaka, 残光',
-      process:[
-        '1998年の reel から 2026.03 に修復。Osaka · Tennoji。oxide noise は残した — 修復のための修復ではなく、時間そのものをそのまま保存したかった。partial restoration で十分。完全に綺麗にしてしまうと、その音が「いつ録られたものか」がわからなくなる。'
-      ],
-      metadata:{ date:'1998 / restored 2026.03', location:'Osaka · Tennoji',
-        environment:'reel-to-reel · oxide noise · partial restoration',
-        tags:['archive','restoration','grain'] },
-      imgSeed:67,
-      texture:['早朝の空気','余韻'],
-      support:'https://www.paypal.me/okamoto' },
-    { id:'06', kind:'audio', channelId:'00',
-      title:'A note left under the door', artist:'lin', sec:114, root:261.6, scale:[0,3,7,10,12],
-      phrases:[
-        'see you when you wake — folded twice.',
-        'tape side B. left for you.',
-        'whispered take, kept as-is.',
-      ],
-      context:'tape, whisper, letter, taipei, songshan, side-b',
-      process:[
-        '2026.03.22, Taipei · Songshan。TASCAM portable のカセット side B、ささやいて録音した一筆書き。マスタリングなし、ノイズリダクションなし、エディットなし。誰か一人のために、ドアの下に折って差し込んでおく。読まなくてもいい。'
-      ],
-      metadata:{ date:'2026.03.22', location:'Taipei · Songshan',
-        environment:'TASCAM portable · cassette side B · whispered',
-        tags:['tape','whisper','letter'] },
-      imgSeed:79,
-      texture:['濡れた紙','静電気'],
-      support:'https://buymeacoffee.com/lin' },
-    { id:'07', kind:'audio', channelId:'00',
-      title:'Courtyard, december', artist:'umeda', sec:199, root:185.0, scale:[0,2,4,7],
-      phrases:[
-        "december's breath, kept in the courtyard.",
-        'untitled, until it became this.',
-        'winter window, breath visible.',
-      ],
-      context:'winter, field, courtyard, sapporo, december, 冬',
-      process:[
-        '2025.12.21, Sapporo · Maruyama、外気温 −4°C の中庭で field recording。息が見える距離で録ったので、マイクの吐き出した湿気がそのまま音に残っている。何週間も untitled のままだったが、ある朝聴き返したらこれだった。'
-      ],
-      metadata:{ date:'2025.12.21', location:'Sapporo · Maruyama',
-        environment:'winter courtyard · −4°C · breath visible',
-        tags:['winter','field','courtyard'] },
-      imgSeed:89,
-      texture:['真冬の窓','ノイズフロア'],
-      support:'https://www.paypal.me/umeda' },
-    { id:'08', kind:'audio', channelId:'00',
-      title:'Half-light, half-language', artist:'sera', sec:132, root:233.1, scale:[0,3,6,8],
-      phrases:[
-        'between two languages, before naming.',
-        'cassette, first pass.',
-        'half-said, half-erased.',
-      ],
-      context:'language, tape, first-take, berlin, neukölln, bilingual',
-      process:[
-        '2026.04.02, Berlin · Neukölln。日本語とドイツ語の間で、まだどちらでも名付けられていない領域を一発録り。cassette single pass、エディットなし。半分は言えて、半分は消えた。それでよかった。'
-      ],
-      metadata:{ date:'2026.04.02', location:'Berlin · Neukölln',
-        environment:'cassette · single pass · no edits',
-        tags:['language','tape','first take'] },
-      imgSeed:103,
-      texture:['ノイズフロア','半径3メートル'],
-      support:'https://www.paypal.me/sera' },
+    // Phase E-prep (2026-04-29): placeholder TRACKS removed for clean empty start.
+    // New users see 0 audio tracks. Owner curates real content via "+ atelier".
+    // Original 8 placeholder tracks preserved in git history.
   ];
 
   // Channels (Are.na-like boxes). Each holds blocks (audio/image/text/url).
   // mainPhrase is the headline that drifts in the top marquee row.
   const CHANNELS = [
-    { id:'-01', label:'Archive −01', meta:'archived · weathered',   state:'past',    lang:'mixed',
-      mainPhrase:'these have weathered.' },
-    { id:'00',  label:'Archive 00',  meta:'now playing',            state:'current', lang:'mixed',
-      mainPhrase:'a courtyard, before anyone wakes.' },
-    { id:'01',  label:'Archive 01',  meta:'drafting · spring 2026', state:'future',  lang:'mixed',
-      mainPhrase:'drafting — see you in spring.' },
-
-    // Artist / curator channels
-    { id:'ch-yoake',  label:'夜更けの中庭',  meta:'curated by 仮田 涼',                   state:'current', lang:'ja',
-      mainPhrase:'夜更け、誰もいない中庭に置いておく。' },
-    { id:'ch-studio', label:'Studio Notes', meta:'kinoshita studio · process notes',     state:'current', lang:'mixed',
-      mainPhrase:'制作の余白、思考の断片。' },
-    { id:'ch-tape',   label:'Tape Letters', meta:'by lin · TASCAM portable, side B',     state:'current', lang:'en',
-      mainPhrase:'whispered into magnetic tape, kept as-is.' },
+    // Phase E-prep (2026-04-29): seed CHANNELS removed for clean empty start.
+    // New users see 0 channels and create their own with "+ create new channel".
+    // Original 6 seed channels (Archive -01/00/01, ch-yoake, ch-studio, ch-tape)
+    // preserved in git history before this commit.
   ];
   // Alias retained for any legacy references; not exposed in UI
   const ISSUES = CHANNELS;
