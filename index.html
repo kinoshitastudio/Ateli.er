@@ -7066,13 +7066,28 @@
     if (action === 'home') {
       if (typeof goHome === 'function') goHome();
     } else if (action === 'user') {
-      // Go to the (current) user's channel grid
-      if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
-        closePieceModal();
-      }
-      if (typeof openModal === 'function') openModal('pieces');
-      if (typeof backToChannelGrid === 'function') {
-        setTimeout(() => backToChannelGrid(), 30);
+      // Phase A-refactor 2 (2026-04-29): if the breadcrumb link carries a
+      // data-uid that's not the current viewer, this is a cross-user link
+      // (e.g., "Taka" in the breadcrumb of one of Taka's blocks viewed by
+      // DDD). Route to the visitor portfolio of that user instead of the
+      // viewer's own My Channel grid.
+      const targetUid = bc.dataset.uid;
+      const targetHandle = bc.dataset.handle;
+      const isCrossUser = targetUid && (typeof currentUser === 'undefined' || targetUid !== currentUser?.id);
+      if (isCrossUser && typeof openUserPortfolio === 'function') {
+        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
+          closePieceModal();
+        }
+        openUserPortfolio({ id: targetUid, handle: targetHandle });
+      } else {
+        // Own user (or no uid attribute) — go to own channel grid
+        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
+          closePieceModal();
+        }
+        if (typeof openModal === 'function') openModal('pieces');
+        if (typeof backToChannelGrid === 'function') {
+          setTimeout(() => backToChannelGrid(), 30);
+        }
       }
     } else if (action === 'channel') {
       const cid = bc.dataset.cid;
@@ -9046,14 +9061,21 @@
   // feedback — it was redundant next to the user handle (looked like a
   // user-level status). Block public/draft state is shown elsewhere
   // (channel detail block-list pill, ix-art column).
-  function _blockTitleHtml({ channel, label, ownerHandle, channelLabel } = {}) {
+  function _blockTitleHtml({ channel, label, ownerHandle, ownerId, channelLabel } = {}) {
     const handle = ownerHandle ? String(ownerHandle).replace(/^@+/, '') : _currentHandle();
     const cid = channel?.id || '';
     const cLabel = channelLabel || channel?.label || '';
     const channelPart = ownerHandle
       ? `<span class="bc-h4-channel">${escapeHtml(cLabel)}</span>`  // not linkable for external
       : `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
-    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`
+    // Phase A-refactor 2 (2026-04-29): emit data-uid / data-handle on the
+    // user link when the block is external, so the global breadcrumb click
+    // handler can route to the visitor portfolio instead of (incorrectly)
+    // navigating to the viewer's own My Channel.
+    const externalAttrs = ownerHandle
+      ? ` data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId || '')}"`
+      : '';
+    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
       + `<span class="bc-h4-sep">/</span>`
       + channelPart
       + `<span class="bc-h4-sep">/</span>`
@@ -9097,7 +9119,7 @@
     const isExternal = !!block?._external;
     const ownerHandle = block?._ownerHandle || '';
     const titleArgs = isExternal
-      ? { channel, label, ownerHandle, channelLabel: block?._externalChannelLabel || channel?.label || '', block }
+      ? { channel, label, ownerHandle, ownerId: block?._ownerId || '', channelLabel: block?._externalChannelLabel || channel?.label || '', block }
       : { channel, label, block };
     const externalPill = isExternal
       ? `<span class="block-public-pill" style="background: var(--gray); margin-left: 8px;">— by @${escapeHtml(ownerHandle)}</span>`
