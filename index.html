@@ -5869,7 +5869,23 @@
     const _channelsWithContent = new Set(_userBlocks.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _channelsWithContent.add(t.channelId); });
     const _userChannelIds = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    const visibleChannels = CHANNELS.filter(c => _channelsWithContent.has(c.id) || _userChannelIds.has(c.id));
+    // Phase A-refactor 2 (2026-04-29): My Channel grid now sorts with the
+    // SAME order key visitor portfolio uses, so the channel list in My
+    // Channel and Explore-of-self always matches. Seed first (in seed
+    // order), then user-created channels alphabetically by id.
+    const _SEED_ORDER_GRID = ['-01', '00', '01', 'ch-yoake', 'ch-studio', 'ch-tape'];
+    const _channelSortIdx = (cid) => {
+      const i = _SEED_ORDER_GRID.indexOf(cid);
+      return i >= 0 ? i : 1000;
+    };
+    const visibleChannels = CHANNELS
+      .filter(c => _channelsWithContent.has(c.id) || _userChannelIds.has(c.id))
+      .sort((a, b) => {
+        const ai = _channelSortIdx(a.id);
+        const bi = _channelSortIdx(b.id);
+        if (ai !== bi) return ai - bi;
+        return (a.id || '').localeCompare(b.id || '');
+      });
     const cards = visibleChannels.map(c => {
       const items = _itemsInChannel(c.id);
       const stateClass = c.state === 'past' ? 'ch-card-state-past' : (c.state === 'future' ? 'ch-card-state-future' : '');
