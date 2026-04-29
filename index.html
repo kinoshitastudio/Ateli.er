@@ -828,17 +828,23 @@
     vertical-align: middle;
   }
   /* Phase E-prep: channel-level visibility pill (public/draft) — minimalist
-     mono styling matching the block-public-pill but with two states */
+     mono styling matching the block-public-pill but with two states.
+     width: fit-content + align-self: flex-start prevent the pill from
+     stretching to full row width when placed inside a flex-column parent
+     like .ix-mid (channel-detail block list) or .ch-card-info. */
   .ch-vis-pill {
     display: inline-block;
     padding: 1px 7px;
     margin-left: 8px;
+    margin-top: 2px;
     font-family: var(--mono);
     font-size: 9px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     vertical-align: middle;
     background: transparent;
+    width: fit-content;
+    align-self: flex-start;
   }
   .ch-vis-pill.ch-vis-public {
     color: var(--ink);
