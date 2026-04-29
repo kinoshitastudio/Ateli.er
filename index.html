@@ -5122,14 +5122,19 @@
           }
         }
       });
-      // Hover preview only for audio tracks
-      if (kind === 'phrase' || kind === 'metadata') {
-        el.addEventListener('mouseenter', () => {
-          const t = TRACKS.find(x => x.id === el.dataset.tid);
-          if (t) previewNote(t);
-        });
-        el.addEventListener('mouseleave', stopPreview);
-      }
+      // Phase A-refactor 2 (2026-04-29): hover synth preview disabled per
+      // Taka feedback. The procedural sine tone fired on every audio item
+      // mouseover was novel but distracting in a courtyard browse — turn
+      // it off until / unless we want a deliberate "preview" affordance.
+      // (Code path retained — `previewNote` / `stopPreview` are still
+      // exported in case the hover behaviour is restored later.)
+      // if (kind === 'phrase' || kind === 'metadata') {
+      //   el.addEventListener('mouseenter', () => {
+      //     const t = TRACKS.find(x => x.id === el.dataset.tid);
+      //     if (t) previewNote(t);
+      //   });
+      //   el.addEventListener('mouseleave', stopPreview);
+      // }
     });
   }
 
