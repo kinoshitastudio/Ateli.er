@@ -4208,6 +4208,23 @@
     if (typeof rebuildVeinIndex === 'function') rebuildVeinIndex();
   }
 
+  // Phase A-refactor 2 (2026-04-29): full re-hydration sequence — same
+  // sequence INIT runs at module load, factored out so atelierSync.pull
+  // can replay it after wiping in-memory state on user switch. Without
+  // this, Taka's channel-label edits (e.g., "Archive -01" → "森の妖精")
+  // were lost on every sign-in: the seed-reset cleared CHANNELS, then
+  // injectBlocksIntoTracks ran against the freshly-pulled localStorage,
+  // but the channel/track edit overlays were never re-applied.
+  function _rehydrateFromLocalStorage() {
+    if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
+    if (typeof applyUserChannels === 'function') applyUserChannels();
+    if (typeof applyChannelEditsToArray === 'function') applyChannelEditsToArray();
+    if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
+    if (typeof applyTrackEditsToArray === 'function') applyTrackEditsToArray();
+    if (typeof hydrateTrackConnections === 'function') hydrateTrackConnections();
+    if (typeof populateChannelSelect === 'function') populateChannelSelect();
+  }
+
   // Vein → tracks index (mutable; rebuilt when uploads change)
   const VEIN_INDEX = new Map();
   function rebuildVeinIndex() {
@@ -10487,8 +10504,7 @@
             // were populated at module-load time from the previous user's
             // localStorage. Without this, render functions still read the
             // stale arrays even though localStorage is clean.
-            if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
-            if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
+            if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
             lastPushedJson = JSON.stringify(_snapshot());
             localStorage.setItem(LAST_USER_KEY, currentUser.id);
             isPulling = false;
@@ -10508,8 +10524,7 @@
           // Phase A-refactor: same reset for the existing-user path. CHANNELS
           // and TRACKS still hold the previous session's in-memory state at
           // this point — replay from the freshly-pulled localStorage.
-          if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
-          if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
+          if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
           lastPushedJson = JSON.stringify(_snapshot());
           localStorage.setItem(LAST_USER_KEY, currentUser.id);
           return true;
