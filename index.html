@@ -9131,7 +9131,16 @@
     const lastActivityTs = channel ? Math.max(channel.updatedAt || 0, ...(itemTs.length ? itemTs : [0])) : 0;
     const createdLabel = channel?.createdAt ? ageString(channel.createdAt) : '—';
     const editedLabel  = lastActivityTs ? ageString(lastActivityTs) : '—';
-    const publicPill = block?.isPublic ? `<span class="block-public-pill">${t('blockPublicBadge')}</span>` : '';
+    // Phase A-refactor 2 (2026-04-29): always show a visibility pill on own
+    // blocks — Public when isPublic, Draft otherwise. Previously only Public
+    // had a pill; Draft state was invisible in the head, so the owner had to
+    // remember which blocks were unpublished. External (visitor) blocks skip
+    // the pill since they're inherently public to be discoverable.
+    const publicPill = block?._external
+      ? ''
+      : (block?.isPublic
+          ? `<span class="ch-vis-pill ch-vis-public">public</span>`
+          : `<span class="ch-vis-pill ch-vis-draft">draft</span>`);
     // Phase C-2: external (non-owner) blocks get a different action set.
     const isExternal = !!block?._external;
     const ownerHandle = block?._ownerHandle || '';
