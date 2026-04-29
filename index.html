@@ -961,7 +961,7 @@
   }
   .feed-text-thumb.is-lyric {
     font-family: 'Cormorant Garamond', Georgia, var(--sans-jp);
-    font-style: italic;
+    font-style: normal;
     font-weight: 400;
     font-size: 17px;
     line-height: 1.45;
@@ -1432,7 +1432,7 @@
   .ch-card-cell-text {
     padding: 8px 10px;
     font-family: var(--sans-jp);
-    font-style: italic;
+    font-style: normal;
     font-weight: 400;
     font-size: 10px;
     color: var(--ink-2);
@@ -8785,7 +8785,7 @@
       ${_backBtnHtml()}
       ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: styleLabel, label: (block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : ''), block })}
       <div class="piece-modal-art" style="font-size: clamp(20px, 3vw, 32px); line-height: 1.5; margin-bottom: 32px; color: var(--ink); letter-spacing: 0; text-transform: none;">
-        ${ block.style === 'lyric' ? `<em style="font-style: italic;">${escapeHtml(block.text)}</em>` : escapeHtml(block.text).replace(/\n/g, '<br>') }
+        ${ block.style === 'lyric' ? `<span style="font-style: normal;">${escapeHtml(block.text)}</span>` : escapeHtml(block.text).replace(/\n/g, '<br>') }
       </div>
       ${_blockMetaHtml(block)}
       ${ block.description ? `
