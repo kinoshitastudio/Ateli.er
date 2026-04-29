@@ -10232,15 +10232,25 @@
           if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text().catch(() => '')}`);
           const rows = await res.json();
           if (!Array.isArray(rows) || rows.length === 0) {
-            // No DB state yet → seed DB from current local state.
+            // CRITICAL fix: no user_state row = new user (or first ever
+            // signin). DO NOT push current localStorage to seed DB —
+            // localStorage may contain stale data from a previous user
+            // who used this browser. Wipe local atelier_* keys so the
+            // new user starts genuinely empty (no Taka-on-DDD leak).
+            SYNC_KEYS.forEach(k => localStorage.removeItem(k));
+            lastPushedJson = JSON.stringify(_snapshot());
             isPulling = false;
-            await push(true);
             return true;
           }
+          // Existing user_state — overwrite local with server state, fully.
+          // Clear keys not present on the server too, so a re-login on a
+          // dirty browser ends up with exactly what the server knows.
           const state = rows[0].state || {};
           SYNC_KEYS.forEach(k => {
             if (Object.prototype.hasOwnProperty.call(state, k)) {
               localStorage.setItem(k, state[k]);
+            } else {
+              localStorage.removeItem(k);
             }
           });
           lastPushedJson = JSON.stringify(_snapshot());
