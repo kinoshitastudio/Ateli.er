@@ -11452,10 +11452,23 @@
 
   // Auth state listener — magic link click returns here and fires SIGNED_IN.
   if (supabaseClient) {
+    // Phase A-refactor 2 (2026-04-29): track whether SIGNED_IN was already
+    // handled this session, so token-refresh / tab-focus re-fires don't
+    // run the full welcome flow (toast + pull + refreshAllViews) — that
+    // re-render was kicking the user off any in-flight upload form back
+    // to the top, especially on mobile when switching tabs.
+    let _greetedUserId = null;
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       updateUserMenu(session);
       if (event === 'SIGNED_IN' && session?.user) {
         const user = session.user;
+        // Re-fire for the same user (e.g., tab focus after token refresh)?
+        // Skip the welcome / pull / refresh path entirely — the session is
+        // already established and the UI is whatever the user last had open.
+        if (_greetedUserId === user.id) {
+          return;
+        }
+        _greetedUserId = user.id;
         const chosenHandle = user.user_metadata?.handle;
         if (chosenHandle) {
           // Best-effort sync of user-chosen handle into profiles (the trigger
@@ -11493,6 +11506,8 @@
         // Phase A-refactor: wipe in-memory state so the next sign-in starts
         // from a clean slate even before pull replays from server.
         if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
+        // Reset greeted flag so the next sign-in shows the welcome toast.
+        _greetedUserId = null;
         showLanding();
       }
     });
