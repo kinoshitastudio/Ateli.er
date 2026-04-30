@@ -3703,7 +3703,7 @@
   </div>
   <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
     <nav class="triggers">
-      <button class="trig" data-tab="pieces">— channel</button>
+      <button class="trig" data-tab="pieces">— my channel</button>
       <button class="trig" data-tab="feed">— feed<span class="num" id="trigFeedCount">(0)</span></button>
       <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
@@ -3844,7 +3844,7 @@
   <div class="modal-shell">
     <div class="modal-inner">
       <div class="modal-tabs">
-        <button class="tab" data-pane="pieces">Channel<span class="tn" id="tabPiecesN">8</span></button>
+        <button class="tab" data-pane="pieces">My Channel<span class="tn" id="tabPiecesN">8</span></button>
         <button class="tab" data-pane="feed">Feed<span class="tn" id="tabFeedN">0</span></button>
         <button class="tab" data-pane="explore">Explore<span class="tn" id="tabExploreN">0</span></button>
         <button class="tab" data-pane="traces">Comment<span class="tn" id="tabTracesN">0</span><span class="tab-incoming-badge" id="tabTracesIncoming" hidden>●</span></button>
@@ -4265,7 +4265,7 @@
       // brand sub
       brandSub: '— atelier × er.  one who tends a space.',
       // topbar triggers
-      trigMyChannel: '— channel',
+      trigMyChannel: '— my channel',
       trigFeed:      '— feed',
       trigComment:   '— comment',
       trigUpload:    '— upload',
@@ -4277,7 +4277,7 @@
       slitPlaceholder: '…',
       slitFeedback:  '— left ✓ thank you',
       // tabs
-      tabMyChannel:  'Channel',
+      tabMyChannel:  'My Channel',
       tabExplore:    'Explore',
       tabComment:    'Comment',
       tabFeed:       'Feed',
@@ -4472,7 +4472,7 @@
     },
     ja: {
       brandSub: '— atelier × er.  場所を慈しむ者。',
-      trigMyChannel: '— チャンネル',
+      trigMyChannel: '— my channel',
       trigFeed:      '— フィード',
       trigComment:   '— コメント',
       trigUpload:    '— アップロード',
@@ -4482,7 +4482,7 @@
       slitBoundOn:   '紐付け先:',
       slitPlaceholder: '…',
       slitFeedback:  '— 投稿しました ✓',
-      tabMyChannel:  'チャンネル',
+      tabMyChannel:  'My Channel',
       tabExplore:    '探訪',
       tabComment:    'コメント',
       tabFeed:       'フィード',
@@ -9131,16 +9131,35 @@
     const incomingHtml = (incomingEl && !incomingEl.hidden)
       ? '<span class="tab-incoming-badge">●</span>'
       : '';
+    // Phase A-refactor 2 (2026-04-30): mirror the parent #modal's active
+    // tab so visitor flows (entered from Explore) keep the Explore tab
+    // highlighted while drilling into portfolio → channel → block. This
+    // matches the user's mental model — "I'm still in Explore" — instead
+    // of the previous always-pieces highlight that suggested My Channel.
+    const activePane = document.querySelector('.modal-tabs .tab.is-active')?.dataset.pane || 'pieces';
+    const cls = (n) => activePane === n ? 'tab is-active' : 'tab';
     return `
       <div class="modal-tabs piece-modal-tabs">
-        <button class="tab is-active" type="button" data-piece-tab="pieces">${t('tabMyChannel')}<span class="tn">${piecesN}</span></button>
-        <button class="tab" type="button" data-piece-tab="feed">${t('tabFeed')}<span class="tn">${feedN}</span></button>
-        <button class="tab" type="button" data-piece-tab="explore">${t('tabExplore')}<span class="tn">${exploreN}</span></button>
-        <button class="tab" type="button" data-piece-tab="traces">${t('tabComment')}<span class="tn">${tracesN}</span>${incomingHtml}</button>
-        <button class="tab" type="button" data-piece-tab="atelier">${t('tabUpload')}</button>
+        <button class="${cls('pieces')}" type="button" data-piece-tab="pieces">${t('tabMyChannel')}<span class="tn">${piecesN}</span></button>
+        <button class="${cls('feed')}" type="button" data-piece-tab="feed">${t('tabFeed')}<span class="tn">${feedN}</span></button>
+        <button class="${cls('explore')}" type="button" data-piece-tab="explore">${t('tabExplore')}<span class="tn">${exploreN}</span></button>
+        <button class="${cls('traces')}" type="button" data-piece-tab="traces">${t('tabComment')}<span class="tn">${tracesN}</span>${incomingHtml}</button>
+        <button class="${cls('atelier')}" type="button" data-piece-tab="atelier">${t('tabUpload')}</button>
         <button class="modal-close" type="button" data-act="piece-close">${t('modalClose')}</button>
       </div>
     `;
+  }
+  // Phase A-refactor 2 (2026-04-30): visitor flow context helper. Marks the
+  // Explore tab as active in the parent #modal — without re-running the
+  // heavy renderExplore — so the top tab strip stays on Explore as the
+  // user drills portfolio → channel → block.
+  function _markVisitorContextOnTabs() {
+    document.querySelectorAll('.modal-tabs .tab').forEach(b => {
+      b.classList.toggle('is-active', b.dataset.pane === 'explore');
+    });
+    document.querySelectorAll('.modal-pane').forEach(p => {
+      p.classList.toggle('is-active', p.dataset.pane === 'explore');
+    });
   }
   // Block-level meta line: "placed Xd ago · edited Yh ago"
   function _blockMetaHtml(b) {
@@ -9491,6 +9510,9 @@
     });
   }
   function openExternalBlock({ id, kind, payload, ownerHandle, ownerId, channelId, channelLabel }) {
+    // Phase A-refactor 2 (2026-04-30): keep the parent #modal's Explore tab
+    // highlighted while the viewer is in visitor flow.
+    if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
     // Defensive: if the caller hands us a block we actually own, drop the
     // external markers and open it in normal owner mode so edit/delete come
     // back. Prevents a Phase C-2 footgun where a stale Explore cache row of
@@ -9592,6 +9614,8 @@
   // Owner can also open this overlay on themselves to preview the visitor view.
   async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel, bio, snsUrl }) {
     if (!ownerId) return;
+    // Phase A-refactor 2 (2026-04-30): keep parent #modal Explore-active.
+    if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
     // Resolve bio/sns from cache if not passed (caller may know them already).
@@ -9752,6 +9776,10 @@
   // public_blocks), and clicks open the existing block modal in external
   // / read-only mode (with a "+ connect to my channel" action).
   function openUserChannel({ ownerId, handle, channelId, channelLabel }) {
+    // Phase A-refactor 2 (2026-04-30): keep parent #modal Explore-active
+    // so the visitor flow's tab context stays consistent across portfolio
+    // → channel → block drilling.
+    if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
     // Phase A-refactor 2 (2026-04-29): match the OWNER's _itemsInChannel
     // ordering exactly — owner is the canonical "正". Owner pushes audio
     // (from TRACKS in insertion = ts-ASC order) first, then non-audio
