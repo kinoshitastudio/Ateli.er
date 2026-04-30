@@ -11834,7 +11834,21 @@
       }
       return true;
     }
-    return { upsert, remove, sync, list, syncChannelLabel };
+    // One-shot backfill: re-upsert every own public block so channel_id /
+    // channel_label columns are populated for legacy rows that were
+    // synced before those columns were added (or before the column-fill
+    // path was reliable). Idempotent — re-running just refreshes rows.
+    async function backfillOwnPublicBlocks() {
+      if (!currentUser?.id) return false;
+      const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+      const targets = blocks.filter(b => b.isPublic);
+      if (targets.length === 0) return true;
+      for (const b of targets) {
+        try { await upsert(b); } catch (e) { /* keep going */ }
+      }
+      return true;
+    }
+    return { upsert, remove, sync, list, syncChannelLabel, backfillOwnPublicBlocks };
   })();
 
   // ──────────────── CROSS-USER BROADCAST (Phase E-prep, 2026-04-29) ────────────────
@@ -12519,6 +12533,15 @@
         // Phase: prime profiles cache so comment-author avatars show up
         // right away without requiring the viewer to open Explore tab.
         if (typeof refreshProfilesCache === 'function') refreshProfilesCache();
+        // One-shot backfill: re-upsert this user's public blocks so the
+        // channel_id / channel_label columns are populated for legacy
+        // rows. Idempotent — runs in background, surfaces correct
+        // channel labels in other users' Feed once it lands.
+        if (atelierPublic?.backfillOwnPublicBlocks) {
+          atelierPublic.backfillOwnPublicBlocks().then(() => {
+            try { refreshCrossUserBlocks(); } catch (e) {}
+          }).catch(() => {});
+        }
       } else if (event === 'SIGNED_OUT') {
         // Phase A-refactor: wipe in-memory state so the next sign-in starts
         // from a clean slate even before pull replays from server.
@@ -12557,6 +12580,13 @@
         refreshAllViews();
       }
     } catch (e) { console.warn('[atelierSync] reload pull failed:', e); }
+    // Backfill own public_blocks columns (channel_id / channel_label) on
+    // every load. Same one-shot per session reasoning as on SIGNED_IN.
+    if (atelierPublic?.backfillOwnPublicBlocks) {
+      atelierPublic.backfillOwnPublicBlocks().then(() => {
+        try { refreshCrossUserBlocks(); } catch (e) {}
+      }).catch(() => {});
+    }
     // Phase D-1: refresh the unread-traces badge once per app load.
     atelierTraces.refreshUnreadBadge();
     // Periodic refresh while the tab is open so notifications appear without reload.
