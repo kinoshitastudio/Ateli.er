@@ -7215,11 +7215,22 @@
       const targetUid = bc.dataset.uid;
       const targetHandle = bc.dataset.handle;
       const isCrossUser = targetUid && (typeof currentUser === 'undefined' || targetUid !== currentUser?.id);
+      // Phase A-refactor 2 (2026-04-30): even an OWN @user link should
+      // keep the visitor flow when the user entered from Explore (i.e.,
+      // the parent #modal's Explore tab is active). Otherwise clicking
+      // "Taka" inside Taka's own visitor portfolio kicked them to My
+      // Channel instead of bouncing back to the visitor portfolio.
+      const inVisitorCtx = document.querySelector('#modal .modal-tabs .tab.is-active')?.dataset.pane === 'explore';
       if (isCrossUser && typeof openUserPortfolio === 'function') {
         if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
           closePieceModal();
         }
         openUserPortfolio({ id: targetUid, handle: targetHandle });
+      } else if (inVisitorCtx && typeof openUserPortfolio === 'function' && currentUser?.id) {
+        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
+          closePieceModal();
+        }
+        openUserPortfolio({ id: currentUser.id, handle: targetHandle || _currentHandle() });
       } else {
         // Own user (or no uid attribute) — go to own channel grid.
         // Phase A-refactor 2 (2026-04-30): close every nested overlay
