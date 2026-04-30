@@ -504,6 +504,18 @@
     animation: pulseDot 2.4s ease-in-out infinite;
   }
   .modal-tabs .tab .tab-incoming-badge[hidden] { display: none; }
+  /* Same pulse on the home-page silent trigger '— comment' button so the
+     user sees pending activity without having to open the Comment tab. */
+  .trig .trig-incoming-badge {
+    display: inline-block;
+    color: var(--ink);
+    font-size: 11px;
+    margin-left: 6px;
+    line-height: 1;
+    vertical-align: middle;
+    animation: pulseDot 2.4s ease-in-out infinite;
+  }
+  .trig .trig-incoming-badge[hidden] { display: none; }
   .modal-tabs .modal-close {
     margin-left: auto;
     font-family: var(--mono);
@@ -3997,7 +4009,7 @@
     <nav class="triggers">
       <button class="trig" data-tab="pieces">— my channel</button>
       <button class="trig" data-tab="feed">— feed<span class="num" id="trigFeedCount">(0)</span></button>
-      <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span></button>
+      <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span><span class="trig-incoming-badge" id="trigTracesIncoming" hidden>●</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
     </nav>
     <button id="userMenu" type="button" hidden class="account-pill" title="account & settings">
@@ -11566,6 +11578,11 @@
           SYNC_KEYS.forEach(k => localStorage.removeItem(k));
           if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
           if (typeof injectBlocksIntoTracks === 'function') injectBlocksIntoTracks();
+          // Per-device markers also need a reset on user switch so the
+          // new user doesn't inherit the previous user's "all read" state
+          // (otherwise the comment badge stays hidden until a new comment
+          // arrives that beats the stale watermark).
+          try { localStorage.removeItem('atelier_traces_watermark_v1'); } catch (e) {}
         }
         const token = _accessToken();
         if (!token) {
@@ -12070,7 +12087,8 @@
     function _setBadges(visible, count) {
       const pill = document.getElementById('userTracesBadge');
       const tab = document.getElementById('tabTracesIncoming');
-      [pill, tab].forEach(el => {
+      const trig = document.getElementById('trigTracesIncoming');
+      [pill, tab, trig].forEach(el => {
         if (!el) return;
         el.hidden = !visible;
         if (visible) {
