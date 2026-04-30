@@ -1975,6 +1975,60 @@
     padding: 10px 0;
     border-bottom: 1px dashed var(--line-soft);
   }
+  .uf-channel-wrap {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .uf-channel-pick,
+  .uf-channel-create {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+  .uf-channel-pick .uf-input,
+  .uf-channel-create .uf-input {
+    flex: 1;
+    min-width: 0;
+  }
+  .uf-channel-new,
+  .uf-channel-confirm,
+  .uf-channel-cancel {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 6px 12px;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .uf-channel-new:hover,
+  .uf-channel-confirm:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .uf-channel-cancel {
+    border-color: var(--gray-2);
+    color: var(--gray-2);
+  }
+  .uf-channel-cancel:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  .uf-channel-confirm { font-size: 13px; padding: 6px 14px; }
+  .uf-channel-cancel { font-size: 13px; padding: 6px 14px; }
+  @media (max-width: 640px) {
+    .uf-channel-new,
+    .uf-channel-confirm,
+    .uf-channel-cancel { padding: 8px 14px; font-size: 13px; }
+  }
   .upload-form .uf-row .sp-k {
     font-family: var(--mono);
     font-size: 10px;
@@ -4128,9 +4182,19 @@
 
           <form id="blockForm" class="upload-form">
             <div class="uf-grid">
-              <label class="uf-row">
+              <label class="uf-row uf-row-channel">
                 <span class="sp-k">channel</span>
-                <select class="uf-input" id="bChannel"></select>
+                <span class="uf-channel-wrap">
+                  <span class="uf-channel-pick" id="bChannelPick">
+                    <select class="uf-input" id="bChannel"></select>
+                    <button type="button" class="uf-channel-new" id="bChannelNew" aria-label="新しいチャンネルを作る" title="新しいチャンネルを作る">+ new</button>
+                  </span>
+                  <span class="uf-channel-create" id="bChannelCreate" hidden>
+                    <input type="text" class="uf-input" id="bChannelNewLabel" placeholder="新しいチャンネル名" maxlength="40" autocomplete="off">
+                    <button type="button" class="uf-channel-confirm" id="bChannelCreateOk" aria-label="作成">✓</button>
+                    <button type="button" class="uf-channel-cancel" id="bChannelCreateCancel" aria-label="キャンセル">×</button>
+                  </span>
+                </span>
               </label>
 
               <!-- AUDIO fields -->
@@ -7788,21 +7852,68 @@
       sel.value = writeable[0].id;
     }
   }
-  // Inline channel creation when user picks "+ create new channel..." from select
+  // Inline channel creation — works on both PC and mobile by swapping the
+  // channel picker for a small label input. Earlier prompt() chain felt
+  // janky on desktop and was unreliable on mobile (multi-prompt sequence).
+  function _showChannelCreateInline() {
+    const pick = document.getElementById('bChannelPick');
+    const create = document.getElementById('bChannelCreate');
+    const input = document.getElementById('bChannelNewLabel');
+    if (!pick || !create || !input) return;
+    pick.hidden = true;
+    create.hidden = false;
+    input.value = '';
+    setTimeout(() => input.focus(), 50);
+  }
+  function _hideChannelCreateInline() {
+    const pick = document.getElementById('bChannelPick');
+    const create = document.getElementById('bChannelCreate');
+    if (!pick || !create) return;
+    create.hidden = true;
+    pick.hidden = false;
+  }
+  function _commitChannelCreateInline() {
+    const input = document.getElementById('bChannelNewLabel');
+    const label = (input?.value || '').trim();
+    if (!label) {
+      input?.focus();
+      return;
+    }
+    // Mainphrase / lang / meta default — owner can refine via channel EDIT.
+    const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: 'now playing' });
+    refreshAllViews();
+    const sel = document.getElementById('bChannel');
+    if (sel && newId) sel.value = newId;
+    _hideChannelCreateInline();
+  }
+  // Dropdown picks "+ create new channel…" → open inline create UI
   document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'bChannel' && e.target.value === '__new__') {
-      const label = prompt('new channel — label?', '');
-      if (!label || !label.trim()) {
-        populateChannelSelect();  // reset selection
-        return;
-      }
-      const phrase = prompt('main phrase? (one line)', '') || '';
-      const lang = prompt('lang? (en / ja / mixed)', 'mixed') || 'mixed';
-      const meta = prompt('meta line? (e.g. "now playing", "weekly")', 'now playing') || 'now playing';
-      const newId = createChannel({ label: label.trim(), mainPhrase: phrase.trim(), lang: lang.trim(), meta: meta.trim() });
-      refreshAllViews();
-      const sel = document.getElementById('bChannel');
-      if (sel && newId) sel.value = newId;
+      // Reset the select so the dropdown doesn't stay on the placeholder option
+      // if the user cancels — populateChannelSelect resolves the previous
+      // selection or falls back to the first writable channel.
+      populateChannelSelect();
+      _showChannelCreateInline();
+    }
+  });
+  // "+ new" button (always visible, mobile-friendly)
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'bChannelNew') {
+      e.preventDefault();
+      _showChannelCreateInline();
+    } else if (e.target && e.target.id === 'bChannelCreateOk') {
+      e.preventDefault();
+      _commitChannelCreateInline();
+    } else if (e.target && e.target.id === 'bChannelCreateCancel') {
+      e.preventDefault();
+      _hideChannelCreateInline();
+    }
+  });
+  // Enter/Esc keyboard support inside the new-channel input
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'bChannelNewLabel') {
+      if (e.key === 'Enter') { e.preventDefault(); _commitChannelCreateInline(); }
+      else if (e.key === 'Escape') { e.preventDefault(); _hideChannelCreateInline(); }
     }
   });
 
