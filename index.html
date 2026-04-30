@@ -5885,10 +5885,12 @@
     }
     if (item.kind === 'text') {
       const b = item.block;
-      const preview = (b.text || '').slice(0, 90);
+      const cellHtml = b.title
+        ? escapeHtml(b.title)
+        : escapeHtml((b.text || '').slice(0, 90)) + ((b.text || '').length > 90 ? '…' : '');
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">text</span>
-        <span class="ch-card-cell-text">${escapeHtml(preview)}${(b.text || '').length > 90 ? '…' : ''}</span>
+        <span class="ch-card-cell-text">${cellHtml}</span>
       </div>`;
     }
     if (item.kind === 'url') {
