@@ -188,9 +188,6 @@
      per frame because of decoded-image compositing. */
   @media (max-width: 720px) {
     .image-marquee { --duration: 200s; }
-    /* Smaller image tiles so fewer items are in flight at once — less
-       paint work per frame, less chance of flicker. */
-    .image-marquee .image-item { width: 150px; height: 110px; }
   }
   /* Touch devices don't have stable hover state — ':hover' can stick
      to a recently-tapped item, which made every other image-item drop
