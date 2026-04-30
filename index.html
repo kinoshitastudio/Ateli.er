@@ -2067,6 +2067,21 @@
     flex: 1;
     min-width: 180px;
   }
+  /* `display: flex` above wins over the UA's [hidden] { display: none }
+     because of source order — without these explicit overrides both
+     pick and create rendered simultaneously when one was supposed to be
+     hidden, making the channel area look like it had two separate UIs
+     at once. */
+  .uf-channel-pick[hidden],
+  .uf-channel-create[hidden] { display: none !important; }
+  .uf-channel-create-hint {
+    flex-basis: 100%;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
   /* Text button — used for "+ new". Compact monospace pill that follows
      the form's existing visual language (mono headers, ink borders). */
   .uf-channel-new {
@@ -4289,8 +4304,9 @@
                   </span>
                   <span class="uf-channel-create" id="bChannelCreate" hidden>
                     <input type="text" class="uf-input" id="bChannelNewLabel" placeholder="新しいチャンネル名" maxlength="40" autocomplete="off">
-                    <button type="button" class="uf-channel-confirm" id="bChannelCreateOk" aria-label="作成">✓</button>
-                    <button type="button" class="uf-channel-cancel" id="bChannelCreateCancel" aria-label="キャンセル">×</button>
+                    <button type="button" class="uf-channel-confirm" id="bChannelCreateOk" aria-label="作成して選ぶ" title="作成して選ぶ">✓</button>
+                    <button type="button" class="uf-channel-cancel" id="bChannelCreateCancel" aria-label="キャンセル(作らずに既存チャンネルを選び直す)" title="キャンセル">×</button>
+                    <span class="uf-channel-create-hint">— 新規チャンネルを作成中。✓で作成・選択 / ×で取り消し</span>
                   </span>
                 </span>
               </label>
@@ -8150,7 +8166,9 @@
   function _hideChannelCreateInline() {
     const pick = document.getElementById('bChannelPick');
     const create = document.getElementById('bChannelCreate');
+    const input = document.getElementById('bChannelNewLabel');
     if (!pick || !create) return;
+    if (input) input.value = '';  // explicitly clear so cancel feels final
     create.hidden = true;
     pick.hidden = false;
   }
