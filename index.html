@@ -9694,12 +9694,16 @@
     if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
-    // Resolve bio/sns from cache if not passed (caller may know them already).
-    if (bio === undefined || snsUrl === undefined) {
+    // Resolve bio/sns/avatar/joined from cache if not passed (caller may know
+    // them already). Without this, [data-bc="user"] generic handlers that
+    // only pass id+handle would lose the avatar on navigation back.
+    if (bio === undefined || snsUrl === undefined || !avatarUrl || !joinedLabel) {
       const cached = _exploreProfilesCache[ownerId];
       if (cached) {
         if (bio === undefined) bio = cached.bio || '';
         if (snsUrl === undefined) snsUrl = cached.sns_url || '';
+        if (!avatarUrl && cached.avatar_url) avatarUrl = convertImageUrl(cached.avatar_url);
+        if (!joinedLabel && cached.created_at) joinedLabel = ageString(new Date(cached.created_at).getTime());
       }
     }
     // Phase E-prep: include the standard block-modal tabs + back row so
