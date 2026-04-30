@@ -8269,7 +8269,34 @@
 
   // ──────────────── FOOTPRINTS ────────────────
   const FP_KEY = 'atelier_footprints_v2';
-  function loadFP() { try { return JSON.parse(localStorage.getItem(FP_KEY)) || []; } catch(e) { return []; } }
+  function loadFP() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(FP_KEY)) || [];
+      // Self-heal: legacy entries lacked `id`, which made the delete button
+      // a no-op (the handler bails on empty id). Synthesize a deterministic
+      // id from ts+text so two devices migrating the same entry produce the
+      // same id (no sync duplicates).
+      let mutated = false;
+      arr.forEach(f => {
+        if (!f.id) {
+          const seed = `${f.ts || 0}-${(f.text || '').slice(0, 32)}`;
+          let hash = 0;
+          for (let i = 0; i < seed.length; i++) {
+            hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+            hash |= 0;
+          }
+          f.id = `tr-legacy-${Math.abs(hash).toString(36)}`;
+          mutated = true;
+        }
+      });
+      if (mutated) {
+        try { localStorage.setItem(FP_KEY, JSON.stringify(arr)); } catch (e) {}
+      }
+      return arr;
+    } catch (e) {
+      return [];
+    }
+  }
   function saveFP(arr) { localStorage.setItem(FP_KEY, JSON.stringify(arr)); }
   function fpOpacity(ts) {
     const ageDays = (Date.now() - ts) / (1000*60*60*24);
