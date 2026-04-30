@@ -11362,6 +11362,7 @@
   // Refreshed on SIGNED_IN, periodically (5 min), and after publish toggle.
   let crossUserBlocksCache = [];
   async function refreshCrossUserBlocks() {
+    const _wasEmpty = crossUserBlocksCache.length === 0;
     try {
       const rows = await atelierPublic.list(60);
       if (!Array.isArray(rows)) return;
@@ -11404,6 +11405,14 @@
       // Re-render TOP and Feed with new data
       try { if (typeof renderMarquees === 'function') renderMarquees(); } catch (e) {}
       try { if (typeof renderFeed === 'function') renderFeed(); } catch (e) {}
+      // Comment views resolve cross-user blocks via these caches. On the
+      // first populate (sign-in race), refresh them so a comment on
+      // someone else's block doesn't render as "block deleted" until the
+      // user manually navigates away and back.
+      if (_wasEmpty) {
+        try { if (typeof renderFP === 'function') renderFP(); } catch (e) {}
+        try { if (typeof renderIncomingTraces === 'function') renderIncomingTraces(); } catch (e) {}
+      }
     } catch (e) {
       console.warn('[crossUser] refresh error:', e);
     }
