@@ -176,6 +176,20 @@
     align-items: center;
     animation: scroll-rtl var(--duration, 90s) linear infinite;
     will-change: transform;
+    /* Force a compositor layer so the animation runs on the GPU and
+       doesn't repaint the whole row each frame on mobile. translateZ
+       and backface-visibility are the standard pair for this. */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  /* Mobile: nudge each lane slightly slower so frame drops on weaker
+     GPUs aren't as visible as 'images flickering / disappearing'. */
+  @media (max-width: 720px) {
+    .phrase-marquee { --duration: 75s; }
+    .phrase-marquee.alt { --duration: 95s; }
+    .title-marquee { --duration: 65s; }
+    .image-marquee { --duration: 60s; }
   }
   /* Marquees never pause — continuous flow at all times.
      (Hover only triggers focus dimming via opacity, never stops animation.) */
@@ -5271,7 +5285,9 @@
   function buildPieceImage(track, w=240, h=160, mono=false) {
     const src = track.imageUrl;
     if (src) {
-      return `<img src="${src}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />`;
+      // No loading=lazy: marquee is above the fold and lazy-load triggers
+      // late paints that look like images flickering in/out of the lane.
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'" />`;
     }
     // Phase A-refactor 2 (2026-04-29): no picsum fallback for audio. The
     // random per-seed image was confusing — visitor saw mountain / lake /
@@ -5284,7 +5300,7 @@
   function buildBlockImage(block, w=240, h=240) {
     const src = block.imageUrl;
     if (src) {
-      return `<img src="${src}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
     }
     // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
     // as buildPieceImage. Image blocks should always have imageUrl, but if
