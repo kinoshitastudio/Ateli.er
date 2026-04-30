@@ -5328,7 +5328,37 @@
     }
     return shuffled;
   }
+  // Initial-paint defer: the first renderMarquees call typically runs
+  // before refreshCrossUserBlocks has populated crossUserBlocksCache,
+  // so the marquees paint with own-only content, then re-paint a moment
+  // later when the cache lands — visible as a single 'pachi-pachi'
+  // flicker on every reload. Wait briefly for cache; render anyway after
+  // 1.2s so a slow / failed fetch doesn't leave the marquees blank.
+  let _marqueeReady = false;
+  let _marqueeDeferTimer = null;
   function renderMarquees() {
+    if (!_marqueeReady) {
+      const haveCross = (typeof crossUserBlocksCache !== 'undefined') && Array.isArray(crossUserBlocksCache) && crossUserBlocksCache.length > 0;
+      if (haveCross) {
+        // Cache populated — proceed and from now on render synchronously.
+        _marqueeReady = true;
+        if (_marqueeDeferTimer) { clearTimeout(_marqueeDeferTimer); _marqueeDeferTimer = null; }
+      } else if (!_marqueeDeferTimer) {
+        // No cache yet; arm the fallback timer so we eventually render.
+        _marqueeDeferTimer = setTimeout(() => {
+          _marqueeReady = true;
+          _marqueeDeferTimer = null;
+          _doRenderMarquees();
+        }, 1200);
+        return;
+      } else {
+        // A defer is already pending; let it complete on its own.
+        return;
+      }
+    }
+    _doRenderMarquees();
+  }
+  function _doRenderMarquees() {
     // ─── ROW 1 (top phrase lane) — own visible channel mainPhrases + cross-user
     //                              lyric/url phrases ───
     // Phase E-prep: previously this row pulled CHANNELS.mainPhrase directly,
