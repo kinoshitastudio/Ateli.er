@@ -8154,19 +8154,40 @@
     create.hidden = true;
     pick.hidden = false;
   }
+  // Guard against duplicate channel creation. Without this, a quick
+  // double-tap on ✓ or Enter pressed twice (or a stray double event)
+  // could fire createChannel() multiple times in the same tick, leaving
+  // the user with several identical empty channels.
+  let _channelCreateInProgress = false;
   function _commitChannelCreateInline() {
+    if (_channelCreateInProgress) return;
     const input = document.getElementById('bChannelNewLabel');
     const label = (input?.value || '').trim();
     if (!label) {
       input?.focus();
       return;
     }
-    // Mainphrase / lang / meta default — owner can refine via channel EDIT.
-    const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: 'now playing' });
-    refreshAllViews();
-    const sel = document.getElementById('bChannel');
-    if (sel && newId) sel.value = newId;
-    _hideChannelCreateInline();
+    _channelCreateInProgress = true;
+    const okBtn = document.getElementById('bChannelCreateOk');
+    const cancelBtn = document.getElementById('bChannelCreateCancel');
+    if (okBtn) okBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    try {
+      // Mainphrase / lang / meta default — owner can refine via channel EDIT.
+      const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: 'now playing' });
+      refreshAllViews();
+      const sel = document.getElementById('bChannel');
+      if (sel && newId) sel.value = newId;
+      _hideChannelCreateInline();
+    } finally {
+      // Brief lockout so Enter held down or rapid double-tap doesn't slip
+      // through after the UI hides but before listeners settle.
+      setTimeout(() => {
+        _channelCreateInProgress = false;
+        if (okBtn) okBtn.disabled = false;
+        if (cancelBtn) cancelBtn.disabled = false;
+      }, 400);
+    }
   }
   // Dropdown picks "+ create new channel…" → open inline create UI
   document.addEventListener('change', (e) => {
@@ -8194,8 +8215,17 @@
   // Enter/Esc keyboard support inside the new-channel input
   document.addEventListener('keydown', (e) => {
     if (e.target && e.target.id === 'bChannelNewLabel') {
-      if (e.key === 'Enter') { e.preventDefault(); _commitChannelCreateInline(); }
-      else if (e.key === 'Escape') { e.preventDefault(); _hideChannelCreateInline(); }
+      if (e.key === 'Enter') {
+        // preventDefault stops the parent form's submit; stopPropagation
+        // keeps any other Enter listener from firing the same commit again.
+        e.preventDefault();
+        e.stopPropagation();
+        _commitChannelCreateInline();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        _hideChannelCreateInline();
+      }
     }
   });
 
