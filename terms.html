@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ateli.er — Terms of Service / 利用規約</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #EFEAE0;
+  --ink: #2A3756;
+  --ink-soft: #5A6378;
+  --gray: #8A8E9C;
+  --gray-2: #A8ABB6;
+  --gray-3: #D6D2C7;
+  --line: #C8C4BA;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Serif JP', 'Inter', -apple-system, BlinkMacSystemFont, serif;
+  line-height: 1.85;
+  font-feature-settings: 'palt' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  padding: 64px 32px 120px;
+}
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.head a { color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; }
+.head a:hover { color: var(--ink-soft); }
+h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gray);
+  letter-spacing: 0.06em;
+  margin-bottom: 48px;
+}
+.lang-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.04);
+  padding: 3px;
+  border-radius: 4px;
+  margin-bottom: 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.lang-toggle button {
+  border: none; background: none;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--gray);
+  font-family: inherit; font-size: inherit;
+  border-radius: 3px;
+  transition: all .15s;
+}
+.lang-toggle button.is-active {
+  background: var(--ink); color: var(--bg);
+}
+section { margin-bottom: 40px; }
+h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gray-3);
+  text-transform: lowercase;
+}
+p { margin-bottom: 14px; font-size: 15px; }
+ul, ol { padding-left: 22px; margin-bottom: 14px; }
+li { margin-bottom: 6px; font-size: 15px; }
+.lang-en { display: none; }
+body.is-en .lang-ja { display: none; }
+body.is-en .lang-en { display: block; }
+body.is-en { font-family: 'Inter', sans-serif; }
+.foot {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid currentColor; }
+@media (max-width: 640px) {
+  body { padding: 40px 20px 80px; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <p class="head"><a href="/">Ateli.er</a> · <span>terms of service</span></p>
+  <h1 class="lang-ja">利用規約</h1>
+  <h1 class="lang-en">Terms of Service</h1>
+  <p class="subtitle mono">version 1.0 — last updated 2026-04-30</p>
+
+  <div class="lang-toggle" role="tablist">
+    <button type="button" data-lang="ja" class="is-active">日本語</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <!-- ========== JA ========== -->
+  <div class="lang-ja">
+
+    <section>
+      <h2>1. はじめに</h2>
+      <p>本利用規約（以下「本規約」）は、Ateli.er（以下「本サービス」）の利用に関する条件を定めるものです。本サービスを利用される方（以下「ユーザー」）は、本規約に同意した上でご利用ください。</p>
+    </section>
+
+    <section>
+      <h2>2. サービス提供者</h2>
+      <p>本サービスは、kinoshita studio（個人運営、以下「運営者」）が個人プロジェクトとして提供する、招待制のクローズドな表現プラットフォームです。法人ではなく、個人による無償の運営です。</p>
+    </section>
+
+    <section>
+      <h2>3. 招待制について</h2>
+      <ul>
+        <li>本サービスは招待コードを持つ方のみが登録できる、招待制（invite-only）のサービスです。</li>
+        <li>招待コードは運営者が個別に発行します。第三者への譲渡・共有は禁止します。</li>
+        <li>招待コードの不正利用が確認された場合、運営者は予告なくアカウントを停止できます。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. アカウント</h2>
+      <ul>
+        <li>登録には有効なメールアドレス、ハンドル名、招待コードが必要です。</li>
+        <li>マジックリンク方式の認証を採用しています（パスワードはありません）。</li>
+        <li>アカウント情報の管理はユーザー自身の責任で行ってください。</li>
+        <li>ユーザーはいつでも自分のアカウントを削除する権利を持ちます。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. 禁止事項</h2>
+      <p>本サービスの利用にあたり、以下の行為を禁止します。詳細は<a href="/community.html">コミュニティガイドライン</a>に定めます。</p>
+      <ul>
+        <li>法令または公序良俗に違反する行為</li>
+        <li>他のユーザーや第三者の権利・名誉・プライバシーを侵害する行為</li>
+        <li>差別的・攻撃的・脅迫的な言動、ハラスメント</li>
+        <li>著作権・商標権その他の知的財産権を侵害するコンテンツの投稿</li>
+        <li>スパム、無関係な広告、勧誘行為</li>
+        <li>本サービスの運営を妨害する行為（不正アクセス、過度な負荷をかける行為等）</li>
+        <li>その他、運営者が不適切と判断する行為</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. ユーザーの責任</h2>
+      <ul>
+        <li>ユーザーが投稿したテキスト・画像・URL・音声等のコンテンツに関する一切の責任は、当該ユーザーが負います。</li>
+        <li>他のユーザーとのトラブル（コメント、コネクト機能を介したやり取り等）は、当事者間で解決するものとします。</li>
+        <li>運営者はユーザー間のトラブルに介入する義務を負いません。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. コンテンツの取り扱い</h2>
+      <ul>
+        <li>ユーザーが投稿したコンテンツの著作権は、当該ユーザーに帰属します。</li>
+        <li>ユーザーは投稿に際し、本サービス内で表示・配信するために必要な範囲で運営者に対し非独占的な利用権を許諾するものとします。</li>
+        <li>運営者は禁止事項に該当するコンテンツを、予告なく削除・非公開化することができます。</li>
+        <li>本サービスは音声・画像のホスティングを行いません。ユーザーは外部サービス（Dropbox 等）の URL を本サービスに登録します。外部サービスの利用規約はユーザーが各自確認してください。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>8. 免責事項</h2>
+      <p>本サービスは個人による無償運営であり、以下について<strong>運営者は一切の責任を負いません</strong>：</p>
+      <ul>
+        <li>他のユーザーの投稿・コメント・行動によりユーザーが受けた損害（精神的苦痛、不快感、誹謗中傷を含む）</li>
+        <li>本サービスの一時的な停止、データの消失、不具合による損害</li>
+        <li>外部サービス（Supabase、Resend、Cloudflare、GitHub Pages 等）の障害に起因する損害</li>
+        <li>マジックリンクの不達、遅延による不利益</li>
+        <li>ユーザーが投稿した URL のリンク先におけるトラブル</li>
+        <li>本サービスを通じて知り合った他者との交流に起因する一切の事象</li>
+      </ul>
+      <p>本サービスは現状有姿（"as-is"）で提供され、運営者は明示・黙示を問わずいかなる保証も行いません。</p>
+    </section>
+
+    <section>
+      <h2>9. サービスの変更・終了</h2>
+      <ul>
+        <li>運営者は予告なく本サービスの内容を変更、または終了する場合があります。</li>
+        <li>本サービスは個人運営であり、運営者の都合（多忙、健康、関心の変化等）により休止・終了する可能性があります。</li>
+        <li>サービス終了に伴うデータの消失について、運営者は責任を負いません。重要なコンテンツはユーザー自身でバックアップを取ることを推奨します。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. 規約の変更</h2>
+      <p>運営者は、必要に応じて本規約を変更することができます。重要な変更がある場合は、本サービス内またはメールにて通知します。変更後も本サービスを継続して利用した場合、変更後の規約に同意したものとみなします。</p>
+    </section>
+
+    <section>
+      <h2>11. 準拠法・管轄</h2>
+      <p>本規約は日本法に準拠します。本サービスに関する紛争については、運営者の住所地を管轄する裁判所を第一審の専属的合意管轄裁判所とします。</p>
+    </section>
+
+    <section>
+      <h2>12. お問い合わせ</h2>
+      <p>本規約に関するお問い合わせは、本サービス内の連絡手段または運営者の連絡先までお願いします。</p>
+    </section>
+
+  </div>
+
+  <!-- ========== EN ========== -->
+  <div class="lang-en">
+
+    <section>
+      <h2>1. introduction</h2>
+      <p>These Terms of Service ("Terms") govern your use of Ateli.er ("the Service"). By using the Service, you agree to these Terms.</p>
+    </section>
+
+    <section>
+      <h2>2. service provider</h2>
+      <p>The Service is operated as a personal project by kinoshita studio ("Operator"), an individual creator, as an invite-only, closed expression platform. It is not provided by a corporation; it is run by an individual on a non-commercial basis.</p>
+    </section>
+
+    <section>
+      <h2>3. invite-only access</h2>
+      <ul>
+        <li>The Service is available only to those who hold an invite code.</li>
+        <li>Invite codes are issued individually by the Operator. Transfer or sharing with third parties is prohibited.</li>
+        <li>Misuse of invite codes may result in account suspension without notice.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. account</h2>
+      <ul>
+        <li>Registration requires a valid email address, a handle, and an invite code.</li>
+        <li>Authentication uses magic links (no passwords).</li>
+        <li>Users are responsible for the security of their account.</li>
+        <li>Users may delete their account at any time.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. prohibited conduct</h2>
+      <p>The following conduct is prohibited. Details are defined in the <a href="/community.html">Community Guidelines</a>.</p>
+      <ul>
+        <li>Conduct that violates law or public order.</li>
+        <li>Infringement of others' rights, reputation, or privacy.</li>
+        <li>Discriminatory, abusive, threatening behavior, or harassment.</li>
+        <li>Posting content that infringes copyright, trademarks, or other intellectual property.</li>
+        <li>Spam, unrelated advertising, or solicitation.</li>
+        <li>Interference with the operation of the Service (unauthorized access, excessive load, etc.).</li>
+        <li>Any other conduct deemed inappropriate by the Operator.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. user responsibility</h2>
+      <ul>
+        <li>Users bear sole responsibility for all content (text, images, URLs, audio, etc.) they post.</li>
+        <li>Disputes between users (via comments, Connect feature, etc.) shall be resolved between the parties involved.</li>
+        <li>The Operator has no obligation to mediate disputes between users.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>7. content rights</h2>
+      <ul>
+        <li>Copyright in user-posted content remains with the user.</li>
+        <li>By posting, the user grants the Operator a non-exclusive license to display and distribute the content within the Service as necessary.</li>
+        <li>The Operator may remove or hide content that violates these Terms without prior notice.</li>
+        <li>The Service does not host audio or images. Users provide URLs from external services (Dropbox, etc.). Users are responsible for complying with those external services' terms.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>8. disclaimer</h2>
+      <p>The Service is operated by an individual on a non-commercial basis. <strong>The Operator bears no responsibility</strong> for:</p>
+      <ul>
+        <li>Damages (including emotional distress, discomfort, defamation) suffered by users due to other users' posts, comments, or behavior.</li>
+        <li>Temporary outages, data loss, or damages due to malfunctions.</li>
+        <li>Damages caused by failures of external services (Supabase, Resend, Cloudflare, GitHub Pages, etc.).</li>
+        <li>Failure or delay in delivery of magic link emails.</li>
+        <li>Issues with linked content (URLs) posted by users.</li>
+        <li>Any consequences arising from interactions with others met through the Service.</li>
+      </ul>
+      <p>The Service is provided "as-is", without warranty of any kind, express or implied.</p>
+    </section>
+
+    <section>
+      <h2>9. changes / termination</h2>
+      <ul>
+        <li>The Operator may modify or discontinue the Service without notice.</li>
+        <li>As a personal project, the Service may pause or end due to the Operator's circumstances (workload, health, shifting interests, etc.).</li>
+        <li>The Operator is not responsible for data loss in the event of termination. Users are encouraged to back up important content themselves.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. changes to these terms</h2>
+      <p>The Operator may revise these Terms as needed. Material changes will be notified via the Service or email. Continued use after revision constitutes acceptance of the revised Terms.</p>
+    </section>
+
+    <section>
+      <h2>11. governing law / jurisdiction</h2>
+      <p>These Terms are governed by the laws of Japan. Any disputes shall be subject to the exclusive jurisdiction of the court having jurisdiction over the Operator's residence as the court of first instance.</p>
+    </section>
+
+    <section>
+      <h2>12. contact</h2>
+      <p>For inquiries regarding these Terms, please reach out via the contact channels available within the Service or the Operator's contact details.</p>
+    </section>
+
+  </div>
+
+  <div class="foot">
+    <span>© Ateli.er — kinoshita studio</span>
+    <span>
+      <a href="/">— back</a> ·
+      <a href="/privacy.html">privacy</a> ·
+      <a href="/community.html">community</a>
+    </span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.lang-toggle button');
+  function setLang(lang) {
+    document.body.classList.toggle('is-en', lang === 'en');
+    buttons.forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
+    try { localStorage.setItem('atelier_doc_lang', lang); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  try {
+    const stored = localStorage.getItem('atelier_doc_lang');
+    if (stored === 'en') setLang('en');
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

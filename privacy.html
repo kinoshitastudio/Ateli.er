@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ateli.er — Privacy Policy / プライバシーポリシー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #EFEAE0;
+  --ink: #2A3756;
+  --ink-soft: #5A6378;
+  --gray: #8A8E9C;
+  --gray-2: #A8ABB6;
+  --gray-3: #D6D2C7;
+  --line: #C8C4BA;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Serif JP', 'Inter', -apple-system, BlinkMacSystemFont, serif;
+  line-height: 1.85;
+  font-feature-settings: 'palt' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  padding: 64px 32px 120px;
+}
+.container { max-width: 720px; margin: 0 auto; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.head a { color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; }
+.head a:hover { color: var(--ink-soft); }
+h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gray);
+  letter-spacing: 0.06em;
+  margin-bottom: 48px;
+}
+.lang-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.04);
+  padding: 3px;
+  border-radius: 4px;
+  margin-bottom: 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.lang-toggle button {
+  border: none; background: none;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--gray);
+  font-family: inherit; font-size: inherit;
+  border-radius: 3px;
+  transition: all .15s;
+}
+.lang-toggle button.is-active {
+  background: var(--ink); color: var(--bg);
+}
+section { margin-bottom: 40px; }
+h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gray-3);
+  text-transform: lowercase;
+}
+p { margin-bottom: 14px; font-size: 15px; }
+ul, ol { padding-left: 22px; margin-bottom: 14px; }
+li { margin-bottom: 6px; font-size: 15px; }
+.lang-en { display: none; }
+body.is-en .lang-ja { display: none; }
+body.is-en .lang-en { display: block; }
+body.is-en { font-family: 'Inter', sans-serif; }
+.foot {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid currentColor; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+th, td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-3);
+  vertical-align: top;
+}
+th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--gray);
+  text-transform: uppercase;
+}
+@media (max-width: 640px) {
+  body { padding: 40px 20px 80px; }
+  h1 { font-size: 26px; }
+  table { font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <p class="head"><a href="/">Ateli.er</a> · <span>privacy policy</span></p>
+  <h1 class="lang-ja">プライバシーポリシー</h1>
+  <h1 class="lang-en">Privacy Policy</h1>
+  <p class="subtitle mono">version 1.0 — last updated 2026-04-30</p>
+
+  <div class="lang-toggle" role="tablist">
+    <button type="button" data-lang="ja" class="is-active">日本語</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <!-- ========== JA ========== -->
+  <div class="lang-ja">
+
+    <section>
+      <h2>1. はじめに</h2>
+      <p>本プライバシーポリシーは、Ateli.er（以下「本サービス」）が個人情報をどのように取得・利用・保管するかを説明するものです。本サービスは kinoshita studio（個人運営）が運営しています。</p>
+    </section>
+
+    <section>
+      <h2>2. 取得する情報</h2>
+      <table>
+        <thead>
+          <tr><th>項目</th><th>取得方法</th><th>用途</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>メールアドレス</td><td>サインアップ時にユーザーが入力</td><td>アカウント識別、マジックリンク送信</td></tr>
+          <tr><td>ハンドル名</td><td>サインアップ時にユーザーが入力</td><td>サービス内での表示</td></tr>
+          <tr><td>招待コード</td><td>サインアップ時にユーザーが入力</td><td>登録権限の確認</td></tr>
+          <tr><td>投稿コンテンツ</td><td>ユーザーが本サービス内で作成</td><td>サービス機能の提供</td></tr>
+          <tr><td>規約同意の記録</td><td>サインアップ時に自動記録</td><td>同意状況の確認</td></tr>
+        </tbody>
+      </table>
+      <p>本サービスは IP アドレス、位置情報、デバイス識別子、行動履歴等の追跡を行いません。アクセス解析ツール（Google Analytics 等）も使用していません。</p>
+    </section>
+
+    <section>
+      <h2>3. 利用目的</h2>
+      <ul>
+        <li>本サービスの提供および運営</li>
+        <li>マジックリンクによる認証</li>
+        <li>不正利用・規約違反の対応</li>
+        <li>重要なお知らせの通知</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. 第三者提供（外部サービスの利用）</h2>
+      <p>本サービスは以下の外部サービスを利用しており、これらに必要最小限の情報を保管・送信しています：</p>
+      <table>
+        <thead>
+          <tr><th>サービス</th><th>用途</th><th>保管されるデータ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Supabase（米国）</td><td>データベース、認証</td><td>email、ハンドル、投稿内容</td></tr>
+          <tr><td>Resend（米国）</td><td>メール配信</td><td>email（送信時のみ）</td></tr>
+          <tr><td>Cloudflare（米国）</td><td>DNS</td><td>なし（解決のみ）</td></tr>
+          <tr><td>GitHub Pages（米国）</td><td>静的ファイル配信</td><td>なし</td></tr>
+        </tbody>
+      </table>
+      <p>各サービスのプライバシーポリシーは各社のサイトでご確認ください。本サービスは上記以外の第三者にユーザー情報を提供しません。法令に基づく要請を受けた場合を除きます。</p>
+    </section>
+
+    <section>
+      <h2>5. データの保管場所と期間</h2>
+      <ul>
+        <li>データは Supabase の米国リージョンに保管されます。</li>
+        <li>ユーザーがアカウントを削除すると、関連データは合理的な期間内に削除されます。</li>
+        <li>本サービスが終了する場合、運営者の判断でデータを削除します。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. ローカルストレージの利用</h2>
+      <p>本サービスはユーザーのブラウザの localStorage に、表示設定や同期キャッシュ等のデータを保存します。これは利用者の端末内のみに保管され、本サービスからは追跡できません。ブラウザの設定で削除可能です。</p>
+    </section>
+
+    <section>
+      <h2>7. ユーザーの権利</h2>
+      <p>ユーザーは本サービスに関し、以下の権利を有します：</p>
+      <ul>
+        <li>自分の登録情報の確認</li>
+        <li>自分のアカウントおよび投稿コンテンツの削除</li>
+        <li>運営者への問い合わせ</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>8. ポリシーの変更</h2>
+      <p>本ポリシーは必要に応じて更新します。重要な変更は本サービス内またはメールで通知します。</p>
+    </section>
+
+    <section>
+      <h2>9. お問い合わせ</h2>
+      <p>本ポリシーに関するお問い合わせは、本サービス内の連絡手段または運営者の連絡先までお願いします。</p>
+    </section>
+
+  </div>
+
+  <!-- ========== EN ========== -->
+  <div class="lang-en">
+
+    <section>
+      <h2>1. introduction</h2>
+      <p>This Privacy Policy explains how Ateli.er ("the Service") collects, uses, and stores personal information. The Service is operated by kinoshita studio (an individual).</p>
+    </section>
+
+    <section>
+      <h2>2. information we collect</h2>
+      <table>
+        <thead>
+          <tr><th>item</th><th>collection</th><th>purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>email address</td><td>provided at signup</td><td>account identification, magic link delivery</td></tr>
+          <tr><td>handle</td><td>provided at signup</td><td>display within the Service</td></tr>
+          <tr><td>invite code</td><td>provided at signup</td><td>verifying registration eligibility</td></tr>
+          <tr><td>posted content</td><td>created by users</td><td>providing Service features</td></tr>
+          <tr><td>terms acceptance</td><td>recorded automatically at signup</td><td>verifying acceptance status</td></tr>
+        </tbody>
+      </table>
+      <p>The Service does not track IP addresses, location, device identifiers, or behavior. No analytics tools (Google Analytics, etc.) are used.</p>
+    </section>
+
+    <section>
+      <h2>3. purpose of use</h2>
+      <ul>
+        <li>Providing and operating the Service.</li>
+        <li>Magic link authentication.</li>
+        <li>Responding to misuse or violations.</li>
+        <li>Sending important notifications.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. third parties (external services)</h2>
+      <p>The Service uses the following external services, which retain or process minimal necessary information:</p>
+      <table>
+        <thead>
+          <tr><th>service</th><th>use</th><th>data stored</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Supabase (US)</td><td>database, auth</td><td>email, handle, posts</td></tr>
+          <tr><td>Resend (US)</td><td>email delivery</td><td>email (during send only)</td></tr>
+          <tr><td>Cloudflare (US)</td><td>DNS</td><td>none (resolution only)</td></tr>
+          <tr><td>GitHub Pages (US)</td><td>static hosting</td><td>none</td></tr>
+        </tbody>
+      </table>
+      <p>Please refer to each service's own privacy policy for their handling of data. The Service does not share user information with any other third parties, except as required by law.</p>
+    </section>
+
+    <section>
+      <h2>5. data location and retention</h2>
+      <ul>
+        <li>Data is stored in Supabase's US region.</li>
+        <li>When a user deletes their account, related data is removed within a reasonable period.</li>
+        <li>If the Service is discontinued, data may be deleted at the Operator's discretion.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. use of local storage</h2>
+      <p>The Service stores display preferences and sync cache in your browser's localStorage. This data resides on your device and is not tracked by the Service. You may clear it via your browser settings.</p>
+    </section>
+
+    <section>
+      <h2>7. user rights</h2>
+      <p>Users have the following rights:</p>
+      <ul>
+        <li>To access their registered information.</li>
+        <li>To delete their account and posted content.</li>
+        <li>To contact the Operator.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>8. changes to this policy</h2>
+      <p>This Policy may be updated as needed. Material changes will be notified via the Service or email.</p>
+    </section>
+
+    <section>
+      <h2>9. contact</h2>
+      <p>For inquiries regarding this Policy, please reach out via the contact channels available within the Service or the Operator's contact details.</p>
+    </section>
+
+  </div>
+
+  <div class="foot">
+    <span>© Ateli.er — kinoshita studio</span>
+    <span>
+      <a href="/">— back</a> ·
+      <a href="/terms.html">terms</a> ·
+      <a href="/community.html">community</a>
+    </span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.lang-toggle button');
+  function setLang(lang) {
+    document.body.classList.toggle('is-en', lang === 'en');
+    buttons.forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
+    try { localStorage.setItem('atelier_doc_lang', lang); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  try {
+    const stored = localStorage.getItem('atelier_doc_lang');
+    if (stored === 'en') setLang('en');
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

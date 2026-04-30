@@ -1513,13 +1513,6 @@
     color: var(--gray);
     letter-spacing: 0.06em;
   }
-  /* state-past / state-future: only dim the text labels, leave images crisp.
-     Previous opacity reduction on the thumb made user-uploaded photos
-     look washed-out. State is still indicated via meta text + Upload picker
-     filtering, not via opacity on the image itself. */
-  .ch-card-state-past .ch-card-name,
-  .ch-card-state-past .ch-card-meta { color: var(--gray-2); }
-
   /* Drill-in view */
   .ch-detail { padding-top: 4px; }
   .ch-detail-back {
@@ -2089,8 +2082,6 @@
   .issue-popover .it:last-child { border-bottom: none; }
   .issue-popover .it:hover { padding-left: 6px; color: var(--ink); }
   .issue-popover .it.cur { color: var(--ink); }
-  .issue-popover .it.weathered, .issue-popover .it.future { color: var(--gray-2); cursor: default; }
-  .issue-popover .it.weathered:hover, .issue-popover .it.future:hover { padding-left: 0; color: var(--gray-2); }
   .issue-popover .it .lbl { font-family: var(--sans); font-size: 12.5px; font-weight: 400; }
   .issue-popover .it .ipmeta { font-size: 9.5px; color: var(--gray); }
 
@@ -4191,19 +4182,19 @@
   // Channels (Are.na-like boxes). Each holds blocks (audio/image/text/url).
   // mainPhrase is the headline that drifts in the top marquee row.
   const CHANNELS = [
-    { id:'-01', label:'Archive −01', meta:'archived · weathered',   state:'past',    lang:'mixed',
+    { id:'-01', label:'Archive −01', meta:'archived · weathered',   lang:'mixed',
       mainPhrase:'these have weathered.' },
-    { id:'00',  label:'Archive 00',  meta:'now playing',            state:'current', lang:'mixed',
+    { id:'00',  label:'Archive 00',  meta:'now playing',            lang:'mixed',
       mainPhrase:'a courtyard, before anyone wakes.' },
-    { id:'01',  label:'Archive 01',  meta:'drafting · spring 2026', state:'future',  lang:'mixed',
+    { id:'01',  label:'Archive 01',  meta:'drafting · spring 2026', lang:'mixed',
       mainPhrase:'drafting — see you in spring.' },
 
     // Artist / curator channels
-    { id:'ch-yoake',  label:'夜更けの中庭',  meta:'curated by 仮田 涼',                   state:'current', lang:'ja',
+    { id:'ch-yoake',  label:'夜更けの中庭',  meta:'curated by 仮田 涼',                   lang:'ja',
       mainPhrase:'夜更け、誰もいない中庭に置いておく。' },
-    { id:'ch-studio', label:'Studio Notes', meta:'kinoshita studio · process notes',     state:'current', lang:'mixed',
+    { id:'ch-studio', label:'Studio Notes', meta:'kinoshita studio · process notes',     lang:'mixed',
       mainPhrase:'制作の余白、思考の断片。' },
-    { id:'ch-tape',   label:'Tape Letters', meta:'by lin · TASCAM portable, side B',     state:'current', lang:'en',
+    { id:'ch-tape',   label:'Tape Letters', meta:'by lin · TASCAM portable, side B',     lang:'en',
       mainPhrase:'whispered into magnetic tape, kept as-is.' },
   ];
     // Alias retained for any legacy references; not exposed in UI
@@ -4395,7 +4386,6 @@
       // my channel — drill-in
       backToChannels: '← back to channels',
       noBlocksYet: '— no blocks placed yet.',
-      noBlocksWeathered: '— these have weathered.',
       // piece modal sections
       pmIndividualSpace: 'block',
       pmPiece: 'Block',
@@ -4430,11 +4420,7 @@
       fldMeta:         'meta line',
       fldMetaPh:       'e.g. now playing · weekly notes',
       fldLangCh:       'lang',
-      fldStateCh:      'state',
       langMixed:       'mixed (JP·EN)',
-      stateCurrent:    'current — accepts new blocks',
-      stateFuture:     'future — accepts new blocks',
-      statePast:       'past — archived (read-only)',
       // feed
       paneFeedHead:    'The <em>Feed</em>',
       paneFeedMeta:    '— blocks across all channels',
@@ -4600,7 +4586,6 @@
       placedAt: '追加日',
       backToChannels: '← チャンネルへ戻る',
       noBlocksYet: '— まだブロックがありません。',
-      noBlocksWeathered: '— 風化しました。',
       pmIndividualSpace: 'ブロック',
       pmPiece: 'Block',
       pmIssue: '',
@@ -4634,11 +4619,7 @@
       fldMeta:         '副題',
       fldMetaPh:       '例：now playing · weekly notes',
       fldLangCh:       '言語',
-      fldStateCh:      '状態',
       langMixed:       'mixed（JP·EN）',
-      stateCurrent:    'current — 稼働中',
-      stateFuture:     'future — 未公開ドラフト',
-      statePast:       'past — アーカイブ（読み取り専用）',
       paneFeedHead:    'フィード',
       paneFeedMeta:    '— 全チャンネルのブロック',
       paneFeedIntro:   `全チャンネルに置かれたものを、新しい順で。<br>フィルタも順位もない、純粋な時系列ストリーム。<br><em>将来：ログイン機能の後、Connect グラフに基づくレコメンドを実装予定。</em>`,
@@ -5941,7 +5922,6 @@
       });
     const cards = visibleChannels.map(c => {
       const items = _itemsInChannel(c.id);
-      const stateClass = c.state === 'past' ? 'ch-card-state-past' : (c.state === 'future' ? 'ch-card-state-future' : '');
       const emptyClass = items.length === 0 ? 'is-empty' : '';
       const cells = [
         items[0] || null,
@@ -5958,7 +5938,7 @@
         ? `<span class="ch-vis-pill ch-vis-public">public</span>`
         : `<span class="ch-vis-pill ch-vis-draft">draft</span>`;
       return `
-        <div class="ch-card ${stateClass} ${emptyClass}" data-cid="${escapeHtml(c.id)}">
+        <div class="ch-card ${emptyClass}" data-cid="${escapeHtml(c.id)}">
           <div class="ch-card-thumb">
             ${ cells.map(_miniCellHtml).join('') }
           </div>
@@ -6048,7 +6028,7 @@
 
     let body;
     if (items.length === 0) {
-      body = `<p style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.06em; padding: 22px 0;">${ c.state === 'past' ? t('noBlocksWeathered') : t('noBlocksYet') }</p>`;
+      body = `<p style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.06em; padding: 22px 0;">${t('noBlocksYet')}</p>`;
     } else {
       const total = items.length;
       body = `<ol class="pane-index">${
@@ -6534,11 +6514,6 @@
             <option value="ja"${c.lang === 'ja' ? ' selected' : ''}>JP</option>
             <option value="en"${c.lang === 'en' ? ' selected' : ''}>EN</option>
           </select></label>
-          <label class="uf-row" style="display:none;"><span class="sp-k">${t('fldStateCh')}</span><select class="uf-input" id="ch-state">
-            <option value="current"${c.state === 'current' ? ' selected' : ''}>${t('stateCurrent')}</option>
-            <option value="future"${c.state === 'future' ? ' selected' : ''}>${t('stateFuture')}</option>
-            <option value="past"${c.state === 'past' ? ' selected' : ''}>${t('statePast')}</option>
-          </select></label>
           <label class="uf-row"><span class="sp-k">visibility</span>
             <span style="display:inline-flex; gap:18px; align-items:center; padding-top:6px; flex-wrap:wrap;">
               <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
@@ -6647,7 +6622,6 @@
     const phrase = ($('#ch-phrase')?.value || '').trim();
     const meta   = ($('#ch-meta')?.value || '').trim();
     const lang   = ($('#ch-lang')?.value || 'mixed');
-    const state  = ($('#ch-state')?.value || 'current');
     // Phase E-prep: read visibility radio (public/draft) and detect cascade.
     const visMode = (document.querySelector('input[name="ch-vis"]:checked')?.value || 'public');
     const newIsPublic = (visMode === 'public');
@@ -6659,7 +6633,6 @@
       mainPhrase: phrase,
       meta: meta || c.meta,
       lang,
-      state,
       isPublic: newIsPublic,
     });
     // Phase E-prep cascade rules (asymmetric for strict consistency):
@@ -6706,7 +6679,7 @@
       const list = loadUserChannels();
       const i = list.findIndex(x => x.id === cid);
       if (i >= 0) {
-        list[i] = { ...list[i], label: c.label, mainPhrase: c.mainPhrase, meta: c.meta, lang: c.lang, state: c.state, isPublic: c.isPublic };
+        list[i] = { ...list[i], label: c.label, mainPhrase: c.mainPhrase, meta: c.meta, lang: c.lang, isPublic: c.isPublic };
         saveUserChannels(list);
       }
     }
@@ -7136,7 +7109,7 @@
     const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    return CHANNELS.filter(c => c.state !== 'past' && (_cwc.has(c.id) || _uci.has(c.id)));
+    return CHANNELS.filter(c => _cwc.has(c.id) || _uci.has(c.id));
   }
   function promptConnectExternal(blockId) {
     // Resolve the source — first try the Explore cache (fresh fetch),
@@ -7650,24 +7623,21 @@
     const sel = document.getElementById('bChannel');
     if (!sel) return;
     const prev = sel.value;
-    // Past channels are read-only — only current and future accept new blocks.
-    // Phase E-prep: ALSO filter to channels the viewer has content in (or
-    // user-created). New users see only "+ create new channel" — no seed
-    // template list cluttering the upload form.
+    // Filter to channels the viewer has content in (or user-created).
+    // New users see only "+ create new channel" — no seed template list
+    // cluttering the upload form.
     const _ub = (typeof loadBlocks === 'function') ? loadBlocks() : [];
     const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    const writeable = CHANNELS.filter(c => c.state !== 'past' && (_cwc.has(c.id) || _uci.has(c.id)));
+    const writeable = CHANNELS.filter(c => _cwc.has(c.id) || _uci.has(c.id));
     sel.innerHTML = writeable.map(c => `<option value="${c.id}">${escapeHtml(c.label)} — ${escapeHtml(c.meta)}</option>`).join('')
                    + `<option value="__new__">+ create new channel…</option>`;
-    // Preserve previous selection if still valid; otherwise default to current
+    // Preserve previous selection if still valid; otherwise default to first
     if (prev && writeable.some(c => c.id === prev)) {
       sel.value = prev;
-    } else {
-      const cur = writeable.find(c => c.state === 'current');
-      if (cur) sel.value = cur.id;
-      else if (writeable.length > 0) sel.value = writeable[0].id;
+    } else if (writeable.length > 0) {
+      sel.value = writeable[0].id;
     }
   }
   // Inline channel creation when user picks "+ create new channel..." from select
@@ -7700,7 +7670,7 @@
     // Phase E-prep: new channels default to public visibility.
     // Owner can flip to draft in channel edit form; cascade hides all
     // contained blocks from courtyard view.
-    const c = { id, label, mainPhrase, lang: lang || 'mixed', meta: meta || 'now playing', state: 'current', isPublic: true, userCreated: true, createdAt: now, updatedAt: now };
+    const c = { id, label, mainPhrase, lang: lang || 'mixed', meta: meta || 'now playing', isPublic: true, userCreated: true, createdAt: now, updatedAt: now };
     CHANNELS.push(c);
     // Persist via channel edits (treat user-created as a patch on a non-existent base + a marker).
     // Simpler: keep a separate localStorage list for user-created channels.
@@ -8660,9 +8630,7 @@
     if (!r) return '';
     const obj = r.obj;
     const channels = blockChannels(obj);
-    // Past (weathered) channels are read-only — exclude them from the connect
-    // picker for consistency with the upload form's channel select.
-    const otherChannels = CHANNELS.filter(c => !channels.includes(c.id) && c.state !== 'past');
+    const otherChannels = CHANNELS.filter(c => !channels.includes(c.id));
 
     const pillsHtml = channels.map((cid, i) => {
       const c = CHANNELS.find(x => x.id === cid);
