@@ -9591,16 +9591,41 @@
         });
       });
     }
+    // Helper: try own-block connect first; if the id isn't in our own
+    // store, fall through to the external-block snapshot connect (for
+    // cross-user blocks reached via Explore / Feed).
+    const _tryConnect = (blockId, targetCid) => {
+      let ok = connectBlock(blockId, targetCid);
+      if (ok) return true;
+      // Cross-user case: build a snapshot from the resolver and persist
+      // it to atelier_external_blocks_v1 under the target channel.
+      const r = (typeof _resolveBlockOrTrack === 'function') ? _resolveBlockOrTrack(blockId) : null;
+      if (!r) return false;
+      const obj = r.obj || {};
+      const snapshot = {
+        id: blockId,
+        kind: r.kind,
+        // The snapshot's payload is the block fields needed to render it
+        // (everything outside of internal flags).
+        payload: { ...obj },
+        ownerId: obj._ownerId || obj.ownerId || null,
+        ownerHandle: obj._ownerHandle || obj.ownerHandle || null,
+        channelLabel: obj._externalChannelLabel || obj.channelLabel || '',
+      };
+      return connectExternalBlock(targetCid, snapshot);
+    };
     root.querySelectorAll('[data-add]').forEach(btn => {
       btn.addEventListener('click', () => {
         const targetCid = btn.dataset.add;
-        const ok = connectBlock(id, targetCid);
+        const ok = _tryConnect(id, targetCid);
         connectPickerOpen = false;
         refreshAllViews();
         if (ok) {
           const ch = CHANNELS.find(c => c.id === targetCid);
           const label = ch ? ch.label : targetCid;
           showToast(`${label} にコネクト追加されました`);
+        } else {
+          showToast(`コネクトに失敗しました`);
         }
       });
     });
@@ -9617,10 +9642,11 @@
           meta: 'now playing',
         });
         if (newId) {
-          connectBlock(id, newId);
+          const ok = _tryConnect(id, newId);
           connectPickerOpen = false;
           refreshAllViews();
-          showToast(`${label.trim()} を新規作成して接続しました`);
+          if (ok) showToast(`${label.trim()} を新規作成して接続しました`);
+          else showToast(`${label.trim()} は作成しましたが接続に失敗しました`);
         }
       });
     }
