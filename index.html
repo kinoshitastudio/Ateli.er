@@ -5824,11 +5824,20 @@
       edits[id] = { _deleted: true };
       saveChannelEdits(edits);
     }
-    // Cascade: remove blocks whose primary is this channel,
-    // and prune connectedTo references in remaining blocks.
-    const blocks = loadBlocks().filter(b => b.channelId !== id);
+    // Cascade: remove blocks whose primary is this channel. Capture the
+    // ids to remove so we can also purge them from the public_blocks
+    // mirror — without this, visitors continued to see the deleted
+    // channel's content in Explore.
+    const allBlocks = loadBlocks();
+    const removedBlockIds = allBlocks.filter(b => b.channelId === id).map(b => b.id);
+    const blocks = allBlocks.filter(b => b.channelId !== id);
     blocks.forEach(b => { if (b.connectedTo) b.connectedTo = b.connectedTo.filter(x => x !== id); });
     saveBlocks(blocks);
+    // Fire-and-forget public_blocks cleanup so visitors stop seeing this
+    // channel's blocks in Explore portfolios.
+    removedBlockIds.forEach(bid => {
+      try { atelierPublic?.remove(bid); } catch (e) {}
+    });
     // Cascade for placeholder TRACKS
     const trackIdsToDelete = TRACKS.filter(t => t.channelId === id && !t.ownLocal).map(t => t.id);
     trackIdsToDelete.forEach(tid => deleteTrack(tid, /*skipRender*/ true));
@@ -5839,6 +5848,13 @@
     });
     saveTrackConnections(conns);
     hydrateTrackConnections();
+    // Drop the channel from the user's grid order so the slot doesn't
+    // come back when the same id is later re-created (or remain stale).
+    try {
+      const order = loadChannelGridOrder();
+      const next = order.filter(cid => cid !== id);
+      if (next.length !== order.length) saveChannelGridOrder(next);
+    } catch (e) {}
   }
   function editTrack(id, patch) {
     const t = TRACKS.find(x => x.id === id);
@@ -6158,6 +6174,29 @@
   }
   function saveChannelGridOrder(arr) {
     try { localStorage.setItem(CHANNEL_GRID_ORDER_KEY, JSON.stringify(arr)); } catch (e) {}
+    // Best-effort sync to profiles.channel_grid_order so visitor portfolios
+    // pick up the owner's chosen order. Silent on failure (missing column,
+    // network) — the local order still works for the owner.
+    _pushChannelGridOrderToProfile(arr).catch(() => {});
+  }
+  async function _pushChannelGridOrderToProfile(arr) {
+    if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
+    const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+    const accessToken = tokenData?.access_token;
+    if (!accessToken) return;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}`;
+    const headers = {
+      'apikey': SUPABASE_PUB_KEY,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    };
+    try {
+      await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ channel_grid_order: arr }) });
+    } catch (e) {
+      // Ignore — column may not exist yet (run the SQL migration first).
+    }
   }
 
   function renderChannelGrid() {
@@ -10097,7 +10136,7 @@
     const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
     const accessToken = tokenData?.access_token;
-    const url = `${SUPABASE_URL}/rest/v1/profiles?select=id,handle,display_name,avatar_url,bio,sns_url,created_at&order=created_at.desc&limit=120`;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?select=*&order=created_at.desc&limit=120`;
     const headers = { 'apikey': SUPABASE_PUB_KEY };
     if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
     const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('profiles fetch timeout (10s)')), 10000));
@@ -10171,7 +10210,7 @@
     const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
     const accessToken = tokenData?.access_token;
-    const url = `${SUPABASE_URL}/rest/v1/profiles?select=id,handle,display_name,avatar_url,bio,sns_url,created_at&order=created_at.desc&limit=120`;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?select=*&order=created_at.desc&limit=120`;
     const headers = { 'apikey': SUPABASE_PUB_KEY };
     if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
     try {
@@ -10411,15 +10450,21 @@
       }
       byChannel.get(cid).items.push(r);
     });
-    // Phase E-prep: sort visitor portfolio in the same order as the owner's
-    // My Channel grid. Owner uses CHANNELS array order = seed order then
-    // appended user-created. Visitor doesn't have access to the owner's
-    // CHANNELS array, so we hardcode the seed order here and append other
-    // (user-created) channels alphabetically by id at the end.
+    // Visitor portfolio sort:
+    //   1. Owner's saved channel_grid_order (mirrors My Channel grid exactly)
+    //   2. Seed-channel order for anything not in the owner's list
+    //   3. Alphabetical by channel id as the final tiebreak
+    // Owner's order arrives via _exploreProfilesCache (profiles.channel_grid_order
+    // column). If the column is missing or the cache is empty, fall back to the
+    // hardcoded seed order — same UX as before.
     const _SEED_ORDER = ['-01', '00', '01', 'ch-yoake', 'ch-studio', 'ch-tape'];
+    const _ownerProfile = (typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[ownerId] : null;
+    const _ownerOrder = (Array.isArray(_ownerProfile?.channel_grid_order)) ? _ownerProfile.channel_grid_order : [];
     const _channelSortIndex = (cid) => {
-      const i = _SEED_ORDER.indexOf(cid);
-      return i >= 0 ? i : 1000 + (cid || '').localeCompare(' ');
+      const userIdx = _ownerOrder.indexOf(cid);
+      if (userIdx >= 0) return userIdx;
+      const seedIdx = _SEED_ORDER.indexOf(cid);
+      return seedIdx >= 0 ? 1000 + seedIdx : 2000;
     };
     const channels = [...byChannel.values()].sort((a, b) => {
       const aIdx = _channelSortIndex(a.channelId);
