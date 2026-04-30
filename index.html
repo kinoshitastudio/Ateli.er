@@ -8498,6 +8498,11 @@
   function _feedItems() {
     const items = [];
     // Audio tracks (TRACKS includes seeded + injected user audio blocks)
+    // Tag own items with currentUser.id so the Feed grouping (ownerId +
+    // channelId + day) doesn't collide with another user's same-named
+    // channel id (createChannel mints 'ch-uNN' per-user, so two users
+    // can independently pick 'ch-u01').
+    const _ownUid = currentUser?.id || '_self';
     TRACKS.forEach(t => {
       items.push({
         id: t.id,
@@ -8507,6 +8512,7 @@
         channelId: t.channelId,
         ts: t.ts || 0,
         track: t,
+        ownerId: _ownUid,
       });
     });
     // Phase E-prep: include cross-user public blocks so Feed becomes a courtyard
@@ -8532,7 +8538,9 @@
         ts: b.ts || 0,
         block: b,
         ownerHandle: b.ownerHandle || b._ownerHandle,
-        ownerId: b.ownerId || b._ownerId,
+        // Cross-user blocks carry their real ownerId; own blocks fall back
+        // to currentUser so grouping treats them as the same actor.
+        ownerId: b.ownerId || b._ownerId || _ownUid,
         crossUser: !!b._crossUser,
       });
     });
@@ -8630,15 +8638,25 @@
       return;
     }
 
-    // Group by (channelId, day) so a burst of additions to one channel
-    // collapses into a single Are.na-style "added N items to ${channel}" entry.
+    // Group by (ownerId, channelId, day) so a burst of additions to one
+    // channel collapses into one '@actor connected N items to ${channel}'
+    // entry. ownerId in the key is critical — channel ids are minted
+    // per-user (ch-uNN), so two different users can both have 'ch-u01'.
+    // Without ownerId in the key, BMboard's image and Taka's audio (both
+    // in their respective 'ch-u01') ended up in the same Feed group.
     const groupsMap = new Map();
     items.forEach(it => {
       const day = new Date(it.ts || 0);
       day.setHours(0, 0, 0, 0);
-      const key = `${it.channelId}_${day.getTime()}`;
+      const ownerKey = it.ownerId || '_unknown';
+      const key = `${ownerKey}_${it.channelId}_${day.getTime()}`;
       if (!groupsMap.has(key)) {
-        groupsMap.set(key, { channelId: it.channelId, ts: it.ts || 0, items: [] });
+        groupsMap.set(key, {
+          channelId: it.channelId,
+          ownerId: it.ownerId || null,
+          ts: it.ts || 0,
+          items: [],
+        });
       }
       const g = groupsMap.get(key);
       g.items.push(it);
