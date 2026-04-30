@@ -8778,21 +8778,25 @@
       const card = e.target.closest('.feed-group-card[data-id]');
       if (!card) return;
       const id = card.dataset.id;
-      const kind = card.dataset.kind;
       _returnToFeed = true;
       // Capture modal-shell scroll so coming back to feed lands at the same place.
       const _ms = document.querySelector('.modal-shell');
       if (_ms) _savedModalScroll = _ms.scrollTop;
-      if (kind === 'audio') {
-        const t = TRACKS.find(x => x.id === id);
-        if (t) { closeModal(); openPieceModal(t); }
-      } else {
-        const b = loadBlocks().find(x => x.id === id);
-        if (!b) { _returnToFeed = false; return; }
-        if (b.kind === 'image') { closeModal(); openImageModal(b); }
-        else if (b.kind === 'text') { closeModal(); openTextModal(b); }
-        else if (b.kind === 'url') { closeModal(); openUrlModal(b); }
+      // Use _resolveBlockOrTrack so cross-user blocks (item.block from
+      // crossUserBlocksCache, not in TRACKS / loadBlocks()) also open.
+      // The earlier inline TRACKS.find / loadBlocks().find lookups
+      // silently failed for any block that wasn't owned by the viewer.
+      const r = (typeof _resolveBlockOrTrack === 'function') ? _resolveBlockOrTrack(id) : null;
+      if (!r) {
+        _returnToFeed = false;
+        if (typeof showToast === 'function') showToast(`block ${id} は見つかりません`);
+        return;
       }
+      closeModal();
+      if (r.kind === 'audio') openPieceModal(r.obj);
+      else if (r.kind === 'image') openImageModal(r.obj);
+      else if (r.kind === 'text') openTextModal(r.obj);
+      else if (r.kind === 'url') openUrlModal(r.obj);
     });
   })();
 
