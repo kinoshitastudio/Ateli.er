@@ -4034,12 +4034,12 @@
               <!-- IMAGE fields -->
               <div class="bf-fields" data-kind="image" hidden>
                 <label class="uf-row">
-                  <span class="sp-k is-required">image url</span>
-                  <input class="uf-input" type="url" id="iUrl" placeholder="https://… (drive / dropbox / direct image url)">
+                  <span class="sp-k">title</span>
+                  <input class="uf-input" type="text" id="iCaption" placeholder="berlin, march · wet pavement" maxlength="80">
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k">caption</span>
-                  <input class="uf-input" type="text" id="iCaption" placeholder="berlin, march · wet pavement" maxlength="80">
+                  <span class="sp-k is-required">image url</span>
+                  <input class="uf-input" type="url" id="iUrl" placeholder="https://… (drive / dropbox / direct image url)">
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">source</span>
@@ -4057,6 +4057,10 @@
 
               <!-- TEXT fields -->
               <div class="bf-fields" data-kind="text" hidden>
+                <label class="uf-row">
+                  <span class="sp-k">title</span>
+                  <input class="uf-input" type="text" id="tTitle" placeholder="optional · a short label that appears above the text" maxlength="80">
+                </label>
                 <label class="uf-row">
                   <span class="sp-k is-required">text</span>
                   <textarea class="uf-input" id="tText" rows="3" placeholder="a fragment, a thought, a half-lyric" maxlength="240"></textarea>
@@ -4081,12 +4085,12 @@
               <!-- URL fields -->
               <div class="bf-fields" data-kind="url" hidden>
                 <label class="uf-row">
-                  <span class="sp-k is-required">url</span>
-                  <input class="uf-input" type="url" id="uUrl" placeholder="https://note.com/… or any external article">
-                </label>
-                <label class="uf-row">
                   <span class="sp-k">title</span>
                   <input class="uf-input" type="text" id="uTitleOnly" placeholder="how the article reads in the courtyard" maxlength="100">
+                </label>
+                <label class="uf-row">
+                  <span class="sp-k is-required">url</span>
+                  <input class="uf-input" type="url" id="uUrl" placeholder="https://note.com/… or any external article">
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">source</span>
@@ -6836,8 +6840,8 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
+            <label class="uf-row"><span class="sp-k">title</span><input class="uf-input" id="ef-caption" value="${escapeHtml(obj.caption || '')}"></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" value="${escapeHtml(obj.imageUrl || '')}"></label>
-            <label class="uf-row"><span class="sp-k">caption</span><input class="uf-input" id="ef-caption" value="${escapeHtml(obj.caption || '')}"></label>
             <label class="uf-row"><span class="sp-k">source</span><input class="uf-input" id="ef-source" value="${escapeHtml(obj.source || '')}"></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
@@ -6863,6 +6867,7 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
+            <label class="uf-row"><span class="sp-k">title</span><input class="uf-input" id="ef-title" placeholder="optional · a short label that appears above the text" maxlength="80" value="${escapeHtml(obj.title || '')}"></label>
             <label class="uf-row"><span class="sp-k">text</span><textarea class="uf-input" id="ef-text" rows="5">${escapeHtml(obj.text || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">style</span><select class="uf-input" id="ef-style">
               <option value="lyric"${obj.style === 'lyric' ? ' selected' : ''}>lyric — drifts in the phrase lane</option>
@@ -6892,8 +6897,8 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
-            <label class="uf-row"><span class="sp-k">url</span><input class="uf-input" type="url" id="ef-url" value="${escapeHtml(obj.url || '')}"></label>
             <label class="uf-row"><span class="sp-k">title</span><input class="uf-input" id="ef-title" value="${escapeHtml(obj.title || '')}"></label>
+            <label class="uf-row"><span class="sp-k">url</span><input class="uf-input" type="url" id="ef-url" value="${escapeHtml(obj.url || '')}"></label>
             <label class="uf-row"><span class="sp-k">source</span><input class="uf-input" id="ef-source" value="${escapeHtml(obj.source || '')}"></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
@@ -7004,6 +7009,7 @@
       });
     } else if (kind === 'text') {
       editBlock(id, {
+        title: ($('#ef-title')?.value || '').trim(),
         text:  $('#ef-text')?.value || '',
         style: ($('#ef-style')?.value === 'prose') ? 'prose' : 'lyric',
         context: ($('#ef-context')?.value || '').trim(),
@@ -7786,6 +7792,7 @@
           caption, source, context, description, ts: Date.now(),
         };
       } else if (bkActive === 'text') {
+        const title = document.getElementById('tTitle')?.value.trim() || '';
         const text = document.getElementById('tText').value.trim();
         const style = document.getElementById('tStyle').value;
         const context = document.getElementById('tContext')?.value.trim() || '';
@@ -7794,7 +7801,7 @@
         block = {
           id: genBlockId('text'),
           kind: 'text', channelId,
-          text, style, context, description, ts: Date.now(),
+          title, text, style, context, description, ts: Date.now(),
         };
       } else if (bkActive === 'url') {
         const url = document.getElementById('uUrl').value.trim();
@@ -9012,7 +9019,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: styleLabel, label: (block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : ''), block })}
+      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: styleLabel, label: block.title || ((block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : '')), block })}
       <div class="piece-modal-art" style="font-size: clamp(20px, 3vw, 32px); line-height: 1.5; margin-bottom: 32px; color: var(--ink); letter-spacing: 0; text-transform: none;">
         ${ block.style === 'lyric' ? `<span style="font-style: normal;">${escapeHtml(block.text)}</span>` : escapeHtml(block.text).replace(/\n/g, '<br>') }
       </div>
