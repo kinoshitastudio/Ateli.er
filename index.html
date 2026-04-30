@@ -187,10 +187,13 @@
      GPUs aren't as visible as 'images flickering / disappearing', and
      so the eye can settle on each item before it scrolls past. */
   @media (max-width: 720px) {
-    .phrase-marquee { --duration: 95s; }
-    .phrase-marquee.alt { --duration: 120s; }
-    .title-marquee { --duration: 90s; }
-    .image-marquee { --duration: 100s; }
+    .phrase-marquee { --duration: 130s; }
+    .phrase-marquee.alt { --duration: 165s; }
+    .title-marquee { --duration: 130s; }
+    .image-marquee { --duration: 160s; }
+    /* Smaller image tiles + tighter gap so fewer items are in flight
+       at once — less paint work per frame, less chance of flicker. */
+    .image-marquee .image-item { width: 150px; height: 110px; }
   }
   /* Soft fade-in on marquee images so a still-loading frame doesn't
      present as a hard gray rectangle as it scrolls in from the right.
