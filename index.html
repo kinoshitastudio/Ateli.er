@@ -9472,7 +9472,18 @@
     if (!r) return '';
     const obj = r.obj;
     const channels = blockChannels(obj);
-    const otherChannels = CHANNELS.filter(c => !channels.includes(c.id));
+    // Restrict the picker to channels the viewer themselves has content
+    // in (own-block channels, own-audio channels, or user-created
+    // channels they've made). Earlier code listed every CHANNELS entry,
+    // which surfaced seed channels (Archive -01 etc.) the viewer never
+    // touched as valid Connect targets — confusing for new users.
+    const _ub = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+    const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
+    TRACKS.forEach(tr => { if (tr.channelId) _cwc.add(tr.channelId); });
+    const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
+    const otherChannels = CHANNELS.filter(c =>
+      !channels.includes(c.id) && (_cwc.has(c.id) || _uci.has(c.id))
+    );
 
     const pillsHtml = channels.map((cid, i) => {
       const c = CHANNELS.find(x => x.id === cid);
