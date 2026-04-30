@@ -9575,7 +9575,20 @@
     const r = _resolveBlockOrTrack(id);
     if (!r) return '';
     const obj = r.obj;
-    const channels = blockChannels(obj);
+    // For cross-user blocks the block's primary channelId belongs to the
+    // owner — looking it up in the viewer's CHANNELS would coincidentally
+    // match a same-id channel the viewer has (createChannel mints
+    // 'ch-uNN' per-user, so collisions are easy). Skip the owner's primary
+    // and instead derive the connected channels purely from the viewer's
+    // own external-block store (atelier_external_blocks_v1).
+    const isExternal = !!(obj._external || obj._crossUser);
+    let channels;
+    if (isExternal) {
+      const map = (typeof loadExternalBlocks === 'function') ? loadExternalBlocks() : {};
+      channels = Object.keys(map).filter(cid => (map[cid] || []).some(x => x.id === id));
+    } else {
+      channels = blockChannels(obj);
+    }
     // Restrict the picker to channels the viewer themselves has content
     // in (own-block channels, own-audio channels, or user-created
     // channels they've made). Earlier code listed every CHANNELS entry,
@@ -9592,7 +9605,11 @@
     const pillsHtml = channels.map((cid, i) => {
       const c = CHANNELS.find(x => x.id === cid);
       if (!c) return '';
-      const isPrimary = i === 0;
+      // For cross-user blocks, every pill represents a viewer connection
+      // (no 'primary' — primary belongs to the owner and isn't a viewer
+      // pill). Each is freely disconnectable. For own blocks, the first
+      // pill is the primary channel and stays pinned.
+      const isPrimary = !isExternal && i === 0;
       const xBtn = isPrimary ? '' : `<span class="pcc-x" data-disconnect="${escapeHtml(cid)}" title="disconnect">×</span>`;
       const mark = isPrimary ? `<span class="pcc-mark">${t('pccPrimary')}</span>` : '';
       return `
@@ -9722,7 +9739,13 @@
         const targetCid = btn.dataset.disconnect;
         customConfirm(t('pccDisconnectConfirm')).then(ok => {
           if (!ok) return;
-          disconnectBlock(id, targetCid);
+          // Try own-block disconnect first; if that returns false the
+          // block is a cross-user external snapshot, so fall through to
+          // disconnectExternalBlock (atelier_external_blocks_v1).
+          let did = (typeof disconnectBlock === 'function') ? disconnectBlock(id, targetCid) : false;
+          if (!did && typeof disconnectExternalBlock === 'function') {
+            did = disconnectExternalBlock(targetCid, id);
+          }
           refreshAllViews();
           const ch = CHANNELS.find(c => c.id === targetCid);
           const label = ch ? ch.label : targetCid;
