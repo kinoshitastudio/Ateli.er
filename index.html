@@ -5530,7 +5530,18 @@
         } else if (kind === 'image') {
           // Phase E-prep: lookup unified across own + cross-user broadcast.
           const blk = _findBroadcastBlock(el.dataset.bid);
-          if (blk) openImageModal(blk);
+          if (!blk) return;
+          // Cross-user image clicked from TOP marquee → mark Explore as
+          // the active context so the parent #modal's tab strip lights up
+          // 'Explore' (visitor flow) instead of 'My Channel'. Otherwise
+          // BACK from the modal would land on My Channel, which is the
+          // viewer's own grid — confusing because the block was someone
+          // else's content.
+          const isCross = !!(blk._external || blk._crossUser || (blk.ownerId && currentUser?.id && blk.ownerId !== currentUser.id));
+          if (isCross && typeof _markVisitorContextOnTabs === 'function') {
+            _markVisitorContextOnTabs();
+          }
+          openImageModal(blk);
         } else if (kind === 'external-block') {
           // Phase E-prep: cross-user phrase (Row 1) → open the source block.
           // Look up first in _explorePublicCache (populated when Explore tab
