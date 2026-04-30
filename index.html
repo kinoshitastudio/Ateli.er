@@ -8576,14 +8576,28 @@
     // is rendered as an underlined link so visitors can click through to the
     // user's portfolio.
     list.innerHTML = groups.map(g => {
-      const ch = CHANNELS.find(c => c.id === g.channelId);
-      const chLabel = ch ? ch.label : '—';
+      const firstItem = g.items[0];
+      const actorIsExternal = !!firstItem?.crossUser;
+      // Resolve channel label. For cross-user groups, prefer the owner's
+      // own label snapshot (b.channelLabel from public_blocks) so a viewer
+      // sees the channel as the owner named it — even if the owner renamed
+      // a seed channel locally and the rename hasn't reached the viewer's
+      // CHANNELS array.
+      let chLabel = '—';
+      if (actorIsExternal && firstItem?.block) {
+        chLabel = firstItem.block.channelLabel
+                || firstItem.block._externalChannelLabel
+                || (CHANNELS.find(c => c.id === g.channelId)?.label)
+                || g.channelId
+                || '—';
+      } else {
+        const ch = CHANNELS.find(c => c.id === g.channelId);
+        chLabel = ch ? ch.label : '—';
+      }
       const when = g.ts ? ageString(g.ts) : '';
       const summary = _summarizeFeedItems(g.items);
       // Determine actor: own handle for own items, owner_handle for cross-user.
-      const firstItem = g.items[0];
       const actorHandle = firstItem?.ownerHandle || _currentHandle() || 'visitor';
-      const actorIsExternal = !!firstItem?.crossUser;
       // Phase A-refactor 2: emit data-uid on the actor link when the feed
       // group is cross-user, so the global breadcrumb click handler routes
       // to the visitor portfolio instead of the viewer's own My Channel.
