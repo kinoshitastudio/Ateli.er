@@ -1472,10 +1472,51 @@
   .ch-card {
     cursor: pointer;
     transition: opacity 0.25s ease, transform 0.4s cubic-bezier(.2,.8,.2,1);
+    position: relative;
   }
   .ch-card:hover { opacity: 0.7; transform: translateY(-2px); }
   .ch-card.is-empty { cursor: default; }
   .ch-card.is-empty:hover { opacity: 1; transform: none; }
+  /* Edit-mode overlay: shows ↑ ↓ × actions on each channel card so the
+     user can reorder or delete without leaving the grid. */
+  .ch-card-edit-actions {
+    display: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    gap: 4px;
+    z-index: 2;
+  }
+  .ch-grid.is-editing .ch-card-edit-actions { display: flex; }
+  .ch-grid.is-editing .ch-card { cursor: default; }
+  .ch-grid.is-editing .ch-card:hover { opacity: 1; transform: none; }
+  .ch-card-edit-actions button {
+    background: rgba(250, 250, 247, 0.9);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .ch-card-edit-actions button:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .ch-card-edit-actions button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .ch-card-edit-actions button.delete:hover {
+    background: #c00;
+    color: #fff;
+    border-color: #c00;
+  }
   .ch-card-thumb {
     aspect-ratio: 1 / 1;
     display: grid;
@@ -4067,10 +4108,11 @@
         <div id="channelGridView">
           <div class="ch-detail-head" id="channelGridHead">
             <p class="ch-grid-helper" id="channelGridHelper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 6px;"><span class="bc-explore-badge" title="My Channel — edit mode">MY CHANNEL</span>— your channel · edit blocks and channels here</p>
-            <div class="ch-head-title">
+            <div class="ch-head-title" style="display:flex; align-items:flex-start; gap:14px; justify-content:space-between;">
               <div style="min-width:0; flex:1;">
                 <h4 id="channelGridHandle"></h4>
               </div>
+              <button type="button" class="yu-action" id="channelGridEditToggle" style="flex-shrink:0;">— edit</button>
             </div>
             <span class="meta" id="channelGridMeta"></span>
             <span class="meta meta-times" id="channelGridMetaTimes"></span>
@@ -6103,6 +6145,21 @@
     return 'JP·EN';
   }
 
+  // My Channel grid edit mode + custom ordering.
+  // Order key persists user-chosen channel order (cross-device via SYNC_KEYS).
+  // Channels not in the saved order fall back to seed-then-alphabetical, so
+  // newly-created channels join at the end without losing the user's prior
+  // arrangement.
+  let channelGridEditMode = false;
+  const CHANNEL_GRID_ORDER_KEY = 'atelier_channel_grid_order_v1';
+  function loadChannelGridOrder() {
+    try { return JSON.parse(localStorage.getItem(CHANNEL_GRID_ORDER_KEY)) || []; }
+    catch (e) { return []; }
+  }
+  function saveChannelGridOrder(arr) {
+    try { localStorage.setItem(CHANNEL_GRID_ORDER_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+
   function renderChannelGrid() {
     const grid = $('#channelGrid');
     // Phase E-prep (2026-04-29): show only channels the viewer actually has
@@ -6124,7 +6181,7 @@
       const i = _SEED_ORDER_GRID.indexOf(cid);
       return i >= 0 ? i : 1000;
     };
-    const visibleChannels = CHANNELS
+    let visibleChannels = CHANNELS
       .filter(c => _channelsWithContent.has(c.id) || _userChannelIds.has(c.id))
       .sort((a, b) => {
         const ai = _channelSortIdx(a.id);
@@ -6132,7 +6189,21 @@
         if (ai !== bi) return ai - bi;
         return (a.id || '').localeCompare(b.id || '');
       });
-    const cards = visibleChannels.map(c => {
+    // Apply user-saved order if present. Channels with a saved position come
+    // first in that order; new (unsaved) channels keep their fall-back sort
+    // and append after.
+    const savedOrder = loadChannelGridOrder();
+    if (savedOrder.length > 0) {
+      const savedSet = new Set(savedOrder);
+      const ordered = savedOrder
+        .map(id => visibleChannels.find(c => c.id === id))
+        .filter(Boolean);
+      const tail = visibleChannels.filter(c => !savedSet.has(c.id));
+      visibleChannels = [...ordered, ...tail];
+    }
+    grid.classList.toggle('is-editing', channelGridEditMode);
+    const total = visibleChannels.length;
+    const cards = visibleChannels.map((c, idx) => {
       const items = _itemsInChannel(c.id);
       const emptyClass = items.length === 0 ? 'is-empty' : '';
       const cells = [
@@ -6149,8 +6220,16 @@
       const _visPill = c.isPublic !== false
         ? `<span class="ch-vis-pill ch-vis-public">public</span>`
         : `<span class="ch-vis-pill ch-vis-draft">draft</span>`;
+      const editActions = `
+        <span class="ch-card-edit-actions">
+          <button type="button" data-act="ch-up" data-cid="${escapeHtml(c.id)}" aria-label="up" title="up"${idx === 0 ? ' disabled' : ''}>↑</button>
+          <button type="button" data-act="ch-down" data-cid="${escapeHtml(c.id)}" aria-label="down" title="down"${idx === total - 1 ? ' disabled' : ''}>↓</button>
+          <button type="button" class="delete" data-act="ch-delete" data-cid="${escapeHtml(c.id)}" aria-label="delete" title="delete">×</button>
+        </span>
+      `;
       return `
         <div class="ch-card ${emptyClass}" data-cid="${escapeHtml(c.id)}">
+          ${editActions}
           <div class="ch-card-thumb">
             ${ cells.map(_miniCellHtml).join('') }
           </div>
@@ -6188,16 +6267,59 @@
       metaTimesEl.innerHTML = `joined ${escapeHtml(joinedLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)}`;
     }
 
-    // Wire card clicks
+    // Wire card clicks (disabled in edit mode — clicks are absorbed by the
+    // ↑/↓/× action buttons instead).
     grid.querySelectorAll('.ch-card').forEach(card => {
       if (card.classList.contains('is-empty')) return;
-      card.addEventListener('click', () => openChannelDetail(card.dataset.cid));
+      card.addEventListener('click', (e) => {
+        if (channelGridEditMode) return;
+        if (e.target.closest('.ch-card-edit-actions')) return;
+        openChannelDetail(card.dataset.cid);
+      });
+    });
+
+    // Wire edit-mode action buttons (↑ ↓ ×). Each click rewrites the saved
+    // order or triggers delete; renderChannelGrid is then called to repaint.
+    grid.querySelectorAll('.ch-card-edit-actions [data-act]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const act = btn.dataset.act;
+        const cid = btn.dataset.cid;
+        if (!cid) return;
+        if (act === 'ch-up' || act === 'ch-down') {
+          // Build the working order from the currently-rendered list so
+          // newly-created channels (not yet in saved order) participate.
+          const currentIds = visibleChannels.map(c => c.id);
+          const i = currentIds.indexOf(cid);
+          if (i < 0) return;
+          const j = act === 'ch-up' ? i - 1 : i + 1;
+          if (j < 0 || j >= currentIds.length) return;
+          [currentIds[i], currentIds[j]] = [currentIds[j], currentIds[i]];
+          saveChannelGridOrder(currentIds);
+          renderChannelGrid();
+        } else if (act === 'ch-delete') {
+          if (typeof promptDeleteChannel === 'function') promptDeleteChannel(cid);
+        }
+      });
     });
 
     // Update tab count
     const tabN = $('#tabPiecesN');
     if (tabN) tabN.textContent = totalChannels;
+
+    // Update edit-toggle button label to reflect current mode.
+    const toggle = document.getElementById('channelGridEditToggle');
+    if (toggle) toggle.textContent = channelGridEditMode ? '— done' : '— edit';
   }
+  // Toggle edit mode for the My Channel grid.
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'channelGridEditToggle') {
+      e.preventDefault();
+      channelGridEditMode = !channelGridEditMode;
+      renderChannelGrid();
+    }
+  });
 
 
   let currentChannelDetailId = null;
@@ -11044,6 +11166,7 @@
     'atelier_track_edits_v1',
     'atelier_track_connections_v1',
     'atelier_channel_order_v1',
+    'atelier_channel_grid_order_v1',
     'atelier_external_blocks_v1',  // Phase C-2: snapshots of other users' public blocks
     'atelier_footprints_v2',
     'atelier_lang_v1',
