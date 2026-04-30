@@ -7222,22 +7222,23 @@
         openUserPortfolio({ id: targetUid, handle: targetHandle });
       } else {
         // Own user (or no uid attribute) — go to own channel grid.
-        // Phase A-refactor 2 (2026-04-29): hide pieceModal SILENTLY (no
-        // history.back) before opening #modal. Previously closePieceModal
-        // called navCloseExternal → history.back, and the popstate fired
-        // AFTER our subsequent openModal('pieces') pushed onto navStack,
-        // so popstate popped the just-opened #modal — landing the user on
-        // the home / TOP screen instead of My Channel.
+        // Phase A-refactor 2 (2026-04-30): close every nested overlay
+        // SILENTLY (no history.back), then re-open #modal at the grid.
+        // Earlier fix only handled pieceModal; later we found channel
+        // edit + save chains left the user inside channelDetail, where
+        // backToChannelGrid still went through navCloseExternal →
+        // history.back, racing with openModal and dropping the user on
+        // the home page.
         if ($('#pieceModal').classList.contains('is-open')) {
           $('#pieceModal').classList.remove('is-open');
-          const _idx = navStack.lastIndexOf('pieceModal');
-          if (_idx >= 0) navStack.splice(_idx, 1);
-          if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
         }
+        if (typeof backToChannelGridInner === 'function') backToChannelGridInner();
+        ['pieceModal', 'channelDetail'].forEach((nid) => {
+          const i = navStack.lastIndexOf(nid);
+          if (i >= 0) navStack.splice(i, 1);
+        });
+        if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
         if (typeof openModal === 'function') openModal('pieces');
-        if (typeof backToChannelGrid === 'function') {
-          setTimeout(() => backToChannelGrid(), 30);
-        }
       }
     } else if (action === 'channel') {
       const cid = bc.dataset.cid;
