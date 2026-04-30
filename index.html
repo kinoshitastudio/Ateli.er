@@ -183,27 +183,27 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
-  /* Mobile: significantly slow each lane down so frame drops on weaker
-     GPUs aren't as visible as 'images flickering / disappearing', and
-     so the eye can settle on each item before it scrolls past. */
+  /* Mobile: only the image lane needs the heavy slowdown — text lanes
+     scroll smoothly on mobile too. Image lane gets the most paint work
+     per frame because of decoded-image compositing. */
   @media (max-width: 720px) {
-    .phrase-marquee { --duration: 130s; }
-    .phrase-marquee.alt { --duration: 165s; }
-    .title-marquee { --duration: 130s; }
-    .image-marquee { --duration: 160s; }
-    /* Smaller image tiles + tighter gap so fewer items are in flight
-       at once — less paint work per frame, less chance of flicker. */
+    .image-marquee { --duration: 200s; }
+    /* Smaller image tiles so fewer items are in flight at once — less
+       paint work per frame, less chance of flicker. */
     .image-marquee .image-item { width: 150px; height: 110px; }
   }
-  /* Soft fade-in on marquee images so a still-loading frame doesn't
-     present as a hard gray rectangle as it scrolls in from the right.
-     Scoped to .image-marquee so other surfaces using .image-item img
-     (channel grid, etc.) aren't affected. */
-  .image-marquee .image-item img {
-    opacity: 0;
-    transition: opacity 0.6s ease;
+  /* Touch devices don't have stable hover state — ':hover' can stick
+     to a recently-tapped item, which made every other image-item drop
+     to 18% opacity and look like 'images disappeared'. Disable the
+     focus-dim entirely on no-hover devices. */
+  @media (hover: none) {
+    .marquee-track:hover .phrase-item:not(:hover),
+    .marquee-track:hover .title-item:not(:hover),
+    .marquee-track:hover .image-item:not(:hover) {
+      opacity: 1 !important;
+    }
+    .image-item:hover { transform: none !important; }
   }
-  .image-marquee .image-item img.is-loaded { opacity: 1; }
   /* Marquees never pause — continuous flow at all times.
      (Hover only triggers focus dimming via opacity, never stops animation.) */
   @keyframes scroll-rtl {
