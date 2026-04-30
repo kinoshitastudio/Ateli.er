@@ -2055,23 +2055,46 @@
     flex: 1;
     min-width: 180px;
   }
-  .uf-channel-new,
-  .uf-channel-confirm,
-  .uf-channel-cancel {
+  /* Text button — used for "+ new". Compact monospace pill that follows
+     the form's existing visual language (mono headers, ink borders). */
+  .uf-channel-new {
     flex-shrink: 0;
     background: transparent;
     border: 1px solid var(--ink);
     color: var(--ink);
     font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 0.06em;
-    padding: 6px 12px;
+    letter-spacing: 0.1em;
+    padding: 9px 18px;
     cursor: pointer;
     line-height: 1;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s ease, color 0.15s ease;
     white-space: nowrap;
+    text-transform: lowercase;
   }
-  .uf-channel-new:hover,
+  .uf-channel-new:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  /* Icon-only square buttons — matched in size so ✓ × align as a pair. */
+  .uf-channel-confirm,
+  .uf-channel-cancel {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
   .uf-channel-confirm:hover {
     background: var(--ink);
     color: var(--paper);
@@ -2079,17 +2102,17 @@
   .uf-channel-cancel {
     border-color: var(--gray-2);
     color: var(--gray-2);
+    font-size: 18px;
   }
   .uf-channel-cancel:hover {
     border-color: var(--ink);
     color: var(--ink);
+    background: transparent;
   }
-  .uf-channel-confirm { font-size: 13px; padding: 6px 14px; }
-  .uf-channel-cancel { font-size: 13px; padding: 6px 14px; }
   @media (max-width: 640px) {
-    .uf-channel-new,
+    .uf-channel-new { padding: 11px 20px; font-size: 12px; }
     .uf-channel-confirm,
-    .uf-channel-cancel { padding: 8px 14px; font-size: 13px; }
+    .uf-channel-cancel { width: 42px; height: 42px; }
   }
   .upload-form .uf-row .sp-k {
     font-family: var(--mono);
