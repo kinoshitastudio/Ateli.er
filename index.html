@@ -3877,7 +3877,7 @@
              meta line, and meta-times so the visual hierarchy is identical. -->
         <div id="channelGridView">
           <div class="ch-detail-head" id="channelGridHead">
-            <p class="ch-grid-helper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 6px;"><span class="bc-explore-badge" title="My Channel — edit mode">MY CHANNEL</span>— your channel · edit blocks and channels here</p>
+            <p class="ch-grid-helper" id="channelGridHelper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 6px;"><span class="bc-explore-badge" title="My Channel — edit mode">MY CHANNEL</span>— your channel · edit blocks and channels here</p>
             <div class="ch-head-title">
               <div style="min-width:0; flex:1;">
                 <h4 id="channelGridHandle"></h4>
@@ -4308,6 +4308,14 @@
       paneTracesHead:    'Your <em>Comments</em>',
       paneUploadHead:    'Your <em>Upload</em>',
       paneSearchHead:    'Search',
+      // Phase A-refactor 2 (2026-04-30): visitor / owner context labels
+      myChannelHelper:        '— your channel · edit blocks and channels here',
+      visitorPortfolioSelf:   'as seen by visitors · read-only preview of your public work',
+      visitorPortfolioOther:  'viewing in Explore · read-only',
+      visitorBadgeTitle:      'viewing in Explore (read-only)',
+      myChannelBadgeTitle:    'My Channel — edit mode',
+      exploreBadgeLabel:      'EXPLORE',
+      myChannelBadgeLabel:    'MY CHANNEL',
       // counts / meta
       channels:      'channels',
       blocks:        'blocks',
@@ -4509,6 +4517,13 @@
       tabSearch:     '検索',
       modalClose:    '— 閉じる',
       panePiecesHead:    '<em>チャンネル</em>',
+      myChannelHelper:        '— あなたのチャンネル · ブロックとチャンネルを編集できます',
+      visitorPortfolioSelf:   'ビジター視点でのプレビュー · 公開済みの作品を読み取り専用で表示',
+      visitorPortfolioOther:  '閲覧中 · 読み取り専用',
+      visitorBadgeTitle:      '閲覧中(読み取り専用)',
+      myChannelBadgeTitle:    'マイチャンネル — 編集モード',
+      exploreBadgeLabel:      '閲覧中',
+      myChannelBadgeLabel:    'マイチャンネル',
       paneTracesHead:    'あなたの<em>コメント</em>',
       paneUploadHead:    'あなたの<em>アップロード</em>',
       paneSearchHead:    '検索',
@@ -4754,6 +4769,11 @@
     if (piFeed) piFeed.innerHTML = t('paneFeedIntro');
     const cdb = document.getElementById('channelDetailBack');
     if (cdb) cdb.textContent = t('backToChannels');
+    // Phase A-refactor 2 (2026-04-30): localize the My Channel grid
+    // helper line. The MY CHANNEL badge stays in English (uppercase mono
+    // by design), but the prose after it follows site language.
+    const cgh = document.getElementById('channelGridHelper');
+    if (cgh) cgh.innerHTML = `<span class="bc-explore-badge" title="${escapeHtml(t('myChannelBadgeTitle'))}">${escapeHtml(t('myChannelBadgeLabel'))}</span>${escapeHtml(t('myChannelHelper'))}`;
     // Pane subtexts
     const ptIntro = document.querySelector('.pane-traces > p');
     if (ptIntro) ptIntro.innerHTML = t('paneCommentIntro');
@@ -9327,12 +9347,10 @@
       ? ` data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId || '')}"`
       : '';
     // Phase A-refactor 2 (2026-04-30): tiny "EXPLORE" badge before the
-    // @handle when the block is external (visitor flow). Inside a block
-    // detail it's hard to tell whether you're in My Channel or Explore,
-    // and edit affordances are absent for visitor mode — this badge is
-    // the at-a-glance cue.
+    // @handle when the block is external (visitor flow). Localized via
+    // t() so JP users see 閲覧中 etc.
     const exploreBadge = ownerHandle
-      ? `<span class="bc-explore-badge" title="viewing in Explore (read-only)">EXPLORE</span>`
+      ? `<span class="bc-explore-badge" title="${escapeHtml(t('visitorBadgeTitle'))}">${escapeHtml(t('exploreBadgeLabel'))}</span>`
       : '';
     return exploreBadge
       + `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
@@ -9684,15 +9702,17 @@
     // Phase A-refactor 2 (2026-04-30): tiny helper line above the
     // portfolio header. Self-view: "as seen by visitors". Other-view:
     // "viewing in Explore (read-only)". Makes the visitor mode obvious.
+    // Strings come from t() so they follow the site language (EN / JP).
     const _isSelfPortfolio = currentUser?.id && ownerId === currentUser.id;
     const _portfolioHelper = _isSelfPortfolio
-      ? 'as seen by visitors · read-only preview of your public work'
-      : 'viewing in Explore · read-only';
+      ? t('visitorPortfolioSelf')
+      : t('visitorPortfolioOther');
+    const _portfolioBadgeTitle = t('visitorBadgeTitle');
     inner.innerHTML = `
       ${_blockTabsHtml()}
       ${_backBtnHtml()}
       <div class="atelier-channels" style="padding-top:6px;">
-        <p class="up-helper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 12px;"><span class="bc-explore-badge" title="viewing in Explore (read-only)">EXPLORE</span>— ${_portfolioHelper}</p>
+        <p class="up-helper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 12px;"><span class="bc-explore-badge" title="${escapeHtml(_portfolioBadgeTitle)}">${escapeHtml(t('exploreBadgeLabel'))}</span>— ${escapeHtml(_portfolioHelper)}</p>
         <div class="ch-head" style="display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;">
           ${ avatarUrl
             ? `<span style="width:60px;height:60px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;margin-top:2px;"></span>`
@@ -9882,7 +9902,7 @@
         <div class="ch-head-title">
           <div style="min-width:0; flex:1;">
             <h4>
-              <span class="bc-explore-badge" title="viewing in Explore (read-only)">EXPLORE</span>
+              <span class="bc-explore-badge" title="${escapeHtml(t('visitorBadgeTitle'))}">${escapeHtml(t('exploreBadgeLabel'))}</span>
               <a class="bc-h4-user bc-external" data-bc="user" title="${escapeHtml(handle)}" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a>
               <span class="bc-h4-sep">/</span>
               <span class="bc-h4-channel">${escapeHtml(channelLabel)}</span>
