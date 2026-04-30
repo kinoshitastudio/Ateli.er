@@ -609,6 +609,24 @@
      clear from the @handle text and breadcrumb structure. */
   .bc-h4-user.bc-external { font-style: normal; }
   .bc-owner-text.bc-external { font-style: normal; }
+  /* Phase A-refactor 2 (2026-04-30): tiny "EXPLORE" badge prefix that
+     appears in block / channel breadcrumbs whenever the viewer is in
+     visitor flow (own or another user's content viewed via Explore).
+     Sits to the left of the @handle and signals read-only context. */
+  .bc-explore-badge {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 2px 6px;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    line-height: 1.2;
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
   /* Phase C-2: "— by @handle" attribution under channel-detail items */
   .ix-by {
     font-family: var(--mono);
@@ -3859,6 +3877,7 @@
              meta line, and meta-times so the visual hierarchy is identical. -->
         <div id="channelGridView">
           <div class="ch-detail-head" id="channelGridHead">
+            <p class="ch-grid-helper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 6px;">— your channel · edit blocks and channels here</p>
             <div class="ch-head-title">
               <div style="min-width:0; flex:1;">
                 <h4 id="channelGridHandle"></h4>
@@ -9307,7 +9326,16 @@
     const externalAttrs = ownerHandle
       ? ` data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId || '')}"`
       : '';
-    return `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
+    // Phase A-refactor 2 (2026-04-30): tiny "EXPLORE" badge before the
+    // @handle when the block is external (visitor flow). Inside a block
+    // detail it's hard to tell whether you're in My Channel or Explore,
+    // and edit affordances are absent for visitor mode — this badge is
+    // the at-a-glance cue.
+    const exploreBadge = ownerHandle
+      ? `<span class="bc-explore-badge" title="viewing in Explore (read-only)">EXPLORE</span>`
+      : '';
+    return exploreBadge
+      + `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
       + `<span class="bc-h4-sep">/</span>`
       + channelPart
       + `<span class="bc-h4-sep">/</span>`
@@ -9653,10 +9681,18 @@
           </div>`;
         })()
       : '';
+    // Phase A-refactor 2 (2026-04-30): tiny helper line above the
+    // portfolio header. Self-view: "as seen by visitors". Other-view:
+    // "viewing in Explore (read-only)". Makes the visitor mode obvious.
+    const _isSelfPortfolio = currentUser?.id && ownerId === currentUser.id;
+    const _portfolioHelper = _isSelfPortfolio
+      ? 'as seen by visitors · read-only preview of your public work'
+      : 'viewing in Explore · read-only';
     inner.innerHTML = `
       ${_blockTabsHtml()}
       ${_backBtnHtml()}
       <div class="atelier-channels" style="padding-top:6px;">
+        <p class="up-helper" style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); letter-spacing: 0.04em; margin: 0 0 12px;">— ${_portfolioHelper}</p>
         <div class="ch-head" style="display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;">
           ${ avatarUrl
             ? `<span style="width:60px;height:60px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;flex-shrink:0;display:block;margin-top:2px;"></span>`
@@ -9846,6 +9882,7 @@
         <div class="ch-head-title">
           <div style="min-width:0; flex:1;">
             <h4>
+              <span class="bc-explore-badge" title="viewing in Explore (read-only)">EXPLORE</span>
               <a class="bc-h4-user bc-external" data-bc="user" title="${escapeHtml(handle)}" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a>
               <span class="bc-h4-sep">/</span>
               <span class="bc-h4-channel">${escapeHtml(channelLabel)}</span>
