@@ -8605,7 +8605,7 @@
 
       return `
         <li class="feed-group" data-cid="${escapeHtml(g.channelId)}">
-          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> connected ${escapeHtml(summary)} to </span><span class="target" data-cid="${escapeHtml(g.channelId)}">${escapeHtml(chLabel)}</span></div>
+          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> connected ${escapeHtml(summary)} to </span><span class="target" data-cid="${escapeHtml(g.channelId)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}" data-handle="${escapeHtml(actorHandle)}" data-clabel="${escapeHtml(chLabel)}"` : ''}>${escapeHtml(chLabel)}</span></div>
           <div class="feed-group-time">${escapeHtml(when)}</div>
           <div class="feed-group-grid">${cards}</div>
         </li>
@@ -8641,6 +8641,17 @@
       const target = e.target.closest('.feed-group-header .target');
       if (target) {
         const cid = target.dataset.cid;
+        const ownerUid = target.dataset.uid;
+        const ownerHandle = target.dataset.handle;
+        const channelLabel = target.dataset.clabel;
+        // Cross-user channel click: route to the visitor channel detail
+        // (read-only). Avoids opening another user's channel as if the
+        // viewer owned it (which surfaced edit/delete affordances on a
+        // channel the viewer never created).
+        if (ownerUid && ownerUid !== currentUser?.id && typeof openUserChannel === 'function') {
+          openUserChannel({ ownerId: ownerUid, handle: ownerHandle || '', channelId: cid, channelLabel: channelLabel || cid });
+          return;
+        }
         if (cid) {
           const piecesTab = document.querySelector('.modal-tabs .tab[data-pane="pieces"]');
           if (piecesTab) piecesTab.click();
