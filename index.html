@@ -5280,6 +5280,30 @@
     `;
   }
 
+  // Transient image failure recovery. The marquee is long-running and on
+  // mobile Safari the decoded-image cache evicts under memory pressure;
+  // when an off-screen tile scrolls back in, the browser refetches and a
+  // single 403 / timeout from external hosts (Google Drive's
+  // lh3.googleusercontent.com is the worst offender) hits onerror.
+  // Previous behaviour (this.style.display='none') made the failure
+  // permanent for the rest of the session — once an image vanished it
+  // never returned. Now: retry once with a cache-buster, then fall back
+  // to a soft fade so the slot stays the right size and visible.
+  window._imgRetry = function(img) {
+    if (!img) return;
+    if (!img.dataset.imgRetried) {
+      img.dataset.imgRetried = '1';
+      const original = img.src;
+      const sep = original.includes('?') ? '&' : '?';
+      // Drop any prior cache-buster fragment first so we don't pile up.
+      const clean = original.replace(/[?&]_r=\d+$/, '');
+      const cleanSep = clean.includes('?') ? '&' : '?';
+      img.src = clean + cleanSep + '_r=' + Date.now();
+      return;
+    }
+    // Second failure — keep the slot but mark the image as failed.
+    img.style.opacity = '0.25';
+  };
   // All images render in their original colour. The `mono` flag is kept for
   // backward compatibility (call-site signatures unchanged) but no longer
   // forces grayscale — colour photos were appearing washed out in the grid.
@@ -5290,7 +5314,7 @@
       // late paints that look like images flickering in/out of the lane.
       // onload class swap fades the img in so a still-decoding frame
       // doesn't slide in as a gray rectangle.
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="this.style.display='none'" />`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
     }
     // Phase A-refactor 2 (2026-04-29): no picsum fallback for audio. The
     // random per-seed image was confusing — visitor saw mountain / lake /
@@ -5303,7 +5327,7 @@
   function buildBlockImage(block, w=240, h=240) {
     const src = block.imageUrl;
     if (src) {
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="this.style.display='none'">`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
     }
     // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
     // as buildPieceImage. Image blocks should always have imageUrl, but if
@@ -10690,7 +10714,13 @@
     // already live in the viewer's channels, no point in offering "+ connect"
     // for blocks they own.
     if (currentUser?.id) rows = rows.filter(r => r.owner_id !== currentUser.id);
-    _explorePublicCache = {};
+    // Merge into existing cache rather than wiping it. openUserPortfolio
+    // populates this cache with a target user's full row set (up to 200);
+    // if Explore feed re-renders mid-flow (auto-refresh, publish event)
+    // and we wipe to {}, then the user clicks a portfolio channel card,
+    // openUserChannel finds 0 rows for that owner+channel and shows the
+    // "no public blocks" empty state. Merge is safe — rows are keyed by
+    // unique block id, so newer fetches overwrite older snapshots.
     rows.forEach(r => { _explorePublicCache[r.id] = r; });
     if (rows.length === 0) {
       list.innerHTML = '<li class="explore-empty">他のユーザーの公開 block はまだありません。</li>';
@@ -10824,16 +10854,29 @@
     const accessToken = tokenData?.access_token;
     if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
     let rows = [];
+    let fetchError = null;
     try {
       const res = await fetch(url, { headers });
-      if (res.ok) rows = await res.json();
-    } catch (e) { console.warn('[portfolio] fetch error:', e); }
+      if (res.ok) {
+        rows = await res.json();
+      } else {
+        fetchError = `HTTP ${res.status}`;
+      }
+    } catch (e) {
+      console.warn('[portfolio] fetch error:', e);
+      fetchError = e?.message || 'network';
+    }
     // Cache rows so block click can open them via openExternalBlock.
     rows.forEach(r => { _explorePublicCache[r.id] = r; });
     const grid = document.getElementById('upGrid');
     const meta = document.getElementById('upMeta');
     const recentSection = document.getElementById('upRecentSection');
     if (!grid || !meta) return;
+    if (fetchError) {
+      meta.textContent = `読み込みエラー (${fetchError}) — 一度リロードしてください`;
+      grid.innerHTML = '';
+      return;
+    }
     if (!rows || rows.length === 0) {
       meta.textContent = '0 channels · 0 blocks · まだ何も公開していません';
       grid.innerHTML = '';
@@ -10945,8 +10988,16 @@
     // uploaded before an image — owner showed [audio, text, image]
     // while visitor showed [audio, image, text]. Now both surfaces use
     // the same key: audio-first boolean, then ts ascending.
+    // Match the same '_unkn' fallback the portfolio grid uses to bucket
+    // rows with NULL channel_id (line 10845). Without this, clicking an
+    // '_unkn' card filters with channelId='_unkn' but the rows hold
+    // channel_id=null → strict === fails → empty channel detail even
+    // though the cards rendered with thumbnails. Most other-user rows
+    // had NULL channel_id (legacy: backfill only runs when each owner
+    // signs in, so a user who hasn't logged in since the column was
+    // added still has unfilled rows).
     const rows = Object.values(_explorePublicCache)
-      .filter(r => r && r.owner_id === ownerId && r.channel_id === channelId)
+      .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId)
       .sort((a, b) => {
         const aIsAudio = a.kind === 'audio';
         const bIsAudio = b.kind === 'audio';
