@@ -1804,6 +1804,19 @@
   .ch-thumb-empty {
     background: repeating-linear-gradient(45deg, var(--paper-2) 0 6px, var(--line-soft) 6px 7px);
   }
+  .ch-thumb-text, .ch-thumb-url {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+    text-align: center;
+    line-height: 1.3;
+    overflow: hidden;
+    word-break: break-all;
+  }
   .ch-mid {
     display: flex; flex-direction: column; gap: 2px;
     overflow: hidden;
@@ -8485,25 +8498,70 @@
 
     const groupBlocks = [];
     for (const [key, traces] of groups.entries()) {
-      const tr = key === '__untethered' ? null : TRACKS.find(t => t.id === key);
-      const headHtml = tr ? `
-        <div class="ch-head" data-tid="${tr.id}">
-          <div class="ch-thumb">${buildPieceImage(tr, 120, 80)}</div>
-          <div class="ch-mid">
-            <span class="ch-title">${escapeHtml(tr.title)}</span>
-            <span class="ch-meta">${escapeHtml(tr.artist)} · ${traces.length} trace${traces.length === 1 ? '' : 's'}</span>
+      // Resolve the bound block across all stores (audio TRACKS, own blocks,
+      // external snapshots, and Explore caches) so a comment on a non-audio
+      // or cross-user block doesn't get misclassified as "untethered".
+      const isUntethered = key === '__untethered';
+      const resolved = isUntethered ? null : _resolveBlockOrTrack(key);
+      let headHtml;
+      if (resolved) {
+        const obj = resolved.obj;
+        let title = '';
+        let metaLine = '';
+        let thumbHtml = '';
+        if (resolved.kind === 'audio') {
+          title = obj.title || '(untitled)';
+          metaLine = `${escapeHtml(obj.artist || '')} · ${traces.length} trace${traces.length === 1 ? '' : 's'}`;
+          thumbHtml = buildPieceImage(obj, 120, 80);
+        } else if (resolved.kind === 'image') {
+          title = obj.caption || obj.title || '(image)';
+          metaLine = `image · ${traces.length} trace${traces.length === 1 ? '' : 's'}`;
+          thumbHtml = buildBlockImage(obj, 120, 80);
+        } else if (resolved.kind === 'text') {
+          const excerpt = (obj.text || '').slice(0, 40);
+          title = obj.title || excerpt || '(text)';
+          metaLine = `text · ${traces.length} trace${traces.length === 1 ? '' : 's'}`;
+          thumbHtml = `<div class="ch-thumb-text">${escapeHtml((obj.title || excerpt).slice(0, 40))}</div>`;
+        } else if (resolved.kind === 'url') {
+          title = obj.title || obj.url || '(url)';
+          let domain = '';
+          try { if (obj.url) domain = new URL(obj.url).hostname.replace(/^www\./, ''); } catch (e) {}
+          metaLine = `link · ${traces.length} trace${traces.length === 1 ? '' : 's'}`;
+          thumbHtml = `<div class="ch-thumb-url">${escapeHtml(domain || 'link')}</div>`;
+        }
+        headHtml = `
+          <div class="ch-head" data-tid="${escapeHtml(key)}" data-kind="${escapeHtml(resolved.kind)}">
+            <div class="ch-thumb">${thumbHtml}</div>
+            <div class="ch-mid">
+              <span class="ch-title">${escapeHtml(title)}</span>
+              <span class="ch-meta">${metaLine}</span>
+            </div>
+            <button class="ch-open" data-tid="${escapeHtml(key)}" data-kind="${escapeHtml(resolved.kind)}">↳ open</button>
           </div>
-          <button class="ch-open" data-tid="${tr.id}">↳ open piece</button>
-        </div>
-      ` : `
-        <div class="ch-head ch-untethered">
-          <div class="ch-thumb ch-thumb-empty"></div>
-          <div class="ch-mid">
-            <span class="ch-title">— untethered</span>
-            <span class="ch-meta">${traces.length} trace${traces.length === 1 ? '' : 's'} · not bound to any piece</span>
+        `;
+      } else if (!isUntethered) {
+        // Bound to a block id but not resolvable in any cache — treat as
+        // deleted / orphaned so the user can clean it up via the × button.
+        headHtml = `
+          <div class="ch-head ch-untethered">
+            <div class="ch-thumb ch-thumb-empty"></div>
+            <div class="ch-mid">
+              <span class="ch-title">⚠ ${escapeHtml(key)} — deleted</span>
+              <span class="ch-meta">${traces.length} trace${traces.length === 1 ? '' : 's'} · block no longer exists</span>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        headHtml = `
+          <div class="ch-head ch-untethered">
+            <div class="ch-thumb ch-thumb-empty"></div>
+            <div class="ch-mid">
+              <span class="ch-title">— untethered</span>
+              <span class="ch-meta">${traces.length} trace${traces.length === 1 ? '' : 's'} · not bound to any piece</span>
+            </div>
+          </div>
+        `;
+      }
       const tracesHtml = traces.map(f => `
         <li class="ch-trace" style="opacity:${fpOpacity(f.ts).toFixed(2)}" data-id="${escapeHtml(f.id || '')}">
           <button class="fp-delete" type="button" data-act="delete-comment" data-id="${escapeHtml(f.id || '')}" aria-label="${escapeHtml(t('deleteCommentLabel'))}" title="${escapeHtml(t('deleteCommentLabel'))}">×</button>
@@ -8520,19 +8578,31 @@
     }
     list.innerHTML = groupBlocks.join('');
 
-    // Wire open-piece buttons / clickable headers
+    // Wire open-piece buttons / clickable headers — works for all kinds.
+    const openByTid = (tid, kindHint) => {
+      const r = _resolveBlockOrTrack(tid);
+      if (!r) {
+        showToast(`block ${tid} は削除されたようです`);
+        return;
+      }
+      closeModal();
+      const k = r.kind || kindHint;
+      if (k === 'audio') openPieceModal(r.obj);
+      else if (k === 'image') openImageModal(r.obj);
+      else if (k === 'text') openTextModal(r.obj);
+      else if (k === 'url') openUrlModal(r.obj);
+    };
     list.querySelectorAll('.ch-head[data-tid]').forEach(el => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('.ch-open')) return; // handled below
-        const t = TRACKS.find(x => x.id === el.dataset.tid);
-        if (t) { closeModal(); openPieceModal(t); }
+        if (e.target.closest('[data-act="delete-comment"]')) return;
+        openByTid(el.dataset.tid, el.dataset.kind);
       });
     });
     list.querySelectorAll('.ch-open').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const t = TRACKS.find(x => x.id === btn.dataset.tid);
-        if (t) { closeModal(); openPieceModal(t); }
+        openByTid(btn.dataset.tid, btn.dataset.kind);
       });
     });
     // Wire delete-comment buttons (own FP entries — always deletable)
@@ -8791,6 +8861,22 @@
     if (ext) {
       const obj = { ...(ext.snapshot.payload || {}), id: ext.snapshot.id, kind: ext.snapshot.kind, _external: true, _ownerHandle: ext.snapshot.ownerHandle, _ownerId: ext.snapshot.ownerId, _hostChannelId: ext.channelId };
       return { obj, kind: ext.snapshot.kind, external: true };
+    }
+    // Cross-user view: block being browsed via Explore (not yet connected).
+    // Without these fallbacks, _resolveBlockOrTrack would return null and the
+    // inline comment composer would default block_owner_id to currentUser.id,
+    // so comments on Taka's block by BMboard would never reach Taka.
+    if (typeof _explorePublicCache !== 'undefined' && _explorePublicCache?.[id]) {
+      const r = _explorePublicCache[id];
+      const obj = { ...(r.payload || {}), id: r.id, kind: r.kind, _external: true, _ownerHandle: r.owner_handle, _ownerId: r.owner_id };
+      return { obj, kind: r.kind, external: true };
+    }
+    if (typeof crossUserBlocksCache !== 'undefined' && Array.isArray(crossUserBlocksCache)) {
+      const cu = crossUserBlocksCache.find(x => x.id === id);
+      if (cu) {
+        // crossUserBlocksCache items already carry _external, _ownerId, etc.
+        return { obj: cu, kind: cu.kind, external: true };
+      }
     }
     return null;
   }
