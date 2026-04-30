@@ -2018,21 +2018,42 @@
   }
   .uf-channel-wrap {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
     min-width: 0;
   }
-  .uf-channel-pick,
+  /* Stack the select + "+ new" vertically so the new-channel button gets
+     its own row. Horizontal layout was crowding tight on mobile and the
+     desktop didn't have enough breathing room either — vertical stacking
+     gives both a clearer rhythm. */
+  .uf-channel-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+  .uf-channel-pick .uf-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .uf-channel-new {
+    align-self: flex-start;
+  }
+  /* Create state stays inline so the small ✓/× icons sit beside the
+     label input — cleaner than a 3-row stack for what is a quick action. */
   .uf-channel-create {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex: 1;
+    flex-wrap: wrap;
+    width: 100%;
     min-width: 0;
   }
-  .uf-channel-pick .uf-input,
   .uf-channel-create .uf-input {
     flex: 1;
-    min-width: 0;
+    min-width: 180px;
   }
   .uf-channel-new,
   .uf-channel-confirm,
