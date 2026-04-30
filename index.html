@@ -6167,6 +6167,20 @@
   // newly-created channels join at the end without losing the user's prior
   // arrangement.
   let channelGridEditMode = false;
+  // Pending state buffers for the My Channel edit session. ↑↓ updates
+  // _chGridPendingOrder; × adds to _chGridPendingDeletes. Nothing hits
+  // localStorage / Supabase / public_blocks until Save commits.
+  let _chGridPendingOrder = null;
+  let _chGridPendingDeletes = new Set();
+  function _isChGridDirty() {
+    if (_chGridPendingDeletes.size > 0) return true;
+    if (_chGridPendingOrder !== null) return true;
+    return false;
+  }
+  function _resetChGridPending() {
+    _chGridPendingOrder = null;
+    _chGridPendingDeletes = new Set();
+  }
   const CHANNEL_GRID_ORDER_KEY = 'atelier_channel_grid_order_v1';
   function loadChannelGridOrder() {
     try { return JSON.parse(localStorage.getItem(CHANNEL_GRID_ORDER_KEY)) || []; }
@@ -6228,17 +6242,21 @@
         if (ai !== bi) return ai - bi;
         return (a.id || '').localeCompare(b.id || '');
       });
-    // Apply user-saved order if present. Channels with a saved position come
-    // first in that order; new (unsaved) channels keep their fall-back sort
-    // and append after.
-    const savedOrder = loadChannelGridOrder();
-    if (savedOrder.length > 0) {
-      const savedSet = new Set(savedOrder);
-      const ordered = savedOrder
+    // Order: pending order (mid-edit) > saved order > fallback. Pending
+    // deletes hide the channel from the grid until the user commits Save.
+    const effectiveOrder = (_chGridPendingOrder !== null)
+      ? _chGridPendingOrder
+      : loadChannelGridOrder();
+    if (effectiveOrder.length > 0) {
+      const orderSet = new Set(effectiveOrder);
+      const ordered = effectiveOrder
         .map(id => visibleChannels.find(c => c.id === id))
         .filter(Boolean);
-      const tail = visibleChannels.filter(c => !savedSet.has(c.id));
+      const tail = visibleChannels.filter(c => !orderSet.has(c.id));
       visibleChannels = [...ordered, ...tail];
+    }
+    if (channelGridEditMode && _chGridPendingDeletes.size > 0) {
+      visibleChannels = visibleChannels.filter(c => !_chGridPendingDeletes.has(c.id));
     }
     grid.classList.toggle('is-editing', channelGridEditMode);
     const total = visibleChannels.length;
@@ -6317,8 +6335,8 @@
       });
     });
 
-    // Wire edit-mode action buttons (↑ ↓ ×). Each click rewrites the saved
-    // order or triggers delete; renderChannelGrid is then called to repaint.
+    // Wire edit-mode action buttons (↑ ↓ ×). Each click updates the
+    // pending state buffer; nothing is committed until Save.
     grid.querySelectorAll('.ch-card-edit-actions [data-act]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -6327,18 +6345,20 @@
         const cid = btn.dataset.cid;
         if (!cid) return;
         if (act === 'ch-up' || act === 'ch-down') {
-          // Build the working order from the currently-rendered list so
-          // newly-created channels (not yet in saved order) participate.
           const currentIds = visibleChannels.map(c => c.id);
           const i = currentIds.indexOf(cid);
           if (i < 0) return;
           const j = act === 'ch-up' ? i - 1 : i + 1;
           if (j < 0 || j >= currentIds.length) return;
           [currentIds[i], currentIds[j]] = [currentIds[j], currentIds[i]];
-          saveChannelGridOrder(currentIds);
+          // Stash in pending order — committed only when the user clicks Save.
+          _chGridPendingOrder = currentIds;
           renderChannelGrid();
         } else if (act === 'ch-delete') {
-          if (typeof promptDeleteChannel === 'function') promptDeleteChannel(cid);
+          // Mark for deletion in the pending set. The card vanishes from
+          // the grid; the actual deletion runs on Save commit.
+          _chGridPendingDeletes.add(cid);
+          renderChannelGrid();
         }
       });
     });
@@ -6349,14 +6369,44 @@
 
     // Update edit-toggle button label to reflect current mode.
     const toggle = document.getElementById('channelGridEditToggle');
-    if (toggle) toggle.textContent = channelGridEditMode ? '— done' : '— edit';
+    if (toggle) toggle.textContent = channelGridEditMode ? '— save' : '— edit';
   }
-  // Toggle edit mode for the My Channel grid.
-  document.addEventListener('click', (e) => {
+  // Commit the pending edits (reorder + deletes) once the user confirms.
+  function _commitChannelGridEdit() {
+    if (_chGridPendingOrder !== null) {
+      saveChannelGridOrder(_chGridPendingOrder);
+    }
+    _chGridPendingDeletes.forEach(cid => {
+      try { deleteChannel(cid); } catch (e) { console.warn('[ch grid] delete failed:', e); }
+    });
+    _resetChGridPending();
+    channelGridEditMode = false;
+    if (typeof refreshAllViews === 'function') refreshAllViews();
+    else renderChannelGrid();
+  }
+  // Toggle / save the edit session.
+  document.addEventListener('click', async (e) => {
     if (e.target && e.target.id === 'channelGridEditToggle') {
       e.preventDefault();
-      channelGridEditMode = !channelGridEditMode;
-      renderChannelGrid();
+      if (!channelGridEditMode) {
+        // Enter edit mode — start with a clean pending buffer.
+        _resetChGridPending();
+        channelGridEditMode = true;
+        renderChannelGrid();
+        return;
+      }
+      // Save click. If nothing changed, just exit silently.
+      if (!_isChGridDirty()) {
+        _resetChGridPending();
+        channelGridEditMode = false;
+        renderChannelGrid();
+        return;
+      }
+      // Confirm before committing destructive changes (deletes, reorder).
+      const ok = await new Promise(resolve => customConfirm('変更を保存しますか？').then(resolve));
+      if (ok) _commitChannelGridEdit();
+      // No → stay in edit mode (changes preserved); user can keep editing
+      // or click Save again to re-confirm.
     }
   });
 
