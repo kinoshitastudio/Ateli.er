@@ -3526,6 +3526,30 @@
     letter-spacing: 0.04em;
     margin-top: 2px;
   }
+  .auth-form-tos {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 4px 0 2px;
+    font-family: var(--sans-jp);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    cursor: pointer;
+  }
+  .auth-form-tos input[type="checkbox"] {
+    margin: 3px 0 0;
+    flex-shrink: 0;
+    width: 14px; height: 14px;
+    accent-color: var(--ink);
+    cursor: pointer;
+  }
+  .auth-form-tos a {
+    color: var(--ink);
+    border-bottom: 1px solid var(--ink);
+    text-decoration: none;
+  }
+  .auth-form-tos a:hover { color: var(--gray); border-bottom-color: var(--gray); }
   .auth-form-actions {
     display: flex;
     justify-content: space-between;
@@ -3661,6 +3685,12 @@
         <input type="text" id="suHandle" placeholder="あなたの呼び名（英数 / 日本語可）" autocomplete="off" required>
         <span class="auth-form-hint">Ateli.er 内での表示名。後から変更可能。</span>
       </div>
+      <label class="auth-form-tos">
+        <input type="checkbox" id="suTos" required>
+        <span>
+          <a href="/terms.html" target="_blank" rel="noopener">利用規約</a>・<a href="/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>・<a href="/community.html" target="_blank" rel="noopener">コミュニティガイドライン</a>を読み、同意します。
+        </span>
+      </label>
       <div class="auth-form-status" id="signupStatus"></div>
       <div class="auth-form-actions">
         <button type="button" class="auth-form-cancel" data-act="auth-switch-login">— already have an account?</button>
@@ -11311,8 +11341,12 @@
     const invite = document.getElementById('suInvite')?.value.trim();
     const email  = document.getElementById('suEmail')?.value.trim();
     const handle = document.getElementById('suHandle')?.value.trim();
+    const tosAgreed = document.getElementById('suTos')?.checked;
     if (!invite || !email || !handle) {
       setAuthStatus('signupStatus', 'すべての項目を入力してください。', 'err'); return;
+    }
+    if (!tosAgreed) {
+      setAuthStatus('signupStatus', '利用規約・プライバシーポリシー・コミュニティガイドラインへの同意が必要です。', 'err'); return;
     }
     setAuthStatus('signupStatus', '招待コードを確認中…', 'ok');
     const inv = await validateInvite(invite);
@@ -11320,9 +11354,14 @@
 
     setAuthStatus('signupStatus', `${email} にマジックリンクを送信しています…`, 'ok');
     const redirectTo = location.origin + location.pathname;
+    const tosAcceptedAt = new Date().toISOString();
+    const tosVersion = '1.0';
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo, data: { handle, invite_code: invite } },
+      options: {
+        emailRedirectTo: redirectTo,
+        data: { handle, invite_code: invite, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion },
+      },
     });
     if (error) {
       console.warn('signup signInWithOtp error:', error);

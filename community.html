@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ateli.er — Community Guidelines / コミュニティガイドライン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #EFEAE0;
+  --ink: #2A3756;
+  --ink-soft: #5A6378;
+  --gray: #8A8E9C;
+  --gray-2: #A8ABB6;
+  --gray-3: #D6D2C7;
+  --line: #C8C4BA;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Serif JP', 'Inter', -apple-system, BlinkMacSystemFont, serif;
+  line-height: 1.85;
+  font-feature-settings: 'palt' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  padding: 64px 32px 120px;
+}
+.container { max-width: 720px; margin: 0 auto; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.head a { color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; }
+.head a:hover { color: var(--ink-soft); }
+h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gray);
+  letter-spacing: 0.06em;
+  margin-bottom: 48px;
+}
+.lang-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.04);
+  padding: 3px;
+  border-radius: 4px;
+  margin-bottom: 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.lang-toggle button {
+  border: none; background: none;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--gray);
+  font-family: inherit; font-size: inherit;
+  border-radius: 3px;
+  transition: all .15s;
+}
+.lang-toggle button.is-active {
+  background: var(--ink); color: var(--bg);
+}
+section { margin-bottom: 40px; }
+h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gray-3);
+  text-transform: lowercase;
+}
+p { margin-bottom: 14px; font-size: 15px; }
+ul, ol { padding-left: 22px; margin-bottom: 14px; }
+li { margin-bottom: 8px; font-size: 15px; }
+.lang-en { display: none; }
+body.is-en .lang-ja { display: none; }
+body.is-en .lang-en { display: block; }
+body.is-en { font-family: 'Inter', sans-serif; }
+.lede {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 16.5px;
+  line-height: 1.95;
+  color: var(--ink);
+  margin-bottom: 36px;
+  padding: 20px 0 22px;
+  border-top: 1px solid var(--gray-3);
+  border-bottom: 1px solid var(--gray-3);
+}
+body.is-en .lede { font-family: 'Inter', sans-serif; }
+.foot {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid currentColor; }
+@media (max-width: 640px) {
+  body { padding: 40px 20px 80px; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <p class="head"><a href="/">Ateli.er</a> · <span>community guidelines</span></p>
+  <h1 class="lang-ja">コミュニティガイドライン</h1>
+  <h1 class="lang-en">Community Guidelines</h1>
+  <p class="subtitle mono">version 1.0 — last updated 2026-04-30</p>
+
+  <div class="lang-toggle" role="tablist">
+    <button type="button" data-lang="ja" class="is-active">日本語</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <!-- ========== JA ========== -->
+  <div class="lang-ja">
+
+    <p class="lede">Ateli.er は、未発表の作品や思考の断片を、静かに置いておくための「中庭」です。アルゴリズムも、ランキングも、いいね数も無し。ここでは「速さ」より「丁寧さ」が大切にされます。</p>
+
+    <section>
+      <h2>1. 推奨される振る舞い</h2>
+      <ul>
+        <li>他者の作品や言葉に、敬意を持って接してください。</li>
+        <li>コメントは、対話のためにあります。批判する前に、相手の意図を読んでください。</li>
+        <li>未完成や未発表のものを共有することへの勇気を、お互いに尊重してください。</li>
+        <li>静けさを大切にしてください。むやみに数を増やすより、丁寧さを。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. 禁止される振る舞い</h2>
+      <p>本サービス内で、以下のような振る舞いは固く禁止されます。違反した場合、警告なしにアカウント停止・削除を行うことがあります。</p>
+      <ul>
+        <li><strong>差別・ヘイト</strong>：人種、民族、国籍、性別、性的指向、宗教、障害、その他の属性に基づく差別的・侮蔑的な発言。</li>
+        <li><strong>ハラスメント</strong>：特定の個人を攻撃、つきまとい、執拗な批判、脅迫、嫌がらせ。</li>
+        <li><strong>暴力・自傷の煽動</strong>：暴力行為、自傷、自殺を煽る、または賛美する内容。</li>
+        <li><strong>性的に露骨なコンテンツ</strong>：成人向けコンテンツ、性的搾取的な表現、未成年に関する性的な内容。</li>
+        <li><strong>違法行為</strong>：薬物、違法取引、詐欺、その他の犯罪行為に関する内容。</li>
+        <li><strong>権利侵害</strong>：著作権、商標権、肖像権、プライバシー権を侵害するコンテンツ。</li>
+        <li><strong>なりすまし</strong>：他者になりすます、誤解を招くハンドル名・プロフィールの使用。</li>
+        <li><strong>スパム・宣伝</strong>：商品やサービスの売り込み、関連性のないリンクの投稿、繰り返しの同一投稿。</li>
+        <li><strong>フィッシング・マルウェア</strong>：詐欺サイト、マルウェアを含む URL、認証情報を盗むコンテンツ。</li>
+        <li><strong>悪意ある情報拡散</strong>：誤情報・デマの意図的な拡散、虚偽の通報。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. グレーゾーンの判断</h2>
+      <p>明確に禁止されていなくても、以下のような振る舞いは、「中庭の空気を壊す」ため避けてください：</p>
+      <ul>
+        <li>過度に攻撃的な批評、皮肉、言葉の刃</li>
+        <li>誰かを傷つける可能性のある内輪ネタ・揶揄</li>
+        <li>議論のための議論、対話を成立させない態度</li>
+        <li>他のプラットフォームで起きた個人的な争いの持ち込み</li>
+      </ul>
+      <p>判断に迷う場合は、「この発言は、知らない誰かに見られても恥ずかしくないか」を基準に考えてください。</p>
+    </section>
+
+    <section>
+      <h2>4. 違反への対応</h2>
+      <p>運営者は、本ガイドラインに違反する内容を発見した、または通報を受けた場合、以下のいずれかを行います：</p>
+      <ol>
+        <li>該当コンテンツの非公開化、または削除</li>
+        <li>当該ユーザーへの警告</li>
+        <li>アカウントの一時停止</li>
+        <li>アカウントの永久停止・削除</li>
+      </ol>
+      <p>違反の悪質さ・継続性・影響範囲によって、段階を経ず最も重い対応を取ることがあります。</p>
+    </section>
+
+    <section>
+      <h2>5. 通報</h2>
+      <p>不適切な投稿・コメント・行動を見つけた場合、運営者まで連絡してください。通報者の情報は、当該対応のために必要な範囲でのみ取り扱います。</p>
+    </section>
+
+    <section>
+      <h2>6. 運営者の責任の限界</h2>
+      <p>本サービスは個人による無償運営です。運営者は、ユーザー間で発生したトラブルへの介入や、すべての投稿の事前確認は行いません。詳細は<a href="/terms.html">利用規約 第8条（免責事項）</a>を参照してください。</p>
+    </section>
+
+    <section>
+      <h2>7. このガイドラインの精神</h2>
+      <p>ルールを増やすことは目的ではありません。「お互いの作品と言葉を、丁寧に扱う」というシンプルな姿勢で十分です。ガイドラインは、その姿勢を共有するための補助線です。</p>
+    </section>
+
+  </div>
+
+  <!-- ========== EN ========== -->
+  <div class="lang-en">
+
+    <p class="lede">Ateli.er is a courtyard for keeping unfinished work and fragments of thought, quietly. No algorithm, no ranking, no like counts. Here, "carefulness" matters more than "speed."</p>
+
+    <section>
+      <h2>1. encouraged behaviors</h2>
+      <ul>
+        <li>Treat others' work and words with respect.</li>
+        <li>Comments exist for dialogue. Before critiquing, read the intent.</li>
+        <li>Respect the courage it takes to share unfinished or unreleased work.</li>
+        <li>Honor the quiet. Carefulness over volume.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2. prohibited behaviors</h2>
+      <p>The following behaviors are strictly prohibited. Violations may result in account suspension or deletion without warning.</p>
+      <ul>
+        <li><strong>discrimination / hate</strong>: Discriminatory or demeaning speech based on race, ethnicity, nationality, gender, sexual orientation, religion, disability, or other attributes.</li>
+        <li><strong>harassment</strong>: Targeting individuals with attacks, stalking, persistent criticism, threats, or intimidation.</li>
+        <li><strong>incitement to violence / self-harm</strong>: Content inciting or glorifying violence, self-harm, or suicide.</li>
+        <li><strong>sexually explicit content</strong>: Adult content, sexually exploitative material, or any sexual content involving minors.</li>
+        <li><strong>illegal activity</strong>: Content related to drugs, illegal trade, fraud, or other criminal acts.</li>
+        <li><strong>rights infringement</strong>: Content that violates copyright, trademark, image rights, or privacy.</li>
+        <li><strong>impersonation</strong>: Pretending to be someone else, or using misleading handles or profiles.</li>
+        <li><strong>spam / promotion</strong>: Selling products or services, posting unrelated links, repeating identical posts.</li>
+        <li><strong>phishing / malware</strong>: Scam sites, URLs containing malware, content designed to steal credentials.</li>
+        <li><strong>malicious misinformation</strong>: Intentional spread of false information or false reports.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. grey-area judgment</h2>
+      <p>Even if not explicitly prohibited, the following behaviors break the courtyard's atmosphere — please avoid them:</p>
+      <ul>
+        <li>Excessively aggressive criticism, sarcasm, or verbal hostility.</li>
+        <li>Inside jokes or ridicule that may hurt someone.</li>
+        <li>Argument for argument's sake; refusing dialogue.</li>
+        <li>Bringing personal disputes from other platforms into this space.</li>
+      </ul>
+      <p>When in doubt, ask yourself: "Would I feel okay if a stranger I don't know saw this?"</p>
+    </section>
+
+    <section>
+      <h2>4. response to violations</h2>
+      <p>When the Operator finds violating content or receives a report, one or more of the following may follow:</p>
+      <ol>
+        <li>Hiding or removing the offending content.</li>
+        <li>Warning the user.</li>
+        <li>Temporary account suspension.</li>
+        <li>Permanent account ban or deletion.</li>
+      </ol>
+      <p>Depending on severity, persistence, and impact, the Operator may skip stages and apply the most severe action immediately.</p>
+    </section>
+
+    <section>
+      <h2>5. reporting</h2>
+      <p>If you find inappropriate posts, comments, or behavior, please contact the Operator. Reporter information will only be used to the extent necessary to handle the case.</p>
+    </section>
+
+    <section>
+      <h2>6. limits of operator responsibility</h2>
+      <p>The Service is run by an individual, non-commercially. The Operator does not mediate disputes between users, nor pre-screen all posts. See <a href="/terms.html">Terms of Service §8 (Disclaimer)</a> for details.</p>
+    </section>
+
+    <section>
+      <h2>7. spirit of these guidelines</h2>
+      <p>Adding more rules is not the goal. A simple stance — "treat each other's work and words with care" — is enough. These guidelines are just a shared reference for that stance.</p>
+    </section>
+
+  </div>
+
+  <div class="foot">
+    <span>© Ateli.er — kinoshita studio</span>
+    <span>
+      <a href="/">— back</a> ·
+      <a href="/terms.html">terms</a> ·
+      <a href="/privacy.html">privacy</a>
+    </span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.lang-toggle button');
+  function setLang(lang) {
+    document.body.classList.toggle('is-en', lang === 'en');
+    buttons.forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
+    try { localStorage.setItem('atelier_doc_lang', lang); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  try {
+    const stored = localStorage.getItem('atelier_doc_lang');
+    if (stored === 'en') setLang('en');
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
