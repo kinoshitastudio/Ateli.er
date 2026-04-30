@@ -5560,6 +5560,28 @@
     _setTrackIfChanged('phraseTrack2', row3Html + row3Html);
     _setTrackIfChanged('imageTrack', imageHtml + imageHtml);
 
+    // ─── Pause-on-touch for the image marquee (mobile tap accuracy) ───
+    // Without this, the 150-300ms iOS tap-confirm delay lets the marquee
+    // drift a few pixels while the user's tap is being processed, so
+    // click hit-tests on whatever scrolled into the finger position
+    // rather than the image the user aimed for. Pausing on touchstart
+    // freezes the scroll at finger-down — click registers on the right
+    // element — then touchend resumes the animation. Listeners survive
+    // innerHTML rewrites because they're bound to the <track> element
+    // itself, not its <span> children. Guard prevents double wiring on
+    // re-render. Only the image lane gets this; text lanes have inline
+    // dimensions tight enough that drift doesn't misroute taps.
+    (() => {
+      const track = document.getElementById('imageTrack');
+      if (!track || track._touchPauseWired) return;
+      track._touchPauseWired = true;
+      const pause = () => { track.style.animationPlayState = 'paused'; };
+      const resume = () => { track.style.animationPlayState = ''; };
+      track.addEventListener('touchstart', pause, { passive: true });
+      track.addEventListener('touchend', resume, { passive: true });
+      track.addEventListener('touchcancel', resume, { passive: true });
+    })();
+
     // ─── Click bindings ───
     document.querySelectorAll('.phrase-item, .title-item, .image-item').forEach(el => {
       const kind = el.dataset.kind;
