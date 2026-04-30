@@ -2473,10 +2473,31 @@
     grid-template-columns: 110px 1fr 80px;
     gap: 24px;
     align-items: baseline;
-    padding: 14px 0;
+    padding: 14px 28px 14px 0;
     border-bottom: 1px dashed var(--line-soft);
     transition: opacity 1.4s ease;
+    position: relative;
   }
+  .ptc-delete, .fp-delete {
+    position: absolute;
+    top: 12px;
+    right: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1;
+    color: var(--gray-2);
+    opacity: 0;
+    padding: 4px 6px;
+    transition: opacity .2s, color .2s;
+  }
+  .piece-comments .ptc-list li:hover .ptc-delete,
+  .ch-traces li:hover .fp-delete,
+  .fpi-list li:hover .fp-delete { opacity: 0.7; }
+  .ptc-delete:hover, .fp-delete:hover { color: var(--ink); opacity: 1 !important; }
+  .ch-traces li, .fpi-list li { position: relative; padding-right: 28px; }
   .piece-comments .ptc-name {
     font-family: var(--mono);
     font-size: 10px;
@@ -4498,6 +4519,8 @@
       confirmResetOrder: 'Reset block order to default?',
       confirmDeleteN:  'Delete {n} selected block{s}?',
       confirmLeaveComment: 'Leave this comment?',
+      confirmDeleteComment: 'Delete this comment?',
+      deleteCommentLabel: 'delete comment',
       // connect widget
       pccHead: '— appears in',
       pccPrimary: 'primary',
@@ -4693,6 +4716,8 @@
       confirmResetOrder: '並び順をデフォルトに戻しますか？',
       confirmDeleteN:  '選択した {n} 個のブロックを削除しますか？',
       confirmLeaveComment: 'コメントを投稿しますか？',
+      confirmDeleteComment: 'このコメントを削除しますか？',
+      deleteCommentLabel: 'コメントを削除',
       pccHead: '— 表示先',
       pccPrimary: '原所有',
       pccConnectTo: '+ 接続',
@@ -8302,7 +8327,8 @@
       const ago = r.ts ? ageString(Number(r.ts)) : '';
       const isUnread = Number(r.ts) > watermark;
       return `
-        <li class="${isUnread ? 'is-unread' : ''}" data-block-id="${escapeHtml(r.block_id || '')}">
+        <li class="${isUnread ? 'is-unread' : ''}" data-block-id="${escapeHtml(r.block_id || '')}" data-id="${escapeHtml(r.id || '')}">
+          <button class="fp-delete" type="button" data-act="delete-comment" data-id="${escapeHtml(r.id || '')}" aria-label="${escapeHtml(t('deleteCommentLabel'))}" title="${escapeHtml(t('deleteCommentLabel'))}">×</button>
           <span class="fpi-handle">@${escapeHtml(handle)}</span>
           <span>
             <span class="fpi-text">${escapeHtml(r.text || '')}</span>
@@ -8315,7 +8341,22 @@
     // Wire click → open the source block (works for own blocks; external
     // ones can be opened via the standard resolver).
     if (!list._wiredD1) {
-      list.addEventListener('click', (e) => {
+      list.addEventListener('click', async (e) => {
+        // Delete comment (block owner moderation) — handle first, don't fall
+        // through to the open-block click below.
+        const delBtn = e.target.closest('[data-act="delete-comment"]');
+        if (delBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = delBtn.dataset.id;
+          await _deleteCommentEverywhere(id, {
+            onAfter: () => {
+              renderIncomingTraces();
+              if (typeof renderFP === 'function') renderFP();
+            },
+          });
+          return;
+        }
         const li = e.target.closest('li[data-block-id]');
         if (!li) return;
         const bid = li.dataset.blockId;
@@ -8383,7 +8424,8 @@
         </div>
       `;
       const tracesHtml = traces.map(f => `
-        <li class="ch-trace" style="opacity:${fpOpacity(f.ts).toFixed(2)}">
+        <li class="ch-trace" style="opacity:${fpOpacity(f.ts).toFixed(2)}" data-id="${escapeHtml(f.id || '')}">
+          <button class="fp-delete" type="button" data-act="delete-comment" data-id="${escapeHtml(f.id || '')}" aria-label="${escapeHtml(t('deleteCommentLabel'))}" title="${escapeHtml(t('deleteCommentLabel'))}">×</button>
           <span class="ch-text">${escapeHtml(f.text)}</span>
           <span class="ch-when">${ageString(f.ts)}</span>
         </li>
@@ -8412,6 +8454,23 @@
         if (t) { closeModal(); openPieceModal(t); }
       });
     });
+    // Wire delete-comment buttons (own FP entries — always deletable)
+    if (!list._wiredDelete) {
+      list.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-act="delete-comment"]');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        await _deleteCommentEverywhere(id, {
+          onAfter: () => {
+            renderFP();
+            if (typeof renderIncomingTraces === 'function') renderIncomingTraces();
+          },
+        });
+      });
+      list._wiredDelete = true;
+    }
   }
   // ──────────────── TRACE SLIT (1-line input) ────────────────
   function updateSlitBound() {
@@ -9086,10 +9145,36 @@
     });
     return [...byId.values()].sort((a, b) => b.ts - a.ts);
   }
+  // Delete a comment by id from local FP cache and remote traces table.
+  // Re-render whichever views are currently visible.
+  // RLS on traces ensures the server only deletes when the requester is
+  // the comment author OR the block owner (see traces_delete_self_or_owner).
+  async function _deleteCommentEverywhere(id, opts = {}) {
+    if (!id) return false;
+    const { onAfter } = opts;
+    const ok = await new Promise(resolve => customConfirm(t('confirmDeleteComment')).then(resolve));
+    if (!ok) return false;
+    // Local FP: filter by id
+    const localBefore = loadFP();
+    const localAfter = localBefore.filter(f => f.id !== id);
+    if (localAfter.length !== localBefore.length) saveFP(localAfter);
+    // Remote: best-effort delete (RLS enforces permission server-side)
+    if (currentUser && atelierTraces?.remove) {
+      try { await atelierTraces.remove(id); } catch (e) { console.warn('[delete comment] remote remove failed:', e); }
+    }
+    if (typeof onAfter === 'function') onAfter();
+    return true;
+  }
+
   function _renderBlockCommentsInto(wrapId, blockId) {
     const wrap = document.getElementById(wrapId);
     if (!wrap) return;
     const localArr = loadFP().filter(f => f.trackId === blockId);
+    // Determine block owner for delete-permission gating: any block owner
+    // can moderate (delete) any comment on their own block.
+    const r = (typeof _resolveBlockOrTrack === 'function') ? _resolveBlockOrTrack(blockId) : null;
+    const blockOwnerId = r?.external ? (r.obj?._ownerId || null) : (currentUser?.id || null);
+    const isBlockOwner = !!(currentUser?.id && blockOwnerId === currentUser.id);
     const composer = `
       <form class="ptc-composer" data-bid="${escapeHtml(blockId)}">
         <input type="text" class="ptc-composer-input" placeholder="${escapeHtml(t('composerPlaceholder'))}" maxlength="160" autocomplete="off">
@@ -9107,8 +9192,14 @@
         const items = merged.map(f => {
           const op = traceOpacityForAge(f.ts);
           const handleHtml = f.handle ? `@${escapeHtml(f.handle)}` : escapeHtml(f.name || 'anonymous');
+          const isOwnAuthor = (f.author_id && f.author_id === currentUser?.id) || f._isOwnAuthor === true;
+          const canDelete = isOwnAuthor || isBlockOwner;
+          const delBtn = canDelete
+            ? `<button class="ptc-delete" type="button" data-act="delete-comment" data-id="${escapeHtml(f.id || '')}" aria-label="${escapeHtml(t('deleteCommentLabel'))}" title="${escapeHtml(t('deleteCommentLabel'))}">×</button>`
+            : '';
           return `
-            <li style="opacity: ${op.toFixed(2)}">
+            <li style="opacity: ${op.toFixed(2)}" data-id="${escapeHtml(f.id || '')}">
+              ${delBtn}
               <span class="ptc-name">${handleHtml}</span>
               <span class="ptc-text">${escapeHtml(f.text)}</span>
               <span class="ptc-when">${ageString(f.ts)}</span>
@@ -9123,6 +9214,23 @@
         `;
       }
       _wireCommentComposer(wrap, wrapId, blockId);
+      // Wire delete buttons (delegated, idempotent — re-attached on each paint)
+      const list = wrap.querySelector('.ptc-list');
+      if (list) {
+        list.addEventListener('click', async (e) => {
+          const btn = e.target.closest('[data-act="delete-comment"]');
+          if (!btn) return;
+          e.preventDefault();
+          const id = btn.dataset.id;
+          await _deleteCommentEverywhere(id, {
+            onAfter: () => {
+              _renderBlockCommentsInto(wrapId, blockId);
+              if (typeof renderFP === 'function') renderFP();
+              if (typeof renderIncomingTraces === 'function') renderIncomingTraces();
+            },
+          });
+        });
+      }
     }
     // Initial paint with local data only (instant)
     paint(_mergeTraces(localArr, []));
