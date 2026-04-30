@@ -10118,6 +10118,13 @@
     document.querySelectorAll('.modal-pane').forEach(p => {
       p.classList.toggle('is-active', p.dataset.pane === 'explore');
     });
+    // Also populate the Explore pane so when the user clicks BACK from
+    // the visitor portfolio they don't land on an empty residents/public
+    // blocks list (the tabs were marked active but renderExplore had
+    // never been triggered if the user reached portfolio via Feed/breadcrumb).
+    if (typeof renderExplore === 'function') {
+      try { renderExplore(); } catch (e) {}
+    }
   }
   // Block-level meta line: "placed Xd ago · edited Yh ago"
   function _blockMetaHtml(b) {
