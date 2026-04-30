@@ -316,13 +316,6 @@
     --gap: 32px;
     padding: 0;
   }
-  /* Phase A-refactor 2 (2026-04-29): 2x speed on mobile per Taka. The
-     image lane's relative width vs viewport is more compact on small
-     screens, so a slower drift felt sluggish — halving the duration
-     keeps the same gesture feel as desktop. */
-  @media (max-width: 720px) {
-    .image-marquee { --duration: 42s; }
-  }
   .image-item {
     width: 200px; height: 150px;
     flex-shrink: 0;
@@ -3142,9 +3135,6 @@
     .player { padding: 0 18px 12px; }
     .player-row { grid-template-columns: 1fr auto; }
     .support { display: none; }
-    .image-item,
-    .image-marquee .image-item:nth-child(3n+1),
-    .image-marquee .image-item:nth-child(3n+2) { width: 300px; height: 220px; }
     /* Hide the floating "leave a comment" slit on mobile.
        Mobile users have the inline composer inside the Block modal — the
        slit was cramped against the player and rarely useful here. */
