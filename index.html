@@ -2563,6 +2563,40 @@
     color: var(--ink-2);
     letter-spacing: 0.06em;
   }
+  .piece-comments .ptc-name-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .piece-comments .ptc-name-link .ptc-handle {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-2);
+    letter-spacing: 0.06em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .piece-comments .ptc-name-link:hover .ptc-handle {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+  .piece-comments .ptc-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: var(--paper-2);
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+  }
+  .piece-comments .ptc-avatar.is-empty {
+    background: repeating-linear-gradient(45deg, var(--paper-2) 0 4px, var(--line-soft) 4px 5px);
+  }
   .piece-comments .ptc-text {
     font-family: var(--sans-jp);
     font-size: 13px;
@@ -8416,12 +8450,16 @@
         isUnread ? 'is-unread' : '',
         !resolved ? 'is-deleted' : '',
       ].filter(Boolean).join(' ');
+      const authorId = r.author_id || '';
+      const handleHtml = authorId
+        ? `<a class="fpi-handle" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}" style="color:inherit; text-decoration:none; cursor:pointer;">@${escapeHtml(handle)}</a>`
+        : `<span class="fpi-handle">@${escapeHtml(handle)}</span>`;
       return `
         <li class="${liClasses}" data-block-id="${escapeHtml(blockId)}" data-id="${escapeHtml(r.id || '')}">
           <button class="fp-delete" type="button" data-act="delete-comment" data-id="${escapeHtml(r.id || '')}" aria-label="${escapeHtml(t('deleteCommentLabel'))}" title="${escapeHtml(t('deleteCommentLabel'))}">×</button>
           <span class="fpi-thumb">${thumbHtml}</span>
           <span class="fpi-mid">
-            <span class="fpi-handle">@${escapeHtml(handle)}</span>
+            ${handleHtml}
             <span class="fpi-text">${escapeHtml(r.text || '')}</span>
             <span class="fpi-block-ref">↗ ${escapeHtml(blockLabel)}</span>
           </span>
@@ -8448,6 +8486,9 @@
           });
           return;
         }
+        // Author handle clicked → let the global [data-bc="user"] handler
+        // route to the portfolio. Don't also open the source block.
+        if (e.target.closest('[data-bc="user"]')) return;
         const li = e.target.closest('li[data-block-id]');
         if (!li) return;
         const bid = li.dataset.blockId;
@@ -9359,7 +9400,20 @@
       } else {
         const items = merged.map(f => {
           const op = traceOpacityForAge(f.ts);
-          const handleHtml = f.handle ? `@${escapeHtml(f.handle)}` : escapeHtml(f.name || 'anonymous');
+          const handle = f.handle || f.name || 'anonymous';
+          // Resolve author for avatar + portfolio link. Local-only own FP
+          // entries lack author_id, so fall back to currentUser when
+          // _isOwnAuthor is set.
+          const authorId = f.author_id || (f._isOwnAuthor && currentUser?.id) || null;
+          const cachedProfile = (authorId && typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[authorId] : null;
+          const avatarUrl = cachedProfile?.avatar_url ? convertImageUrl(cachedProfile.avatar_url) : '';
+          const avatarStyle = avatarUrl ? `style="background-image:url('${escapeHtml(avatarUrl)}');"` : '';
+          const avatarClass = avatarUrl ? 'ptc-avatar' : 'ptc-avatar is-empty';
+          // Make the @handle clickable when we have an author_id — the
+          // global [data-bc="user"] handler routes to the right portfolio.
+          const nameHtml = authorId
+            ? `<a class="ptc-name-link" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}"><span class="${avatarClass}" ${avatarStyle}></span><span class="ptc-handle">@${escapeHtml(handle)}</span></a>`
+            : `<span class="ptc-name-link"><span class="${avatarClass}" ${avatarStyle}></span><span class="ptc-handle">${escapeHtml(handle)}</span></span>`;
           const isOwnAuthor = (f.author_id && f.author_id === currentUser?.id) || f._isOwnAuthor === true;
           const canDelete = isOwnAuthor || isBlockOwner;
           const delBtn = canDelete
@@ -9368,7 +9422,7 @@
           return `
             <li style="opacity: ${op.toFixed(2)}" data-id="${escapeHtml(f.id || '')}">
               ${delBtn}
-              <span class="ptc-name">${handleHtml}</span>
+              <span class="ptc-name">${nameHtml}</span>
               <span class="ptc-text">${escapeHtml(f.text)}</span>
               <span class="ptc-when">${ageString(f.ts)}</span>
             </li>
