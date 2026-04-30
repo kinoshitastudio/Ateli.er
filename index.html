@@ -790,13 +790,66 @@
   }
   .fp-incoming-list li {
     display: grid;
-    grid-template-columns: 110px 1fr auto;
+    grid-template-columns: 64px 1fr auto;
     gap: 14px;
-    align-items: baseline;
-    padding: 12px 0;
+    align-items: flex-start;
+    padding: 12px 28px 12px 0;
     border-bottom: 1px dashed var(--line-soft);
     cursor: pointer;
     transition: opacity 0.15s;
+  }
+  .fp-incoming-list .fpi-thumb {
+    width: 64px;
+    height: 64px;
+    background: var(--paper-2);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--gray);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .fp-incoming-list .fpi-thumb img,
+  .fp-incoming-list .fpi-thumb svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .fp-incoming-list .fpi-thumb-text,
+  .fp-incoming-list .fpi-thumb-url {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--gray);
+    letter-spacing: 0.04em;
+    padding: 4px;
+    text-align: center;
+    line-height: 1.3;
+    overflow: hidden;
+    word-break: break-all;
+  }
+  .fp-incoming-list .fpi-mid {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .fp-incoming-list .fpi-block-ref {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--gray-2);
+    letter-spacing: 0.04em;
+  }
+  .fp-incoming-list li.is-deleted {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .fp-incoming-list li.is-deleted .fpi-block-ref::before {
+    content: '⚠ ';
+    color: var(--gray);
   }
   .fp-incoming-list li:hover { opacity: 0.78; }
   .fp-incoming-list li.is-unread { padding-left: 14px; position: relative; }
@@ -829,17 +882,9 @@
     letter-spacing: 0.04em;
     text-align: right;
   }
-  .fp-incoming-list .fpi-block {
-    font-family: var(--mono);
-    font-size: 9.5px;
-    color: var(--gray-2);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-top: 4px;
-  }
   @media (max-width: 720px) {
-    .fp-incoming-list li { grid-template-columns: 1fr; gap: 4px; }
-    .fp-incoming-list .fpi-meta { text-align: left; }
+    .fp-incoming-list li { grid-template-columns: 64px 1fr; gap: 10px; }
+    .fp-incoming-list .fpi-meta { grid-column: 2; text-align: left; }
   }
   /* Public-state pill for the block modal head */
   .block-public-pill {
@@ -8326,13 +8371,45 @@
       const handle = (r.author_handle || 'visitor').replace(/^@+/, '');
       const ago = r.ts ? ageString(Number(r.ts)) : '';
       const isUnread = Number(r.ts) > watermark;
+      const blockId = r.block_id || '';
+      // Resolve block to friendly title + thumbnail. Returns null if the
+      // block was deleted or otherwise unavailable in this client.
+      const resolved = blockId ? _resolveBlockOrTrack(blockId) : null;
+      let blockLabel = blockId || '(no block)';
+      let thumbHtml = '<span class="fpi-thumb-text">—</span>';
+      if (resolved) {
+        const obj = resolved.obj;
+        if (resolved.kind === 'audio') {
+          blockLabel = obj.title || 'untitled audio';
+          thumbHtml = buildPieceImage(obj, 64, 64, /*mono=*/false);
+        } else if (resolved.kind === 'image') {
+          blockLabel = obj.caption || obj.title || '(image)';
+          thumbHtml = buildBlockImage(obj, 64, 64);
+        } else if (resolved.kind === 'text') {
+          const excerpt = (obj.text || '').slice(0, 40);
+          blockLabel = obj.title || excerpt || '(text)';
+          thumbHtml = `<span class="fpi-thumb-text">${escapeHtml((obj.title || excerpt).slice(0, 40))}</span>`;
+        } else if (resolved.kind === 'url') {
+          blockLabel = obj.title || obj.url || '(url)';
+          let domain = '';
+          try { if (obj.url) domain = new URL(obj.url).hostname.replace(/^www\./, ''); } catch (e) {}
+          thumbHtml = `<span class="fpi-thumb-url">${escapeHtml(domain || 'link')}</span>`;
+        }
+      } else if (blockId) {
+        blockLabel = `${blockId} — deleted`;
+      }
+      const liClasses = [
+        isUnread ? 'is-unread' : '',
+        !resolved ? 'is-deleted' : '',
+      ].filter(Boolean).join(' ');
       return `
-        <li class="${isUnread ? 'is-unread' : ''}" data-block-id="${escapeHtml(r.block_id || '')}" data-id="${escapeHtml(r.id || '')}">
+        <li class="${liClasses}" data-block-id="${escapeHtml(blockId)}" data-id="${escapeHtml(r.id || '')}">
           <button class="fp-delete" type="button" data-act="delete-comment" data-id="${escapeHtml(r.id || '')}" aria-label="${escapeHtml(t('deleteCommentLabel'))}" title="${escapeHtml(t('deleteCommentLabel'))}">×</button>
-          <span class="fpi-handle">@${escapeHtml(handle)}</span>
-          <span>
+          <span class="fpi-thumb">${thumbHtml}</span>
+          <span class="fpi-mid">
+            <span class="fpi-handle">@${escapeHtml(handle)}</span>
             <span class="fpi-text">${escapeHtml(r.text || '')}</span>
-            <div class="fpi-block">↗ ${escapeHtml(r.block_id || '')}</div>
+            <span class="fpi-block-ref">↗ ${escapeHtml(blockLabel)}</span>
           </span>
           <span class="fpi-meta">${escapeHtml(ago)}</span>
         </li>
@@ -8361,12 +8438,16 @@
         if (!li) return;
         const bid = li.dataset.blockId;
         if (!bid) return;
-        closeModal();
+        // Resolve FIRST — only close the modal once we know the target
+        // block exists. Earlier code closed the modal then bounced the
+        // user to TOP if the block was missing (deleted block / orphan
+        // trace), which felt jarring.
         const r = _resolveBlockOrTrack(bid);
         if (!r) {
-          showToast(`block ${bid} が見つかりません`);
+          showToast(`block ${bid} は削除されたようです`);
           return;
         }
+        closeModal();
         if (r.kind === 'audio') openPieceModal(r.obj);
         else if (r.kind === 'image') openImageModal(r.obj);
         else if (r.kind === 'text') openTextModal(r.obj);
