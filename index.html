@@ -5519,11 +5519,19 @@
   function editChannel(id, patch) {
     const c = CHANNELS.find(x => x.id === id);
     if (!c) return;
+    const oldLabel = c.label;
     const stamped = { ...patch, updatedAt: Date.now() };
     Object.assign(c, stamped);
     const edits = loadChannelEdits();
     edits[id] = { ...(edits[id] || {}), ...stamped };
     saveChannelEdits(edits);
+    // Phase A-refactor 2 (2026-04-30): if the channel was renamed,
+    // propagate the new label to public_blocks rows for this channel so
+    // visitor portfolios immediately render the new name. Fire-and-forget;
+    // the sync periodic refresh will pick up the change either way.
+    if (patch.label && patch.label !== oldLabel) {
+      try { atelierPublic?.syncChannelLabel?.(id); } catch (e) {}
+    }
   }
   function deleteChannel(id) {
     const idx = CHANNELS.findIndex(x => x.id === id);
@@ -10875,7 +10883,22 @@
         return null;
       }
     }
-    return { upsert, remove, sync, list };
+    // Phase A-refactor 2 (2026-04-30): re-upsert every public block in the
+    // channel so the channel_label snapshot in public_blocks reflects the
+    // rename. Uses the existing upsert path (which reads the live label
+    // from CHANNELS via _channelLabel), so visitor portfolios pick up the
+    // new name on their next refresh without any new API or RLS surface.
+    async function syncChannelLabel(channelId) {
+      if (!currentUser?.id || !channelId) return false;
+      const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+      const targets = blocks.filter(b => b.channelId === channelId && b.isPublic);
+      if (targets.length === 0) return true;
+      for (const b of targets) {
+        try { await upsert(b); } catch (e) { /* keep going */ }
+      }
+      return true;
+    }
+    return { upsert, remove, sync, list, syncChannelLabel };
   })();
 
   // ──────────────── CROSS-USER BROADCAST (Phase E-prep, 2026-04-29) ────────────────
