@@ -8043,11 +8043,17 @@
   function genBlockId(kind) {
     const arr = loadBlocks();
     const prefix = ({ audio:'a', image:'i', text:'t', url:'u' })[kind] || 'b';
+    // Globally unique. Per-user counter alone collided between users
+    // (Taka's first audio = a001, BMboard's first audio = a001), which
+    // made UPSERT to public_blocks fail because the existing row belonged
+    // to another owner and the UPDATE policy's USING denied it. Append a
+    // random suffix so two users independently minting ids never overlap.
     let n = arr.filter(b => b.id && b.id.startsWith(prefix)).length + 1;
-    let id = prefix + String(n).padStart(3, '0');
+    const rnd = () => Math.random().toString(36).slice(2, 8);
+    let id = `${prefix}${String(n).padStart(3, '0')}-${rnd()}`;
     while (arr.some(b => b.id === id) || TRACKS.some(t => t.id === id)) {
       n += 1;
-      id = prefix + String(n).padStart(3, '0');
+      id = `${prefix}${String(n).padStart(3, '0')}-${rnd()}`;
     }
     return id;
   }
@@ -11847,7 +11853,7 @@
       const c = (typeof CHANNELS !== 'undefined' ? CHANNELS : []).find(x => x.id === channelId);
       return c?.label || '';
     }
-    async function upsert(block) {
+    async function upsert(block, _retried) {
       if (!currentUser || !block || !block.id) return false;
       const token = _accessToken();
       if (!token) return false;
@@ -11877,6 +11883,33 @@
         ]);
         if (!res.ok) {
           const txt = await res.text().catch(() => `HTTP ${res.status}`);
+          // 403 with code 42501 = RLS denied. Most often this is the
+          // legacy id-collision case: a different user already owns a
+          // public_blocks row with the same legacy id (a001 / i001 …),
+          // so on_conflict triggers UPDATE which the RLS USING clause
+          // denies. Recover by minting a fresh globally-unique id for
+          // the local block and retrying once. (Comments / connectedTo
+          // referencing the old id are orphaned, but those would have
+          // been broken anyway since the block was never reachable
+          // server-side.)
+          if (!_retried && (res.status === 403 || res.status === 409)) {
+            const oldId = block.id;
+            const newId = (typeof genBlockId === 'function') ? genBlockId(block.kind) : `${block.kind[0]}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+            try {
+              const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+              const i = blocks.findIndex(b => b.id === oldId);
+              if (i >= 0) {
+                blocks[i].id = newId;
+                if (typeof saveBlocks === 'function') saveBlocks(blocks);
+              }
+              block.id = newId;
+              row.id = newId;
+              console.warn('[atelierPublic] id collision recovery: ' + oldId + ' → ' + newId);
+              return await upsert(block, /*_retried=*/true);
+            } catch (re) {
+              console.warn('[atelierPublic] id recovery failed:', re);
+            }
+          }
           throw new Error(`HTTP ${res.status}: ${txt}`);
         }
         return true;
