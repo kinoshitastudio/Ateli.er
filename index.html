@@ -8320,16 +8320,25 @@
   }
   function _feedThumbHtml(item) {
     if (item.kind === 'audio') {
-      return buildPieceImage(item.track, 192, 128, /*mono=*/true);
+      // Cross-user audio is added via _broadcastBlocks (item.block set,
+      // item.track unset). Fall back so cross-user audio renders without
+      // crashing the whole Feed render mid-loop.
+      const tr = item.track || item.block;
+      if (!tr) return '';
+      return buildPieceImage(tr, 192, 128, /*mono=*/true);
     }
     if (item.kind === 'image') {
-      return buildBlockImage(item.block, 192, 128);
+      const b = item.block;
+      if (!b) return '';
+      return buildBlockImage(b, 192, 128);
     }
     if (item.kind === 'text') {
+      const b = item.block;
+      if (!b) return '';
       // Prefer the user-supplied title if any; fall back to the body so
       // legacy text blocks without a title still render meaningfully.
-      const display = item.block.title || item.block.text || '';
-      const isLyric = item.block.style === 'lyric';
+      const display = b.title || b.text || '';
+      const isLyric = b.style === 'lyric';
       const cls = isLyric ? 'feed-text-thumb is-lyric' : 'feed-text-thumb';
       const mark = isLyric ? 'lyric' : 'prose';
       return `<div class="${cls}">
@@ -8339,6 +8348,7 @@
     }
     if (item.kind === 'url') {
       const b = item.block;
+      if (!b) return '';
       let domain = '';
       try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
       if (!domain) domain = b.source || 'link';
