@@ -303,6 +303,9 @@
     overflow: hidden;
     transition: opacity 0.55s ease, transform 0.5s cubic-bezier(.2,.8,.2,1);
     position: relative;
+    /* Fallback background so a failed image (onerror hides the <img>)
+       leaves a neutral placeholder instead of a transparent gap mid-marquee. */
+    background: var(--paper-2);
   }
   .image-item svg { width: 100%; height: 100%; display: block; }
   .image-item .ii-cap {
@@ -5484,11 +5487,24 @@
     }
     const imageHtml = imageItems.join('');
 
-    // 2x duplicate for seamless loop
-    document.getElementById('phraseTrack').innerHTML = row1Html + row1Html;
-    document.getElementById('titleTrack').innerHTML = titleHtml + titleHtml;
-    document.getElementById('phraseTrack2').innerHTML = row3Html + row3Html;
-    document.getElementById('imageTrack').innerHTML = imageHtml + imageHtml;
+    // 2x duplicate for seamless loop. Skip the innerHTML write if the
+    // generated HTML hasn't changed since last render — without this
+    // guard, every renderMarquees call (initial paint, refreshCrossUser
+    // landing, sign-in, publish toggle) reset the CSS animation back to
+    // 0% even though the visible content was identical, producing the
+    // 'images flicker / disappear / restart mid-scroll' effect on
+    // mobile especially.
+    const _setTrackIfChanged = (id, html) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el._lastRenderedHtml === html) return;
+      el.innerHTML = html;
+      el._lastRenderedHtml = html;
+    };
+    _setTrackIfChanged('phraseTrack', row1Html + row1Html);
+    _setTrackIfChanged('titleTrack', titleHtml + titleHtml);
+    _setTrackIfChanged('phraseTrack2', row3Html + row3Html);
+    _setTrackIfChanged('imageTrack', imageHtml + imageHtml);
 
     // ─── Click bindings ───
     document.querySelectorAll('.phrase-item, .title-item, .image-item').forEach(el => {
