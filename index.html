@@ -6100,11 +6100,12 @@
           if (it.kind === 'text') {
             const b = it.block;
             const preview = (b.text || '').slice(0, 160);
+            const thumbPreview = (b.text || '').slice(0, 90);
             const styleLabel = b.style === 'lyric' ? 'lyric' : 'prose';
             return `<li class="${ownClass}" data-kind="text" data-bid="${escapeHtml(b.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb"><span class="ix-thumb-text">${styleLabel}</span></span>
+              <span class="ix-thumb"><span class="ix-thumb-text">${escapeHtml(thumbPreview)}${(b.text || '').length > 90 ? '…' : ''}</span></span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(preview)}${(b.text || '').length > 160 ? '…' : ''}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
@@ -8853,10 +8854,11 @@
           }
           if (m.kind === 'text') {
             const preview = (b.text || '').slice(0, 160);
+            const thumbPreview = (b.text || '').slice(0, 90);
             const styleLabel = b.style === 'lyric' ? 'lyric' : 'prose';
             return `<li data-kind="text" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb"><span class="ix-thumb-text">${styleLabel}</span></span>
+              <span class="ix-thumb"><span class="ix-thumb-text">${escapeHtml(thumbPreview)}${(b.text || '').length > 90 ? '…' : ''}</span></span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(preview)}${(b.text || '').length > 160 ? '…' : ''}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
@@ -9959,10 +9961,11 @@
             }
             if (r.kind === 'text') {
               const preview = (p.text || '').slice(0, 160);
+              const thumbPreview = (p.text || '').slice(0, 90);
               const styleLabel = p.style === 'lyric' ? 'lyric' : 'prose';
               return `<li data-kind="text" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb"><span class="ix-thumb-text">${styleLabel}</span></span>
+                <span class="ix-thumb"><span class="ix-thumb-text">${escapeHtml(thumbPreview)}${(p.text || '').length > 90 ? '…' : ''}</span></span>
                 <span class="ix-mid">
                   <span class="ix-title">${escapeHtml(preview)}${(p.text || '').length > 160 ? '…' : ''}</span>
                   <span class="ix-phrase">— ${escapeHtml(p.style || 'text')} —</span>
