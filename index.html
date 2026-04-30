@@ -5457,9 +5457,14 @@
     // context) and floats them as `#tag` items. Click → tag detail.
     // Single source of truth — only show tags that resolve to ≥1 block.
     const allTagsForRow = getAllTags();
-    // Repeat-pad so a sparse tag set still fills the lane
-    const tagRepeat = Math.max(1, Math.ceil(12 / Math.max(1, allTagsForRow.length)));
+    // Repeat-pad so a sparse tag set still fills the lane — but cap the
+    // pad so a single tag doesn't render as '#映画 #映画 #映画 …' twelve
+    // times. With < 3 unique tags we just show what we have (the marquee
+    // looks sparser, which is honest about the data being thin).
     const tagsShuffled = _shufflePoolStable(allTagsForRow, 'row3', s => `t:${s}`);
+    const tagRepeat = allTagsForRow.length >= 3
+      ? Math.max(1, Math.ceil(12 / allTagsForRow.length))
+      : Math.min(2, Math.max(1, Math.ceil(4 / Math.max(1, allTagsForRow.length))));
     const row3Pool = [];
     for (let r = 0; r < tagRepeat; r++) {
       tagsShuffled.forEach(tag => row3Pool.push(tag));
