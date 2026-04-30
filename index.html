@@ -6104,13 +6104,15 @@
           if (it.kind === 'text') {
             const b = it.block;
             const preview = (b.text || '').slice(0, 160);
-            const thumbPreview = (b.text || '').slice(0, 90);
             const ixTitle = b.title || (preview + ((b.text || '').length > 160 ? '…' : ''));
+            const thumbHtml = b.title
+              ? escapeHtml(b.title)
+              : escapeHtml((b.text || '').slice(0, 90)) + ((b.text || '').length > 90 ? '…' : '');
             const styleLabel = b.style === 'lyric' ? 'lyric' : 'prose';
             return `<li class="${ownClass}" data-kind="text" data-bid="${escapeHtml(b.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb"><span class="ix-thumb-text">${escapeHtml(thumbPreview)}${(b.text || '').length > 90 ? '…' : ''}</span></span>
+              <span class="ix-thumb"><span class="ix-thumb-text">${thumbHtml}</span></span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(ixTitle)}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
@@ -7878,7 +7880,8 @@
         title = escapeHtml(b.caption || '(image)');
         meta = `${escapeHtml(b.source || '')} · placed ${ageString(b.ts)}`;
       } else if (b.kind === 'text') {
-        thumb = `<div style="padding:6px; font-family:var(--mono); font-size:9px; color:var(--gray); line-height:1.2; overflow:hidden;">${escapeHtml((b.text || '').slice(0, 40))}…</div>`;
+        const thumbInner = b.title ? escapeHtml(b.title) : escapeHtml((b.text || '').slice(0, 40)) + '…';
+        thumb = `<div style="padding:6px; font-family:var(--mono); font-size:9px; color:var(--gray); line-height:1.2; overflow:hidden;">${thumbInner}</div>`;
         title = escapeHtml(b.title || (b.text || '').slice(0, 60));
         meta = `${escapeHtml(b.style || 'text')} · placed ${ageString(b.ts)}`;
       } else if (b.kind === 'url') {
@@ -8862,12 +8865,14 @@
           }
           if (m.kind === 'text') {
             const preview = (b.text || '').slice(0, 160);
-            const thumbPreview = (b.text || '').slice(0, 90);
             const ixTitle = b.title || (preview + ((b.text || '').length > 160 ? '…' : ''));
+            const thumbHtml = b.title
+              ? escapeHtml(b.title)
+              : escapeHtml((b.text || '').slice(0, 90)) + ((b.text || '').length > 90 ? '…' : '');
             const styleLabel = b.style === 'lyric' ? 'lyric' : 'prose';
             return `<li data-kind="text" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb"><span class="ix-thumb-text">${escapeHtml(thumbPreview)}${(b.text || '').length > 90 ? '…' : ''}</span></span>
+              <span class="ix-thumb"><span class="ix-thumb-text">${thumbHtml}</span></span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(ixTitle)}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
@@ -9645,7 +9650,10 @@
         title = (r.kind === 'audio' ? p.title : p.caption) || '(untitled)';
       } else if (r.kind === 'text') {
         const txt = (p.text || '').slice(0, 80);
-        thumbHtml = `<span class="explore-block-thumb is-text">${escapeHtml(txt)}${(p.text || '').length > 80 ? '…' : ''}</span>`;
+        const thumbInner = p.title
+          ? escapeHtml(p.title)
+          : escapeHtml(txt) + ((p.text || '').length > 80 ? '…' : '');
+        thumbHtml = `<span class="explore-block-thumb is-text">${thumbInner}</span>`;
         title = p.title || ((p.text || '').slice(0, 40) + ((p.text || '').length > 40 ? '…' : ''));
       } else if (r.kind === 'url') {
         let domain = '';
@@ -9970,12 +9978,14 @@
             }
             if (r.kind === 'text') {
               const preview = (p.text || '').slice(0, 160);
-              const thumbPreview = (p.text || '').slice(0, 90);
               const ixTitle = p.title || (preview + ((p.text || '').length > 160 ? '…' : ''));
+              const thumbHtml = p.title
+                ? escapeHtml(p.title)
+                : escapeHtml((p.text || '').slice(0, 90)) + ((p.text || '').length > 90 ? '…' : '');
               const styleLabel = p.style === 'lyric' ? 'lyric' : 'prose';
               return `<li data-kind="text" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb"><span class="ix-thumb-text">${escapeHtml(thumbPreview)}${(p.text || '').length > 90 ? '…' : ''}</span></span>
+                <span class="ix-thumb"><span class="ix-thumb-text">${thumbHtml}</span></span>
                 <span class="ix-mid">
                   <span class="ix-title">${escapeHtml(ixTitle)}</span>
                   <span class="ix-phrase">— ${escapeHtml(p.style || 'text')} —</span>
