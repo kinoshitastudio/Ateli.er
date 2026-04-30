@@ -11986,15 +11986,27 @@
     // channel_label columns are populated for legacy rows that were
     // synced before those columns were added (or before the column-fill
     // path was reliable). Idempotent — re-running just refreshes rows.
+    let _backfillInFlight = null;
     async function backfillOwnPublicBlocks() {
       if (!currentUser?.id) return false;
-      const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
-      const targets = blocks.filter(b => b.isPublic);
-      if (targets.length === 0) return true;
-      for (const b of targets) {
-        try { await upsert(b); } catch (e) { /* keep going */ }
-      }
-      return true;
+      // Concurrency guard: SIGNED_IN handler and gateAppByAuth's reload
+      // path both call this on entry. Without the guard, both kicked off
+      // backfill in parallel — when an id-collision recovery fired, BOTH
+      // calls retried with new random ids, producing duplicate
+      // public_blocks rows for the same logical block. Hold a single
+      // promise and let any concurrent caller await the original.
+      if (_backfillInFlight) return _backfillInFlight;
+      _backfillInFlight = (async () => {
+        const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+        const targets = blocks.filter(b => b.isPublic);
+        if (targets.length === 0) return true;
+        for (const b of targets) {
+          try { await upsert(b); } catch (e) { /* keep going */ }
+        }
+        return true;
+      })();
+      try { return await _backfillInFlight; }
+      finally { _backfillInFlight = null; }
     }
     return { upsert, remove, sync, list, syncChannelLabel, backfillOwnPublicBlocks };
   })();
