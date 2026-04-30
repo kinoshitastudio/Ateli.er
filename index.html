@@ -8417,14 +8417,17 @@
       let syncFailed = false;
       if (block.isPublic) {
         try {
-          await atelierPublic?.sync(block);
+          // sync() now returns boolean — false signals a silent failure
+          // path inside upsert (RLS deny, network non-ok, missing token, etc.).
+          const ok = await atelierPublic?.sync(block);
+          if (ok === false) syncFailed = true;
         } catch (e) {
           console.warn('[publish] sync error:', e);
           syncFailed = true;
         }
       }
       if (syncFailed) {
-        const errMsg = '⚠ 公開同期に失敗しました。ブロックは保存されましたが、他ユーザーへの公開反映が遅れる可能性があります。';
+        const errMsg = '⚠ 公開同期に失敗しました。ブロックは保存されましたが、他ユーザーには反映されません。再ログインで自動 retry されます。';
         try { await new Promise(resolve => customConfirm(errMsg).then(resolve)); } catch (e) {}
       }
       // Refresh
@@ -11907,9 +11910,12 @@
     }
     // Sync helper: push to public_blocks if isPublic, else ensure removed.
     async function sync(block) {
-      if (!block) return;
-      if (block.isPublic) await upsert(block);
-      else await remove(block.id);
+      if (!block) return false;
+      // Propagate the underlying success/failure so the upload form (and
+      // any other caller) can surface a real error instead of swallowing
+      // an upsert that quietly returned false.
+      if (block.isPublic) return await upsert(block);
+      return await remove(block.id);
     }
     async function list(limit) {
       const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&order=ts.desc&limit=${limit || 60}`;
