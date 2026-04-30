@@ -5303,6 +5303,28 @@
     }
     return a;
   }
+  // Stable shuffle for marquee lanes. renderMarquees fires multiple times
+  // per session (initial paint, after refreshCrossUserBlocks, after a
+  // publish, etc.) — re-shuffling on every call made the lanes visibly
+  // jump as items reordered mid-animation. Cache the shuffled order
+  // keyed by the sorted set of item ids; only re-shuffle when the
+  // content set actually changes (new post arrives, etc.).
+  const _marqueeShuffleCache = new Map();
+  function _shufflePoolStable(pool, lane, getKey) {
+    if (pool.length === 0) return [];
+    const ids = pool.map(getKey).slice().sort().join('|');
+    const cacheKey = `${lane}::${ids}`;
+    const cached = _marqueeShuffleCache.get(cacheKey);
+    if (cached) return cached;
+    const shuffled = _shuffleArr(pool);
+    _marqueeShuffleCache.set(cacheKey, shuffled);
+    // Bound cache so it doesn't grow forever as users post / unpost.
+    if (_marqueeShuffleCache.size > 24) {
+      const firstKey = _marqueeShuffleCache.keys().next().value;
+      _marqueeShuffleCache.delete(firstKey);
+    }
+    return shuffled;
+  }
   function renderMarquees() {
     // ─── ROW 1 (top phrase lane) — own visible channel mainPhrases + cross-user
     //                              lyric/url phrases ───
@@ -5334,7 +5356,7 @@
       }
     });
     const REPEAT = Math.max(1, Math.ceil(8 / Math.max(1, row1Pool.length)));
-    const row1Shuffled = _shuffleArr(row1Pool);
+    const row1Shuffled = _shufflePoolStable(row1Pool, 'row1', p => p.kind === 'own-ch' ? `c:${p.ch.id}` : `b:${p.block.id}`);
     const row1Repeated = [];
     for (let r = 0; r < REPEAT; r++) {
       row1Shuffled.forEach(p => row1Repeated.push(p));
@@ -5391,7 +5413,7 @@
     // shorter than the screen, so the -50% animation visually "stopped"
     // mid-way and restarted. Same pattern Row 1 already uses.
     const _row2Repeat = Math.max(1, Math.ceil(8 / Math.max(1, _row2ItemsPool.length)));
-    const _row2Shuffled = _shuffleArr(_row2ItemsPool);
+    const _row2Shuffled = _shufflePoolStable(_row2ItemsPool, 'row2', p => p.kind === 'own-track' ? `t:${p.t.id}` : `b:${p.b.id}`);
     const _row2Items = [];
     for (let r = 0; r < _row2Repeat; r++) {
       _row2Shuffled.forEach(p => _row2Items.push(p));
@@ -5418,7 +5440,7 @@
     const allTagsForRow = getAllTags();
     // Repeat-pad so a sparse tag set still fills the lane
     const tagRepeat = Math.max(1, Math.ceil(12 / Math.max(1, allTagsForRow.length)));
-    const tagsShuffled = _shuffleArr(allTagsForRow);
+    const tagsShuffled = _shufflePoolStable(allTagsForRow, 'row3', s => `t:${s}`);
     const row3Pool = [];
     for (let r = 0; r < tagRepeat; r++) {
       tagsShuffled.forEach(tag => row3Pool.push(tag));
@@ -5452,7 +5474,10 @@
     });
     // Repeat-pad sparse pools (same fix as Row 1 and Row 2).
     const _row4Repeat = Math.max(1, Math.ceil(6 / Math.max(1, _row4Pool.length)));
-    const _row4Shuffled = _shuffleArr(_row4Pool);
+    // Row 4 items are pre-built HTML strings, so the cache key uses the
+    // string itself (stable per content). When an image is added/removed
+    // the set of strings changes, triggering a single re-shuffle.
+    const _row4Shuffled = _shufflePoolStable(_row4Pool, 'row4', s => s);
     const imageItems = [];
     for (let r = 0; r < _row4Repeat; r++) {
       _row4Shuffled.forEach(s => imageItems.push(s));
