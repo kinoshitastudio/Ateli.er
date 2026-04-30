@@ -5276,6 +5276,17 @@
   }
 
   // ──────────────── MARQUEES ────────────────
+  // Fisher-Yates shuffle (immutable). Used to randomize marquee item order
+  // each render — without this, lanes mirror Feed's newest-first and users
+  // never bump into older / mid-history work.
+  function _shuffleArr(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
   function renderMarquees() {
     // ─── ROW 1 (top phrase lane) — own visible channel mainPhrases + cross-user
     //                              lyric/url phrases ───
@@ -5307,9 +5318,10 @@
       }
     });
     const REPEAT = Math.max(1, Math.ceil(8 / Math.max(1, row1Pool.length)));
+    const row1Shuffled = _shuffleArr(row1Pool);
     const row1Repeated = [];
     for (let r = 0; r < REPEAT; r++) {
-      row1Pool.forEach(p => row1Repeated.push(p));
+      row1Shuffled.forEach(p => row1Repeated.push(p));
     }
     const row1ItemHtml = (p) => {
       if (p.kind === 'own-ch') {
@@ -5363,9 +5375,10 @@
     // shorter than the screen, so the -50% animation visually "stopped"
     // mid-way and restarted. Same pattern Row 1 already uses.
     const _row2Repeat = Math.max(1, Math.ceil(8 / Math.max(1, _row2ItemsPool.length)));
+    const _row2Shuffled = _shuffleArr(_row2ItemsPool);
     const _row2Items = [];
     for (let r = 0; r < _row2Repeat; r++) {
-      _row2ItemsPool.forEach(p => _row2Items.push(p));
+      _row2Shuffled.forEach(p => _row2Items.push(p));
     }
     const titleHtml = _row2Items.map(it => {
       if (it.kind === 'own-track') {
@@ -5389,9 +5402,10 @@
     const allTagsForRow = getAllTags();
     // Repeat-pad so a sparse tag set still fills the lane
     const tagRepeat = Math.max(1, Math.ceil(12 / Math.max(1, allTagsForRow.length)));
+    const tagsShuffled = _shuffleArr(allTagsForRow);
     const row3Pool = [];
     for (let r = 0; r < tagRepeat; r++) {
-      allTagsForRow.forEach(tag => row3Pool.push(tag));
+      tagsShuffled.forEach(tag => row3Pool.push(tag));
     }
     const row3Html = row3Pool.map(tag => `
       <span class="phrase-item is-tag" data-kind="tag" data-tag="${escapeHtml(tag)}">
@@ -5422,9 +5436,10 @@
     });
     // Repeat-pad sparse pools (same fix as Row 1 and Row 2).
     const _row4Repeat = Math.max(1, Math.ceil(6 / Math.max(1, _row4Pool.length)));
+    const _row4Shuffled = _shuffleArr(_row4Pool);
     const imageItems = [];
     for (let r = 0; r < _row4Repeat; r++) {
-      _row4Pool.forEach(s => imageItems.push(s));
+      _row4Shuffled.forEach(s => imageItems.push(s));
     }
     const imageHtml = imageItems.join('');
 
