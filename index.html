@@ -4811,17 +4811,17 @@
       if (k && key) k.textContent = t(key);
     });
     document.querySelectorAll('.bf-fields[data-kind="image"] .uf-row').forEach((row, i) => {
-      const key = ['fldImageUrl','fldCaption','fldSource'][i];
+      const key = ['fldTitle','fldImageUrl','fldSource'][i];
       const k = row.querySelector('.sp-k');
       if (k && key) k.textContent = t(key);
     });
     document.querySelectorAll('.bf-fields[data-kind="text"] .uf-row').forEach((row, i) => {
-      const key = ['fldText','fldStyle'][i];
+      const key = ['fldTitle','fldText','fldStyle'][i];
       const k = row.querySelector('.sp-k');
       if (k && key) k.textContent = t(key);
     });
     document.querySelectorAll('.bf-fields[data-kind="url"] .uf-row').forEach((row, i) => {
-      const key = ['fldUrl','fldTitle','fldSource'][i];
+      const key = ['fldTitle','fldUrl','fldSource'][i];
       const k = row.querySelector('.sp-k');
       if (k && key) k.textContent = t(key);
     });
