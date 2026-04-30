@@ -8269,10 +8269,25 @@
       const _channelObj = CHANNELS.find(c => c.id === channelId);
       const _channelIsPublic = _channelObj?.isPublic !== false;  // default true
       block.isPublic = _channelIsPublic;
+      const channelLabel = CHANNELS.find(c => c.id === channelId)?.label || channelId;
+      // Confirm before publishing — same gate for all 4 kinds.
+      const confirmMsg = block.isPublic
+        ? `「${channelLabel}」にこのまま投稿しますか？\n(公開)`
+        : `「${channelLabel}」に下書きとして保存しますか？\n(チャンネルが draft のため非公開)`;
+      const proceed = await new Promise(resolve => customConfirm(confirmMsg).then(resolve));
+      if (!proceed) {
+        status.textContent = '';
+        status.className = 'uf-status';
+        submit.disabled = false;
+        return;
+      }
+      submit.disabled = true;
       const arr = loadBlocks();
       arr.push(block);
       const ok = saveBlocks(arr);
       if (!ok) {
+        const errMsg = '⚠ ストレージが一杯です。古いブロックを削除してから再度お試しください。';
+        try { await new Promise(resolve => customConfirm(errMsg).then(resolve)); } catch (e) {}
         status.textContent = '— storage full. remove a block first.';
         status.className = 'uf-status err';
         submit.disabled = false;
@@ -8280,8 +8295,18 @@
       }
       // Channel public → block public, immediately mirror to public_blocks.
       // Channel draft → block draft, no sync (stays private).
+      let syncFailed = false;
       if (block.isPublic) {
-        try { atelierPublic?.sync(block); } catch (e) { console.warn('[publish] sync error:', e); }
+        try {
+          await atelierPublic?.sync(block);
+        } catch (e) {
+          console.warn('[publish] sync error:', e);
+          syncFailed = true;
+        }
+      }
+      if (syncFailed) {
+        const errMsg = '⚠ 公開同期に失敗しました。ブロックは保存されましたが、他ユーザーへの公開反映が遅れる可能性があります。';
+        try { await new Promise(resolve => customConfirm(errMsg).then(resolve)); } catch (e) {}
       }
       // Refresh
       injectBlocksIntoTracks();
@@ -8290,7 +8315,6 @@
       renderYourBlocks();
       blockForm.reset();
       populateChannelSelect();
-      const channelLabel = CHANNELS.find(c => c.id === channelId)?.label || channelId;
       status.textContent = block.isPublic
         ? '— placed. ✓ in ' + channelLabel + ' (public)'
         : '— placed as draft. ✓ in ' + channelLabel + ' (channel is draft)';
