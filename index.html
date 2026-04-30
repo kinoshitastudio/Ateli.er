@@ -8204,13 +8204,15 @@
       return buildBlockImage(item.block, 192, 128);
     }
     if (item.kind === 'text') {
-      const text = item.block.text || '';
+      // Prefer the user-supplied title if any; fall back to the body so
+      // legacy text blocks without a title still render meaningfully.
+      const display = item.block.title || item.block.text || '';
       const isLyric = item.block.style === 'lyric';
       const cls = isLyric ? 'feed-text-thumb is-lyric' : 'feed-text-thumb';
       const mark = isLyric ? 'lyric' : 'prose';
       return `<div class="${cls}">
         <span class="feed-text-thumb-mark">${mark}</span>
-        <div class="feed-text-thumb-inner">${escapeHtml(text)}</div>
+        <div class="feed-text-thumb-inner">${escapeHtml(display)}</div>
       </div>`;
     }
     if (item.kind === 'url') {
