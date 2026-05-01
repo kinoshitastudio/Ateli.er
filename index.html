@@ -660,6 +660,25 @@
     vertical-align: middle;
     text-transform: uppercase;
   }
+  /* CONNECT badge — same shape as EXPLORE but in a warm rust tone so the
+     user can tell at a glance which blocks in their own channel are
+     connected from other users (read-only here) vs. their own posts.
+     Distinct from EXPLORE's ink-blue: rust/sienna keeps the muted earthy
+     palette but contrasts cleanly with the page's blue-on-beige scheme. */
+  .bc-connect-badge {
+    display: inline-block;
+    margin-right: 8px;
+    padding: 2px 6px;
+    border: 1px solid #8B3A1F;
+    color: #8B3A1F;
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    line-height: 1.2;
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
   /* Phase C-2: "— by @handle" attribution under channel-detail items */
   .ix-by {
     font-family: var(--mono);
@@ -4651,6 +4670,8 @@
       myChannelBadgeTitle:    'My Channel — edit mode',
       exploreBadgeLabel:      'EXPLORE',
       myChannelBadgeLabel:    'MY CHANNEL',
+      connectBadgeLabel:      'CONNECT',
+      connectBadgeTitle:      'connected from another user (read-only)',
       // counts / meta
       channels:      'channels',
       blocks:        'blocks',
@@ -4856,6 +4877,8 @@
       myChannelBadgeTitle:    'マイチャンネル — 編集モード',
       exploreBadgeLabel:      '閲覧中',
       myChannelBadgeLabel:    'マイチャンネル',
+      connectBadgeLabel:      '連携',
+      connectBadgeTitle:      '他ユーザーから連携(読み取り専用)',
       paneTracesHead:    'あなたの<em>コメント</em>',
       paneUploadHead:    'あなたの<em>アップロード</em>',
       paneSearchHead:    '検索',
@@ -6745,6 +6768,14 @@
           const byLine = it.external
             ? `<span class="ix-by">— by @${escapeHtml(it.ownerHandle || '')}</span>`
             : '';
+          // CONNECT badge — surfaces "this is a connected (other-user)
+          // block, read-only here" at a glance. Mirrors the EXPLORE badge
+          // pattern but in the rust palette so the two contexts read as
+          // distinct on first scan. Inline with title so the badge is
+          // visible without scanning down to the byLine.
+          const connectBadge = it.external
+            ? `<span class="bc-connect-badge" title="${escapeHtml(t('connectBadgeTitle'))}">${escapeHtml(t('connectBadgeLabel'))}</span>`
+            : '';
           // Phase E-prep: visibility pill on each block in channel detail.
           // Owner sees public/draft state at a glance for every item, even
           // when the channel itself is public (individual blocks may be
@@ -6763,7 +6794,7 @@
               <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(tr.id)}</span>
               <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
               <span class="ix-mid">
-                <span class="ix-title">${escapeHtml(tr.title)}</span>
+                <span class="ix-title">${connectBadge}${escapeHtml(tr.title)}</span>
                 <span class="ix-phrase">— ${escapeHtml((tr.phrases && tr.phrases[0]) || '')} —</span>
                 ${byLine}
               </span>
@@ -6779,7 +6810,7 @@
               <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(b.id)}</span>
               <span class="ix-thumb">${buildBlockImage(b, 160, 110)}</span>
               <span class="ix-mid">
-                <span class="ix-title">${escapeHtml(b.caption || '(image)')}</span>
+                <span class="ix-title">${connectBadge}${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
                 ${byLine}
               </span>
@@ -6801,7 +6832,7 @@
               <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(b.id)}</span>
               <span class="ix-thumb"><span class="ix-thumb-text">${thumbHtml}</span></span>
               <span class="ix-mid">
-                <span class="ix-title">${escapeHtml(ixTitle)}</span>
+                <span class="ix-title">${connectBadge}${escapeHtml(ixTitle)}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.style || 'text')} —</span>
                 ${byLine}
               </span>
@@ -6820,7 +6851,7 @@
               <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(b.id)}</span>
               <span class="ix-thumb"><span class="ix-thumb-url">${escapeHtml(domain)}</span></span>
               <span class="ix-mid">
-                <span class="ix-title">${escapeHtml(b.title || b.url || '(url)')}</span>
+                <span class="ix-title">${connectBadge}${escapeHtml(b.title || b.url || '(url)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.source || '')} —</span>
                 ${byLine}
               </span>
