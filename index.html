@@ -10973,8 +10973,39 @@
       }
       return { kind: r.kind, block: { ...p, id: r.id, kind: r.kind } };
     }
+    // Honor the owner's per-channel block order for card thumbnails too —
+    // otherwise cards keep showing the most-recently-uploaded items (ts DESC
+    // from the Supabase query) regardless of how the owner has arranged
+    // their channel. Same source of truth as the openUserChannel sort:
+    // profiles.block_order keyed by channel id.
+    const _ownerBlockOrderForCards = _ownerProfile?.block_order || null;
+    const _orderForChannel = (cid) => {
+      if (!_ownerBlockOrderForCards) return null;
+      const arr = _ownerBlockOrderForCards[cid];
+      return Array.isArray(arr) ? arr : null;
+    };
     grid.innerHTML = channels.map(c => {
       const items = c.items.map(_publicRowToItem);
+      const order = _orderForChannel(c.channelId);
+      if (order && order.length > 0) {
+        const idOf = it => it.kind === 'audio' ? it.track.id : it.block.id;
+        items.sort((a, b) => {
+          const ai = order.indexOf(idOf(a));
+          const bi = order.indexOf(idOf(b));
+          if (ai !== -1 && bi !== -1) return ai - bi;
+          if (ai !== -1) return -1;
+          if (bi !== -1) return 1;
+          // unranked → audio-first then ts-ASC (mirrors openUserChannel
+          // fallback so the thumbnail leads with the same items the
+          // visitor will see in the channel detail).
+          const aIsAudio = a.kind === 'audio';
+          const bIsAudio = b.kind === 'audio';
+          if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
+          const aTs = (a.kind === 'audio' ? a.track : a.block)?.ts || 0;
+          const bTs = (b.kind === 'audio' ? b.track : b.block)?.ts || 0;
+          return aTs - bTs;
+        });
+      }
       const cells = [items[0] || null, items[1] || null, items[2] || null, items[3] || null];
       return `
         <div class="ch-card" data-pb-cid="${escapeHtml(c.channelId)}" data-pb-clabel="${escapeHtml(c.channelLabel)}" style="cursor:pointer;">
