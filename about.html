@@ -557,6 +557,34 @@ section.block.is-alt {
   text-transform: uppercase;
 }
 
+/* ──────────────── ART SLOT — image fill ─────────────────
+   When a <data-art-slot> wrapper holds an <img>, drop the dashed
+   placeholder treatment and let the artwork fill the rounded box. */
+[data-art-slot]:has(img) {
+  background: transparent;
+  border: 0;
+}
+[data-art-slot] > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+.hero-art:has(img),
+.unit-art:has(img),
+.illustration-box:has(img),
+.final-art:has(img) {
+  overflow: hidden;
+}
+/* logo.svg in the aesthetic slot reads as a mark, not a photo —
+   contain it with breathing room instead of crop-fill. */
+.illustration-box > img[src$=".svg"] {
+  object-fit: contain;
+  padding: 36px;
+  background: var(--paper-3);
+}
+
 /* ──────────────── FOOTER ──────────────── */
 footer.foot {
   padding: 36px 28px 56px;
@@ -628,7 +656,7 @@ footer.foot {
       </div>
     </div>
     <div class="hero-art" data-art-slot="hero">
-      <span class="hero-art-tag">illustration · hero</span>
+      <img src="img/flower.png" alt="" loading="eager" decoding="async">
     </div>
   </div>
 </section>
@@ -656,7 +684,9 @@ footer.foot {
 
 <!-- ──────── ILLUSTRATION SLOT ──────── -->
 <div class="illustration">
-  <div class="illustration-box" data-art-slot="manifesto">illustration · manifesto</div>
+  <div class="illustration-box" data-art-slot="manifesto">
+    <img src="img/dog.png" alt="" loading="lazy" decoding="async">
+  </div>
 </div>
 
 <!-- ──────── 02 — units ──────── -->
@@ -673,7 +703,9 @@ footer.foot {
     </div>
     <div class="units-grid">
       <article class="unit">
-        <div class="unit-art" data-art-slot="unit-block">illustration</div>
+        <div class="unit-art" data-art-slot="unit-block">
+          <img src="img/camera.png" alt="" loading="lazy" decoding="async">
+        </div>
         <div class="unit-num">01</div>
         <div class="unit-name">block</div>
         <div class="unit-tag"><span class="lang-ja">最小単位</span><span class="lang-en">the unit</span></div>
@@ -683,7 +715,9 @@ footer.foot {
         </div>
       </article>
       <article class="unit">
-        <div class="unit-art" data-art-slot="unit-channel">illustration</div>
+        <div class="unit-art" data-art-slot="unit-channel">
+          <img src="img/bird.png" alt="" loading="lazy" decoding="async">
+        </div>
         <div class="unit-num">02</div>
         <div class="unit-name">channel</div>
         <div class="unit-tag"><span class="lang-ja">テーマの集合</span><span class="lang-en">a theme</span></div>
@@ -693,7 +727,9 @@ footer.foot {
         </div>
       </article>
       <article class="unit">
-        <div class="unit-art" data-art-slot="unit-connect">illustration</div>
+        <div class="unit-art" data-art-slot="unit-connect">
+          <img src="img/people.png" alt="" loading="lazy" decoding="async">
+        </div>
         <div class="unit-num">03</div>
         <div class="unit-name">connect</div>
         <div class="unit-tag"><span class="lang-ja">curatorial</span><span class="lang-en">curatorial</span></div>
@@ -703,7 +739,9 @@ footer.foot {
         </div>
       </article>
       <article class="unit">
-        <div class="unit-art" data-art-slot="unit-footprint">illustration</div>
+        <div class="unit-art" data-art-slot="unit-footprint">
+          <img src="img/flower.png" alt="" loading="lazy" decoding="async">
+        </div>
         <div class="unit-num">04</div>
         <div class="unit-name">footprint</div>
         <div class="unit-tag"><span class="lang-ja">静かな対話</span><span class="lang-en">quiet trace</span></div>
@@ -760,7 +798,9 @@ footer.foot {
 
 <!-- ──────── ILLUSTRATION SLOT ──────── -->
 <div class="illustration">
-  <div class="illustration-box" data-art-slot="aesthetic">illustration · aesthetic</div>
+  <div class="illustration-box" data-art-slot="aesthetic">
+    <img src="img/logo.svg" alt="" loading="lazy" decoding="async">
+  </div>
 </div>
 
 <!-- ──────── 04 — aesthetic ──────── -->
@@ -822,7 +862,9 @@ footer.foot {
     <span class="lang-en">We're invite-only. With a code, anyone is welcome.<br>Without one, please reach out to the operator.</span>
   </p>
   <a class="btn btn-invert" href="/"><span class="lang-ja">サービスを開く →</span><span class="lang-en">open the service →</span></a>
-  <div class="final-art" data-art-slot="final">illustration · join</div>
+  <div class="final-art" data-art-slot="final">
+    <img src="img/bird.png" alt="" loading="lazy" decoding="async">
+  </div>
 </div>
 
 <!-- ──────── FOOTER ──────── -->
