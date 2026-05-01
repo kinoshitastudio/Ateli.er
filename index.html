@@ -1634,13 +1634,20 @@
     padding: 1px 4px;
     pointer-events: none;
   }
-  .ch-card-info { display: flex; flex-direction: column; gap: 4px; }
+  .ch-card-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .ch-card-name {
     font-family: var(--sans);
     font-size: 16px;
     font-weight: 400;
     color: var(--ink);
     letter-spacing: -0.005em;
+    /* 2-line clamp so unusually long channel names (multi-word, kanji
+       sequences, etc.) don't push the card width or break the grid. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
   }
   .ch-card-name em {
     font-family: var(--serif-i); font-style: italic; color: var(--ink-2);
@@ -2801,7 +2808,15 @@
     flex-shrink: 0;
   }
   .piece-comments .ptc-avatar.is-empty {
-    background: repeating-linear-gradient(45deg, var(--paper-2) 0 4px, var(--line-soft) 4px 5px);
+    background: var(--paper-2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gray);
+    text-transform: uppercase;
+    line-height: 1;
   }
   .piece-comments .ptc-text {
     font-family: var(--sans-jp);
@@ -5899,11 +5914,29 @@
     const externalUrl = track.audioUrl || track.sourceAudioUrl;
     audioEl = new Audio();
     audioEl.src = externalUrl;
+    let _audioRetried = false;
     audioEl.play().catch(err => console.warn('audio play failed:', err));
     audioEl.addEventListener('loadedmetadata', () => {
       if (audioEl && audioEl.duration && isFinite(audioEl.duration)) {
         track.sec = Math.round(audioEl.duration);
       }
+    });
+    // Audio fetch fails (Drive CORP, transient 403, network blip) used to
+    // leave the player hanging — no toast, no retry. Mirror the image
+    // retry strategy: one cache-buster reload, then surface a clear
+    // notice to the user instead of silent failure.
+    audioEl.addEventListener('error', () => {
+      if (!_audioRetried && externalUrl) {
+        _audioRetried = true;
+        const sep = externalUrl.includes('?') ? '&' : '?';
+        try {
+          audioEl.src = externalUrl + sep + '_r=' + Date.now();
+          audioEl.play().catch(() => {});
+        } catch (e) {}
+        return;
+      }
+      try { showToast('音声を読み込めませんでした — URL を確認してください'); } catch (e) {}
+      stopTrack();
     });
     audioEl.addEventListener('ended', stopTrack);
     audioEl.addEventListener('play',  _setPlayPauseLabel);
@@ -7743,6 +7776,25 @@
       _saveEditFormApply(id, kind);
     });
   }
+  // Async validation of an image URL by attempting to load it. Resolves
+  // true if the image loaded within the timeout, false otherwise. Used
+  // post-save to surface a non-blocking toast if the URL doesn't return
+  // a valid image — fixes the silent "image not displaying" UX where the
+  // user types a Drive folder link or a 404'd URL and never knows it
+  // didn't work until they reopen the block. Doesn't block the save —
+  // we still write the URL to localStorage and Supabase.
+  function _validateImageUrlAsync(url, timeoutMs) {
+    return new Promise(resolve => {
+      if (!url) { resolve(true); return; }
+      let done = false;
+      const img = new Image();
+      const finish = (ok) => { if (done) return; done = true; resolve(ok); };
+      img.onload = () => finish(true);
+      img.onerror = () => finish(false);
+      img.src = url;
+      setTimeout(() => finish(false), timeoutMs || 6000);
+    });
+  }
   function _saveEditFormApply(id, kind) {
     // Phase E-prep: read from radio (public/draft).
     // Channel-level cascade: if parent channel is draft, force isPublic=false.
@@ -7762,6 +7814,13 @@
       const newContext  = ($('#ef-context')?.value || '').trim();
       const newAudioUrl = ($('#ef-audioUrl')?.value || '').trim();
       const newImageUrl = ($('#ef-imageUrl')?.value || '').trim();
+      // Validate image URL post-save (non-blocking) so the user finds out
+      // immediately if the URL they pasted doesn't return a valid image.
+      if (newImageUrl) {
+        _validateImageUrlAsync(convertImageUrl(newImageUrl)).then(ok => {
+          if (!ok) try { showToast('画像 URL を読み込めませんでした — リンクを確認してください'); } catch (e) {}
+        });
+      }
       const newSupport  = ($('#ef-support')?.value || '').trim();
       const newProcessRaw = ($('#ef-process')?.value || '').trim();
       // Store as single-element array for back-compat with existing data shape;
@@ -7788,8 +7847,15 @@
         ...isPublicPatch,
       });
     } else if (kind === 'image') {
+      const newImageUrl = ($('#ef-imageUrl')?.value || '').trim();
+      const convertedUrl = convertImageUrl(newImageUrl);
+      if (convertedUrl) {
+        _validateImageUrlAsync(convertedUrl).then(ok => {
+          if (!ok) try { showToast('画像 URL を読み込めませんでした — リンクを確認してください'); } catch (e) {}
+        });
+      }
       editBlock(id, {
-        imageUrl: convertImageUrl(($('#ef-imageUrl')?.value || '').trim()),
+        imageUrl: convertedUrl,
         caption: ($('#ef-caption')?.value || '').trim(),
         source:  ($('#ef-source')?.value || '').trim(),
         context: ($('#ef-context')?.value || '').trim(),
@@ -10344,11 +10410,14 @@
           const avatarUrl = cachedProfile?.avatar_url ? convertImageUrl(cachedProfile.avatar_url) : '';
           const avatarStyle = avatarUrl ? `style="background-image:url('${escapeHtml(avatarUrl)}');"` : '';
           const avatarClass = avatarUrl ? 'ptc-avatar' : 'ptc-avatar is-empty';
+          // Show first letter of the handle as fallback when no avatar URL
+          // — better identity affordance than the striped pattern alone.
+          const avatarInner = avatarUrl ? '' : escapeHtml(((handle || '?').replace(/^@+/, '').charAt(0)) || '?');
           // Make the @handle clickable when we have an author_id — the
           // global [data-bc="user"] handler routes to the right portfolio.
           const nameHtml = authorId
-            ? `<a class="ptc-name-link" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}"><span class="${avatarClass}" ${avatarStyle}></span><span class="ptc-handle">@${escapeHtml(handle)}</span></a>`
-            : `<span class="ptc-name-link"><span class="${avatarClass}" ${avatarStyle}></span><span class="ptc-handle">${escapeHtml(handle)}</span></span>`;
+            ? `<a class="ptc-name-link" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}"><span class="${avatarClass}" ${avatarStyle}>${avatarInner}</span><span class="ptc-handle">@${escapeHtml(handle)}</span></a>`
+            : `<span class="ptc-name-link"><span class="${avatarClass}" ${avatarStyle}>${avatarInner}</span><span class="ptc-handle">${escapeHtml(handle)}</span></span>`;
           const isOwnAuthor = (f.author_id && f.author_id === currentUser?.id) || f._isOwnAuthor === true;
           const canDelete = isOwnAuthor || isBlockOwner;
           const delBtn = canDelete
@@ -11062,7 +11131,7 @@
         <div class="ch-head" style="display:flex;align-items:flex-start;gap:18px;margin-bottom:18px;">
           ${ avatarUrl
             ? `<span style="width:60px;height:60px;border-radius:50%;background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center 30%;flex-shrink:0;display:block;margin-top:2px;"></span>`
-            : `<span style="width:60px;height:60px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:block;margin-top:2px;"></span>` }
+            : `<span style="width:60px;height:60px;border-radius:50%;background:var(--paper-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:24px;color:var(--gray);text-transform:uppercase;margin-top:2px;">${escapeHtml(((handle || '?').replace(/^@+/, '').charAt(0)) || '?')}</span>` }
           <div style="flex:1; min-width:0;">
             <h2 class="ch-head-name" style="margin:0;font-family:var(--mono);font-size:18px;color:var(--ink);">@${escapeHtml(handle || 'visitor')}</h2>
             <div class="ch-head-meta" id="upMeta" style="font-family:var(--mono);font-size:10.5px;color:var(--gray-2);margin-top:6px;">読み込み中…</div>
