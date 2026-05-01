@@ -8089,6 +8089,23 @@
     } else if (action === 'channel') {
       const cid = bc.dataset.cid;
       if (!cid) return;
+      // Cross-user channel link (e.g., breadcrumb on an external block in
+      // the visitor flow): route to openUserChannel so the visitor stays
+      // inside the EXPLORE/portfolio view of the original owner instead
+      // of jumping into their own My Channel detail with the same id.
+      const targetUid = bc.dataset.uid;
+      const targetHandle = bc.dataset.handle;
+      const targetClabel = bc.dataset.clabel;
+      const isCrossUser = targetUid && (typeof currentUser === 'undefined' || targetUid !== currentUser?.id);
+      if (isCrossUser && typeof openUserChannel === 'function') {
+        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
+          closePieceModal();
+        }
+        setTimeout(() => {
+          openUserChannel({ ownerId: targetUid, handle: targetHandle, channelId: cid, channelLabel: targetClabel });
+        }, 30);
+        return;
+      }
       if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
         closePieceModal();
       }
@@ -10605,8 +10622,13 @@
     const handle = ownerHandle ? String(ownerHandle).replace(/^@+/, '') : _currentHandle();
     const cid = channel?.id || '';
     const cLabel = channelLabel || channel?.label || '';
+    // External channel link: route back to the visitor channel detail
+    // (openUserChannel) via the global breadcrumb handler, which checks
+    // for data-uid + data-handle and dispatches accordingly. Without
+    // these attrs, the click would fall through to openChannelDetail
+    // and try to open the viewer's own channel by that id (wrong).
     const channelPart = ownerHandle
-      ? `<span class="bc-h4-channel">${escapeHtml(cLabel)}</span>`  // not linkable for external
+      ? `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" data-uid="${escapeHtml(ownerId || '')}" data-handle="${escapeHtml(handle)}" data-clabel="${escapeHtml(cLabel)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`
       : `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
     // Phase A-refactor 2 (2026-04-29): emit data-uid / data-handle on the
     // user link when the block is external, so the global breadcrumb click
