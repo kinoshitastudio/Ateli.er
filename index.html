@@ -6336,6 +6336,47 @@
       // Ignore — column may not exist yet (run the SQL migration first).
     }
   }
+  // One-shot sync of local ordering data to the user's profile row. Called
+  // on sign-in / reload after atelierSync.pull restores localStorage from
+  // user_state. Reasoning: saveChannelOrder / saveChannelGridOrder push to
+  // profiles only when the owner saves a fresh edit, which means users who
+  // arranged channels before the columns existed (or before this sync code
+  // shipped) have NULL profiles.{block_order, channel_grid_order} even
+  // though localStorage has their saved arrangement. Visitors then see the
+  // legacy ts-ASC order instead of the owner's intended order. This helper
+  // pushes the local snapshot once per session so visitor views catch up
+  // without requiring the owner to manually re-save every channel.
+  async function syncLocalOrderingToProfile() {
+    if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
+    let blockOrder = null;
+    let gridOrder = null;
+    try { blockOrder = JSON.parse(localStorage.getItem('atelier_channel_order_v1')); } catch (e) {}
+    try { gridOrder = JSON.parse(localStorage.getItem('atelier_channel_grid_order_v1')); } catch (e) {}
+    const patch = {};
+    if (blockOrder && typeof blockOrder === 'object' && Object.keys(blockOrder).length > 0) {
+      patch.block_order = blockOrder;
+    }
+    if (Array.isArray(gridOrder) && gridOrder.length > 0) {
+      patch.channel_grid_order = gridOrder;
+    }
+    if (Object.keys(patch).length === 0) return;  // nothing local to sync
+    const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+    const accessToken = tokenData?.access_token;
+    if (!accessToken) return;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}`;
+    const headers = {
+      'apikey': SUPABASE_PUB_KEY,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    };
+    try {
+      await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(patch) });
+    } catch (e) {
+      // Silent — column missing or transient network error.
+    }
+  }
   function moveBlockInChannel(cid, blockId, direction) {
     // direction: -1 = up, +1 = down
     const items = _itemsInChannel(cid);
@@ -12996,6 +13037,10 @@
             try { refreshCrossUserBlocks(); } catch (e) {}
           }).catch(() => {});
         }
+        // One-shot sync: push localStorage block_order / channel_grid_order
+        // to profiles so visitors see the owner's intended order even for
+        // users who haven't manually re-saved since the columns were added.
+        try { syncLocalOrderingToProfile().catch(() => {}); } catch (e) {}
       } else if (event === 'SIGNED_OUT') {
         // Phase A-refactor: wipe in-memory state so the next sign-in starts
         // from a clean slate even before pull replays from server.
@@ -13041,6 +13086,10 @@
         try { refreshCrossUserBlocks(); } catch (e) {}
       }).catch(() => {});
     }
+    // One-shot sync of local ordering (block_order / channel_grid_order)
+    // into profiles columns so visitor views reflect the owner's saved
+    // arrangement without requiring a manual re-save.
+    try { syncLocalOrderingToProfile().catch(() => {}); } catch (e) {}
     // Phase D-1: refresh the unread-traces badge once per app load.
     atelierTraces.refreshUnreadBadge();
     // Periodic refresh while the tab is open so notifications appear without reload.
