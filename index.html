@@ -6218,6 +6218,10 @@
     arr.push({ ...snapshot, connectedAt: Date.now() });
     map[cid] = arr;
     saveExternalBlocks(map);
+    // Mirror to Supabase channel_connections so visitors see this CONNECT
+    // when they open the owner's channel via Explore. localStorage stays
+    // canonical; the push is best-effort and silent on failure.
+    _pushChannelConnection(cid, snapshot.id).catch(() => {});
     return true;
   }
   function disconnectExternalBlock(cid, blockId) {
@@ -6228,6 +6232,7 @@
     if (map[cid].length === before) return false;
     if (map[cid].length === 0) delete map[cid];
     saveExternalBlocks(map);
+    _removeChannelConnection(cid, blockId).catch(() => {});
     return true;
   }
   function findExternalBlock(blockId) {
@@ -6399,6 +6404,76 @@
     } catch (e) {
       // Silent — column missing or transient network error.
     }
+  }
+  // ──────────────── channel_connections (Supabase mirror) ────────────────
+  // Owners CONNECT another user's public block to one of their own channels.
+  // localStorage atelier_external_blocks_v1 has been the canonical store
+  // (snapshot of payload + ownership metadata at the time of connect).
+  // channel_connections is the visitor-readable mirror so when a third
+  // user views this owner's portfolio, the curated CONNECT items show up
+  // in the right channel rather than disappearing entirely (the visitor
+  // sort filtered by owner_id and dropped them).
+  // Keep localStorage canonical — Supabase writes are best-effort, fail
+  // silently when the table doesn't exist or RLS blocks. Backfill on
+  // sign-in covers users who connected blocks before this code shipped.
+  function _supabaseHeaders() {
+    const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+    const accessToken = tokenData?.access_token;
+    if (!accessToken) return null;
+    return {
+      'apikey': SUPABASE_PUB_KEY,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    };
+  }
+  async function _pushChannelConnection(cid, blockId) {
+    if (!currentUser?.id || !cid || !blockId) return;
+    const headers = _supabaseHeaders();
+    if (!headers) return;
+    headers['Prefer'] = 'resolution=merge-duplicates,return=minimal';
+    const row = { owner_id: currentUser.id, channel_id: cid, block_id: blockId };
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/channel_connections?on_conflict=owner_id,channel_id,block_id`, {
+        method: 'POST', headers, body: JSON.stringify(row),
+      });
+    } catch (e) { /* silent */ }
+  }
+  async function _removeChannelConnection(cid, blockId) {
+    if (!currentUser?.id || !cid || !blockId) return;
+    const headers = _supabaseHeaders();
+    if (!headers) return;
+    headers['Prefer'] = 'return=minimal';
+    const url = `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(currentUser.id)}&channel_id=eq.${encodeURIComponent(cid)}&block_id=eq.${encodeURIComponent(blockId)}`;
+    try {
+      await fetch(url, { method: 'DELETE', headers });
+    } catch (e) { /* silent */ }
+  }
+  // One-shot backfill: walk localStorage atelier_external_blocks_v1 and
+  // push every (channel, block) pair to channel_connections. Idempotent
+  // via UNIQUE constraint + on_conflict. Runs on sign-in / reload after
+  // atelierSync.pull restores localStorage from user_state.
+  async function syncChannelConnectionsToProfile() {
+    if (!currentUser?.id) return;
+    let map = null;
+    try { map = JSON.parse(localStorage.getItem('atelier_external_blocks_v1')); } catch (e) {}
+    if (!map || typeof map !== 'object') return;
+    const headers = _supabaseHeaders();
+    if (!headers) return;
+    headers['Prefer'] = 'resolution=merge-duplicates,return=minimal';
+    const rows = [];
+    for (const cid of Object.keys(map)) {
+      const arr = map[cid] || [];
+      for (const snap of arr) {
+        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id });
+      }
+    }
+    if (rows.length === 0) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/channel_connections?on_conflict=owner_id,channel_id,block_id`, {
+        method: 'POST', headers, body: JSON.stringify(rows),
+      });
+    } catch (e) { /* silent — table missing or transient */ }
   }
   function moveBlockInChannel(cid, blockId, direction) {
     // direction: -1 = up, +1 = down
@@ -10773,6 +10848,11 @@
   // Cache of last-fetched public_blocks rows, keyed by id, so click on an
   // Explore card can read the full payload without a second network round-trip.
   let _explorePublicCache = {};
+  // Cache of CONNECT relationships from channel_connections, populated by
+  // openUserPortfolio. Shape: { ownerId: { channelId: [block_id, ...] } }.
+  // openUserChannel reads this to merge curated blocks into the channel
+  // detail view without re-fetching.
+  let _userConnectionsCache = {};
   // Phase C-2: open an external (other-user) public block in preview mode.
   // We synthesize an enriched block object carrying _external markers so the
   // existing modal helpers swap to the read-only / connect action set.
@@ -10988,6 +11068,34 @@
     }
     // Cache rows so block click can open them via openExternalBlock.
     rows.forEach(r => { _explorePublicCache[r.id] = r; });
+    // Fetch this owner's CONNECT'd blocks (channel_connections rows with
+    // embedded public_blocks payload via FK). For each connection, build a
+    // "synthetic" row whose channel_id is overridden to the connection's
+    // owning channel, so grouping puts the curated block under the
+    // portfolio owner's channel rather than the original poster's. The
+    // synthetic row carries _isConnected so the renderer can mark it
+    // with the CONNECT badge.
+    let connectionsRaw = [];
+    try {
+      const cUrl = `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(ownerId)}&select=channel_id,block_id,public_blocks(*)`;
+      const cRes = await fetch(cUrl, { headers });
+      if (cRes.ok) connectionsRaw = await cRes.json();
+    } catch (e) { /* silent — table missing or transient */ }
+    if (!_userConnectionsCache[ownerId]) _userConnectionsCache[ownerId] = {};
+    connectionsRaw.forEach(c => {
+      const pb = c?.public_blocks;
+      if (!pb || !pb.id) return;
+      // Cache the original row (canonical owner_id, original channel_id)
+      // so other lookups (block click, comment author resolution, etc.)
+      // get accurate data. Don't overwrite if a richer copy already exists.
+      if (!_explorePublicCache[pb.id]) _explorePublicCache[pb.id] = pb;
+      // Synthetic row with overridden channel_id and CONNECT marker.
+      rows.push({ ...pb, channel_id: c.channel_id, _isConnected: true });
+      // Per-(owner, channel) connection list cache for openUserChannel.
+      const m = _userConnectionsCache[ownerId];
+      if (!m[c.channel_id]) m[c.channel_id] = [];
+      if (!m[c.channel_id].includes(pb.id)) m[c.channel_id].push(pb.id);
+    });
     const grid = document.getElementById('upGrid');
     const meta = document.getElementById('upMeta');
     const recentSection = document.getElementById('upRecentSection');
@@ -11079,13 +11187,21 @@
         });
       }
       const cells = [items[0] || null, items[1] || null, items[2] || null, items[3] || null];
+      // CONNECT badge on the channel card — surfaces "this channel
+      // contains curated CONNECT'd blocks from other users" before the
+      // visitor drills in. Triggered by any item.row carrying _isConnected
+      // (set during the synthetic-row build above).
+      const _hasConnect = c.items.some(r => r && r._isConnected);
+      const _connectBadgeHtml = _hasConnect
+        ? `<span class="bc-connect-badge" title="${escapeHtml(t('connectBadgeTitle'))}">${escapeHtml(t('connectBadgeLabel'))}</span>`
+        : '';
       return `
         <div class="ch-card" data-pb-cid="${escapeHtml(c.channelId)}" data-pb-clabel="${escapeHtml(c.channelLabel)}" style="cursor:pointer;">
           <div class="ch-card-thumb">
             ${ cells.map(_miniCellHtml).join('') }
           </div>
           <div class="ch-card-info">
-            <span class="ch-card-name">${escapeHtml(c.channelLabel)}</span>
+            <span class="ch-card-name">${_connectBadgeHtml}${escapeHtml(c.channelLabel)}</span>
           </div>
         </div>
       `;
@@ -11162,8 +11278,19 @@
       const i = _ownerBlockOrder.indexOf(id);
       return i >= 0 ? i : -1;
     };
-    const rows = Object.values(_explorePublicCache)
-      .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId)
+    // Combine own blocks (owner_id matches, channel_id matches) with
+    // CONNECT'd external blocks (id is in _userConnectionsCache for this
+    // owner+channel — the underlying block lives under another user's
+    // owner_id, so the strict filter below would drop it). External rows
+    // are tagged _isConnected so the renderer shows a CONNECT badge.
+    const _ownRows = Object.values(_explorePublicCache)
+      .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId);
+    const _connectedIds = (_userConnectionsCache[ownerId]?.[channelId]) || [];
+    const _connectedRows = _connectedIds
+      .map(bid => _explorePublicCache[bid])
+      .filter(Boolean)
+      .map(r => ({ ...r, _isConnected: true }));
+    const rows = [..._ownRows, ..._connectedRows]
       .sort((a, b) => {
         const ai = _orderIndex(a.id);
         const bi = _orderIndex(b.id);
@@ -11243,14 +11370,24 @@
           rows.map(r => {
             const p = r.payload || {};
             const id = r.id;
+            // CONNECT badge inline with title for items the portfolio owner
+            // curated from another user. Plus an attribution line so the
+            // visitor sees who originally posted the block.
+            const _connBadge = r._isConnected
+              ? `<span class="bc-connect-badge" title="${escapeHtml(t('connectBadgeTitle'))}">${escapeHtml(t('connectBadgeLabel'))}</span>`
+              : '';
+            const _byLine = r._isConnected && r.owner_handle
+              ? `<span class="ix-by">— by @${escapeHtml(r.owner_handle)}</span>`
+              : '';
             if (r.kind === 'audio') {
               const tr = { ...p, id, kind: 'audio' };
               return `<li data-kind="audio" data-tid="${escapeHtml(id)}" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(id.slice(0, 6))}</span>
                 <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
                 <span class="ix-mid">
-                  <span class="ix-title">${escapeHtml(p.title || '(untitled)')}</span>
+                  <span class="ix-title">${_connBadge}${escapeHtml(p.title || '(untitled)')}</span>
                   <span class="ix-phrase">— ${escapeHtml((p.phrases && p.phrases[0]) || p.catchphrase || '')} —</span>
+                  ${_byLine}
                 </span>
                 <span class="ix-art">${escapeHtml(p.artist || '')}</span>
                 <span class="ix-time">${fmtDur(p.sec || 0)}</span>
@@ -11262,8 +11399,9 @@
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(id.slice(0, 6))}</span>
                 <span class="ix-thumb">${buildBlockImage(b, 160, 110)}</span>
                 <span class="ix-mid">
-                  <span class="ix-title">${escapeHtml(p.caption || '(image)')}</span>
+                  <span class="ix-title">${_connBadge}${escapeHtml(p.caption || '(image)')}</span>
                   <span class="ix-phrase">${escapeHtml(p.source || '')}</span>
+                  ${_byLine}
                 </span>
                 <span class="ix-art">image</span>
                 <span class="ix-time">↗</span>
@@ -11280,8 +11418,9 @@
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('text')}</span>${escapeHtml(id.slice(0, 6))}</span>
                 <span class="ix-thumb"><span class="ix-thumb-text">${thumbHtml}</span></span>
                 <span class="ix-mid">
-                  <span class="ix-title">${escapeHtml(ixTitle)}</span>
+                  <span class="ix-title">${_connBadge}${escapeHtml(ixTitle)}</span>
                   <span class="ix-phrase">— ${escapeHtml(p.style || 'text')} —</span>
+                  ${_byLine}
                 </span>
                 <span class="ix-art">text</span>
                 <span class="ix-time">↗</span>
@@ -11295,8 +11434,9 @@
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(id.slice(0, 6))}</span>
                 <span class="ix-thumb"><span class="ix-thumb-url">${escapeHtml(domain)}</span></span>
                 <span class="ix-mid">
-                  <span class="ix-title">${escapeHtml(p.title || p.url || '(url)')}</span>
+                  <span class="ix-title">${_connBadge}${escapeHtml(p.title || p.url || '(url)')}</span>
                   <span class="ix-phrase">— ${escapeHtml(p.source || '')} —</span>
+                  ${_byLine}
                 </span>
                 <span class="ix-art">link</span>
                 <span class="ix-time">↗</span>
@@ -13072,6 +13212,10 @@
         // to profiles so visitors see the owner's intended order even for
         // users who haven't manually re-saved since the columns were added.
         try { syncLocalOrderingToProfile().catch(() => {}); } catch (e) {}
+        // One-shot sync: push localStorage atelier_external_blocks_v1 to
+        // channel_connections so visitors viewing this owner's portfolio
+        // see CONNECT'd items in the right channels.
+        try { syncChannelConnectionsToProfile().catch(() => {}); } catch (e) {}
       } else if (event === 'SIGNED_OUT') {
         // Phase A-refactor: wipe in-memory state so the next sign-in starts
         // from a clean slate even before pull replays from server.
@@ -13121,6 +13265,9 @@
     // into profiles columns so visitor views reflect the owner's saved
     // arrangement without requiring a manual re-save.
     try { syncLocalOrderingToProfile().catch(() => {}); } catch (e) {}
+    // One-shot mirror of local CONNECTed block list to channel_connections
+    // so visitors see curated items in the right channel via Explore.
+    try { syncChannelConnectionsToProfile().catch(() => {}); } catch (e) {}
     // Phase D-1: refresh the unread-traces badge once per app load.
     atelierTraces.refreshUnreadBadge();
     // Periodic refresh while the tab is open so notifications appear without reload.
