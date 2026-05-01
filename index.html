@@ -10696,8 +10696,19 @@
     // Phase C-2: external (non-owner) blocks get a different action set.
     const isExternal = !!block?._external;
     const ownerHandle = block?._ownerHandle || '';
+    // External blocks intentionally clear block.channelId so the head's
+    // owner-only meta lines skip rendering (we don't have the visitor
+    // owner's channel meta from public_blocks). But the BREADCRUMB still
+    // needs a clickable channel id to route back to the visitor channel
+    // detail (openUserChannel) — so synthesize a stand-in channel object
+    // from _externalHostChannelId / _externalChannelLabel for the title
+    // helper. Without this, data-cid renders empty and the bc click
+    // handler bails on `if (!cid) return`, leaving "映画" inert.
+    const externalChannel = isExternal && block?._externalHostChannelId
+      ? { id: block._externalHostChannelId, label: block._externalChannelLabel || '' }
+      : null;
     const titleArgs = isExternal
-      ? { channel, label, ownerHandle, ownerId: block?._ownerId || '', channelLabel: block?._externalChannelLabel || channel?.label || '', block }
+      ? { channel: externalChannel || channel, label, ownerHandle, ownerId: block?._ownerId || '', channelLabel: block?._externalChannelLabel || channel?.label || '', block }
       : { channel, label, block };
     // Phase A-refactor 2 (2026-04-29): "— by @handle" pill removed per user
     // feedback. The breadcrumb (@user / channel / block) shown in the title
@@ -10735,7 +10746,7 @@
         </div>
         ${ channel ? `
           <span class="meta">${escapeHtml(channel.meta || '')} · ${count} ${blocksLabel}</span>
-          <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${isExternal ? `<a class="bc-owner-text bc-external">@${escapeHtml(ownerHandle)}</a>` : _ownerTextLink()}</span>
+          <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${isExternal ? `<a class="bc-owner-text bc-external" data-bc="user" data-uid="${escapeHtml(block?._ownerId || '')}" data-handle="${escapeHtml(ownerHandle)}" style="cursor:pointer;">@${escapeHtml(ownerHandle)}</a>` : _ownerTextLink()}</span>
         ` : '' }
       </div>
     `;
