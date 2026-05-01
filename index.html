@@ -9039,7 +9039,7 @@
 
       return `
         <li class="feed-group" data-cid="${escapeHtml(g.channelId)}">
-          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> placed ${escapeHtml(summary)} in </span><span class="target" data-cid="${escapeHtml(g.channelId)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}" data-handle="${escapeHtml(actorHandle)}" data-clabel="${escapeHtml(chLabel)}"` : ''}>${escapeHtml(chLabel)}</span></div>
+          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> placed ${escapeHtml(summary)} in </span><span class="target" data-cid="${escapeHtml(g.channelId)}" data-clabel="${escapeHtml(chLabel || g.channelId)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}" data-handle="${escapeHtml(actorHandle)}"` : ''}>${escapeHtml(chLabel)}</span></div>
           <div class="feed-group-time">${escapeHtml(when)}</div>
           <div class="feed-group-grid">${cards}</div>
         </li>
