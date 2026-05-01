@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ateli.er — about / アトリエとは</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #EFEAE0;
+  --ink: #2A3756;
+  --ink-soft: #5A6378;
+  --gray: #8A8E9C;
+  --gray-2: #A8ABB6;
+  --gray-3: #D6D2C7;
+  --line: #C8C4BA;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Serif JP', 'Inter', -apple-system, BlinkMacSystemFont, serif;
+  line-height: 1.85;
+  font-feature-settings: 'palt' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  padding: 64px 32px 120px;
+}
+.container { max-width: 720px; margin: 0 auto; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.head a { color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; }
+.head a:hover { color: var(--ink-soft); }
+h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+.subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gray);
+  letter-spacing: 0.06em;
+  margin-bottom: 48px;
+}
+.lang-toggle {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.04);
+  padding: 3px;
+  border-radius: 4px;
+  margin-bottom: 32px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.lang-toggle button {
+  border: none; background: none;
+  padding: 5px 12px;
+  cursor: pointer;
+  color: var(--gray);
+  font-family: inherit; font-size: inherit;
+  border-radius: 3px;
+  transition: all .15s;
+}
+.lang-toggle button.is-active {
+  background: var(--ink); color: var(--bg);
+}
+section { margin-bottom: 40px; }
+h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gray-3);
+  text-transform: lowercase;
+}
+p { margin-bottom: 14px; font-size: 15px; }
+ul, ol { padding-left: 22px; margin-bottom: 14px; }
+li { margin-bottom: 8px; font-size: 15px; }
+.lang-en { display: none; }
+body.is-en .lang-ja { display: none; }
+body.is-en .lang-en { display: block; }
+body.is-en { font-family: 'Inter', sans-serif; }
+.lede {
+  font-family: 'Noto Serif JP', serif;
+  font-size: 16.5px;
+  line-height: 1.95;
+  color: var(--ink);
+  margin-bottom: 36px;
+  padding: 20px 0 22px;
+  border-top: 1px solid var(--gray-3);
+  border-bottom: 1px solid var(--gray-3);
+}
+body.is-en .lede { font-family: 'Inter', sans-serif; }
+.concept-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin: 20px 0 6px;
+}
+.concept {
+  padding: 16px 18px 18px;
+  background: rgba(255,255,255,0.35);
+  border: 1px solid var(--gray-3);
+}
+.concept-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.concept-desc {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.aphorism {
+  font-family: 'Noto Serif JP', serif;
+  font-style: italic;
+  font-size: 15.5px;
+  line-height: 1.85;
+  color: var(--ink-soft);
+  padding: 14px 0 14px 18px;
+  border-left: 2px solid var(--gray-3);
+  margin: 18px 0;
+}
+body.is-en .aphorism { font-family: 'Inter', sans-serif; font-style: italic; }
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.cta a {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--ink);
+  transition: background 0.15s, color 0.15s;
+}
+.cta a:hover { background: var(--ink); color: var(--bg); }
+.cta a.cta-soft { border-color: var(--gray-3); color: var(--ink-soft); }
+.cta a.cta-soft:hover { background: var(--ink-soft); color: var(--bg); border-color: var(--ink-soft); }
+.foot {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-3);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--gray);
+  letter-spacing: 0.04em;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.foot a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid currentColor; }
+@media (max-width: 640px) {
+  body { padding: 40px 20px 80px; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <p class="head"><a href="/">Ateli.er</a> · <span>about</span></p>
+  <h1 class="lang-ja">アトリエとは</h1>
+  <h1 class="lang-en">About Ateli.er</h1>
+  <p class="subtitle mono">a quiet courtyard for unfinished work</p>
+
+  <div class="lang-toggle" role="tablist">
+    <button type="button" data-lang="ja" class="is-active">日本語</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <!-- ========== JA ========== -->
+  <div class="lang-ja">
+
+    <p class="lede">Ateli.er は、未発表の作品や思考の断片を、静かに置いておくための「中庭」です。アルゴリズムも、ランキングも、いいね数もありません。早さではなく、丁寧さに価値を置く場所です。</p>
+
+    <section>
+      <h2>1. なぜつくったのか</h2>
+      <p>多くの SNS は「完成」と「拡散」のためにできています。投稿は速さで競い、見られる回数で評価され、磨きの途中の作品はそもそも置く場所がない。</p>
+      <p>Ateli.er は、その逆を選んでいます。完成する前の手書きのメモ、まだタイトルがついていない曲の断片、書きかけの文章、ふと撮ったままの写真。それらを「途中のままで」置いておける、小さな中庭のような場所です。</p>
+      <p class="aphorism">速さの外側にある、静かな積み重ねを支えるための器。</p>
+    </section>
+
+    <section>
+      <h2>2. 4 つの単位</h2>
+      <div class="concept-grid">
+        <div class="concept">
+          <div class="concept-name">block</div>
+          <div class="concept-desc">最小単位。audio・image・text・url の 4 種類。1 枚の写真、1 行のメモ、1 本のリンク、1 曲の音源。</div>
+        </div>
+        <div class="concept">
+          <div class="concept-name">channel</div>
+          <div class="concept-desc">block を集めるテーマ。連作、リサーチ、いま考えていること。Public で公開も Draft で限定もできます。</div>
+        </div>
+        <div class="concept">
+          <div class="concept-name">connect</div>
+          <div class="concept-desc">他のユーザーの公開 block を、自分の channel に紐付ける機能。誰かの作品を、自分の文脈で再配置する curatorial な動作です。</div>
+        </div>
+        <div class="concept">
+          <div class="concept-name">footprint</div>
+          <div class="concept-desc">block へのコメント。静かに、ひとことだけ。返信通知や重ねコメントはありません。</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. 設計の核</h2>
+      <ul>
+        <li><strong>アルゴリズムなし</strong>：表示順は時系列か、制作者本人が決めた順序のみ。</li>
+        <li><strong>ランキングなし</strong>：「人気」を競う仕組みはありません。</li>
+        <li><strong>いいね数なし</strong>：足跡 (footprint) だけが残ります。数で評価されない静かな対話。</li>
+        <li><strong>広告なし</strong>：個人運営。商業目的ではなく、文化的な器として運営しています。</li>
+        <li><strong>招待制</strong>：数より空気。慎重に、ゆっくり広げていきます。</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. 美学について</h2>
+      <p>視覚は、ベージュ地と青墨の二色を基調にしたモノクロームです。完成された雑誌の「目次」のような佇まい。意図的に画像が前面に出ない、活字主体のレイアウトを採用しています。</p>
+      <p>「BIWAKO SILENCE」と呼んでいる、静けさを軸に置いた設計思想。賑やかな SNS とは違う、対話のための余白を持つ画面です。</p>
+      <p class="aphorism">余白は、空白ではなく余韻のためにある。</p>
+    </section>
+
+    <section>
+      <h2>5. 誰のための場所か</h2>
+      <ul>
+        <li>制作の途中を、誰かに見せながら考えたい人</li>
+        <li>完成品ではなく、過程に価値を置く人</li>
+        <li>SNS の速さに疲れて、別のリズムを探している人</li>
+        <li>他者の制作物を curate して、自分の視点で並べ直したい人</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. 参加するには</h2>
+      <p>現在は招待制で運営しています。招待コードをお持ちの方は、サインアップ画面でコードを入力してください。</p>
+      <p>招待コードがない方は、運営者に直接お問い合わせください。数を急がず、丁寧に空気を保つために招待制を採っています。</p>
+      <div class="cta">
+        <a href="/">— サービスを開く</a>
+        <a href="/community.html" class="cta-soft">— コミュニティガイドライン</a>
+        <a href="/terms.html" class="cta-soft">— 利用規約</a>
+      </div>
+    </section>
+
+    <section>
+      <h2>7. 運営について</h2>
+      <p>Ateli.er は <a href="https://atelistudio.com" style="color:var(--ink); border-bottom:1px solid currentColor; text-decoration:none;">kinoshita studio</a> による個人運営のサービスです。商業的な拡大ではなく、長く続く小さな器として運営しています。</p>
+    </section>
+
+  </div>
+
+  <!-- ========== EN ========== -->
+  <div class="lang-en">
+
+    <p class="lede">Ateli.er is a quiet courtyard for unfinished work — a place to leave fragments of thought and works in progress, without algorithms, rankings, or like counts. We value care over speed.</p>
+
+    <section>
+      <h2>1. why this exists</h2>
+      <p>Most social platforms are built for "finished" and "shared." Posts compete on speed, get judged by visibility, and works mid-process have nowhere to live.</p>
+      <p>Ateli.er chooses the opposite. A handwritten memo before it's a draft, an untitled fragment of a song, a half-written paragraph, a photo you took without knowing why. A small courtyard where you can leave them as-is, mid-process.</p>
+      <p class="aphorism">A vessel for the quiet accumulation that lives outside of speed.</p>
+    </section>
+
+    <section>
+      <h2>2. four units</h2>
+      <div class="concept-grid">
+        <div class="concept">
+          <div class="concept-name">block</div>
+          <div class="concept-desc">The minimal unit. Four kinds: audio, image, text, url. One photo, one line of writing, one link, one piece of audio.</div>
+        </div>
+        <div class="concept">
+          <div class="concept-name">channel</div>
+          <div class="concept-desc">A theme that collects blocks. A series, a research thread, a current preoccupation. Public to share, or Draft for now.</div>
+        </div>
+        <div class="concept">
+          <div class="concept-name">connect</div>
+          <div class="concept-desc">Pin another user's public block into your own channel. A curatorial gesture — re-arranging someone's work into your own context.</div>
+        </div>
+        <div class="concept">
+          <div class="concept-name">footprint</div>
+          <div class="concept-desc">A comment on a block. Quietly, briefly. No reply notifications, no nested threads. A trace of presence.</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. core design</h2>
+      <ul>
+        <li><strong>no algorithm</strong>: display order is chronological, or whatever order the maker chose.</li>
+        <li><strong>no rankings</strong>: nothing competes for "popularity."</li>
+        <li><strong>no like counts</strong>: only footprints remain. Quiet dialogue, never measured by numbers.</li>
+        <li><strong>no ads</strong>: independently run. A cultural vessel, not a commercial product.</li>
+        <li><strong>invite-only</strong>: atmosphere over scale. Careful, slow expansion.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. on aesthetic</h2>
+      <p>Visually, a monochrome built on beige paper and ink-blue. A presence closer to the table-of-contents of a printed quarterly than a feed. Type-driven layout that intentionally doesn't lead with imagery.</p>
+      <p>We call this design philosophy "BIWAKO SILENCE" — silence as the axis. Unlike noisy social feeds, this screen leaves white space for dialogue.</p>
+      <p class="aphorism">White space exists for resonance, not for emptiness.</p>
+    </section>
+
+    <section>
+      <h2>5. who it's for</h2>
+      <ul>
+        <li>People who want to think out loud, mid-process, with someone watching.</li>
+        <li>People who value the process over the finished work.</li>
+        <li>People tired of social media's tempo, looking for a different rhythm.</li>
+        <li>People who want to curate others' work into their own viewpoint.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. how to join</h2>
+      <p>Ateli.er is currently invite-only. If you have an invite code, enter it on the sign-up screen.</p>
+      <p>Without one, please reach out directly to the operator. We use invite-only not to gatekeep, but to grow carefully and keep the atmosphere intact.</p>
+      <div class="cta">
+        <a href="/">— open the service</a>
+        <a href="/community.html" class="cta-soft">— community guidelines</a>
+        <a href="/terms.html" class="cta-soft">— terms</a>
+      </div>
+    </section>
+
+    <section>
+      <h2>7. who runs this</h2>
+      <p>Ateli.er is independently run by <a href="https://atelistudio.com" style="color:var(--ink); border-bottom:1px solid currentColor; text-decoration:none;">kinoshita studio</a>. Not a commercial product to scale — a small vessel meant to last.</p>
+    </section>
+
+  </div>
+
+  <div class="foot">
+    <span>© Ateli.er — kinoshita studio</span>
+    <span>
+      <a href="/">— back</a> ·
+      <a href="/terms.html">terms</a> ·
+      <a href="/privacy.html">privacy</a> ·
+      <a href="/community.html">community</a>
+    </span>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const buttons = document.querySelectorAll('.lang-toggle button');
+  function setLang(lang) {
+    document.body.classList.toggle('is-en', lang === 'en');
+    buttons.forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
+    try { localStorage.setItem('atelier_doc_lang', lang); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  try {
+    const stored = localStorage.getItem('atelier_doc_lang');
+    if (stored === 'en') setLang('en');
+  } catch (e) {}
+})();
+</script>
+
+</body>
+</html>
