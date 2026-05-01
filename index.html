@@ -3664,20 +3664,12 @@
     font-size: 14px;
     letter-spacing: 0.04em;
     color: var(--ink);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .landing-mark-img {
-    display: block;
-    height: 22px;
-    width: auto;
   }
   .landing-mark sup {
     font-size: 9px;
+    margin-left: 4px;
     color: var(--gray);
-    align-self: flex-start;
-    margin-top: 2px;
+    vertical-align: super;
   }
   .landing-head-actions {
     display: inline-flex; gap: 12px;
@@ -3983,7 +3975,7 @@
 <!-- ──────────────── LANDING ──────────────── -->
 <section class="landing" id="landingScreen" hidden>
   <header class="landing-head">
-    <span class="landing-mark"><img src="img/logo.svg" alt="Ateli.er" class="landing-mark-img"><sup>0.1</sup></span>
+    <span class="landing-mark">Ateli.er<sup>0.1</sup></span>
     <span class="landing-head-actions">
       <button type="button" class="landing-btn" id="landingLoginBtn">Log in</button>
       <button type="button" class="landing-btn is-primary" id="landingSignupBtn">Sign up</button>
