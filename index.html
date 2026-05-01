@@ -6016,9 +6016,9 @@
   const CHANNEL_EDITS_KEY = 'atelier_channel_edits_v1';
   const TRACK_EDITS_KEY   = 'atelier_track_edits_v1';
   function loadChannelEdits() { try { return JSON.parse(localStorage.getItem(CHANNEL_EDITS_KEY)) || {}; } catch(e) { return {}; } }
-  function saveChannelEdits(m) { try { localStorage.setItem(CHANNEL_EDITS_KEY, JSON.stringify(m)); } catch(e) {} }
+  function saveChannelEdits(m) { _safeSetItem(CHANNEL_EDITS_KEY, JSON.stringify(m)); }
   function loadTrackEdits()   { try { return JSON.parse(localStorage.getItem(TRACK_EDITS_KEY)) || {}; } catch(e) { return {}; } }
-  function saveTrackEdits(m)  { try { localStorage.setItem(TRACK_EDITS_KEY, JSON.stringify(m)); } catch(e) {} }
+  function saveTrackEdits(m)  { _safeSetItem(TRACK_EDITS_KEY, JSON.stringify(m)); }
 
   function applyChannelEditsToArray() {
     const edits = loadChannelEdits();
@@ -6126,6 +6126,40 @@
       const next = order.filter(cid => cid !== id);
       if (next.length !== order.length) saveChannelGridOrder(next);
     } catch (e) {}
+    // Drop any local block-order entry for the channel (otherwise the
+    // map carries a dead key forever).
+    try {
+      const map = loadChannelOrder();
+      if (map[id]) {
+        delete map[id];
+        saveChannelOrder(map);
+      }
+    } catch (e) {}
+    // Server-side cleanup: delete this owner's channel_connections rows
+    // for the deleted channel. The FK on channel_connections is on
+    // (owner_id, block_id), NOT channel_id, so deleting the local
+    // channel doesn't cascade here. Without this, visitors would still
+    // see the deleted channel as a portfolio card with CONNECTed
+    // content. Fire-and-forget — local channel removal already
+    // succeeded and we don't want to block the UI.
+    try {
+      if (currentUser?.id && SUPABASE_URL && SUPABASE_PUB_KEY) {
+        const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+        const accessToken = tokenData?.access_token;
+        if (accessToken) {
+          const url = `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(currentUser.id)}&channel_id=eq.${encodeURIComponent(id)}`;
+          fetch(url, {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_PUB_KEY,
+              'Authorization': `Bearer ${accessToken}`,
+              'Prefer': 'return=minimal',
+            },
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {}
   }
   function editTrack(id, patch) {
     const t = TRACKS.find(x => x.id === id);
@@ -6206,7 +6240,7 @@
     catch(e) { return {}; }
   }
   function saveTrackConnections(map) {
-    try { localStorage.setItem(TRACK_CONN_KEY, JSON.stringify(map)); } catch(e) {}
+    _safeSetItem(TRACK_CONN_KEY, JSON.stringify(map));
   }
   // Hydrate: populate t.connectedTo on every TRACK from localStorage so Connect
   // state survives reloads even for the placeholder hardcoded tracks.
@@ -6238,7 +6272,7 @@
     catch (e) { return {}; }
   }
   function saveExternalBlocks(map) {
-    try { localStorage.setItem(EXTERNAL_BLOCKS_KEY, JSON.stringify(map)); } catch (e) {}
+    _safeSetItem(EXTERNAL_BLOCKS_KEY, JSON.stringify(map));
   }
   function externalBlocksInChannel(cid) {
     return (loadExternalBlocks()[cid] || []).slice();
@@ -6371,7 +6405,7 @@
   const CHANNEL_ORDER_KEY = 'atelier_channel_order_v1';
   function loadChannelOrder() { try { return JSON.parse(localStorage.getItem(CHANNEL_ORDER_KEY)) || {}; } catch(e) { return {}; } }
   function saveChannelOrder(map) {
-    try { localStorage.setItem(CHANNEL_ORDER_KEY, JSON.stringify(map)); } catch(e) {}
+    _safeSetItem(CHANNEL_ORDER_KEY, JSON.stringify(map));
     // Best-effort sync to profiles.block_order so visitors looking at this
     // user's channels via Explore see the same per-channel block order the
     // owner has arranged. Silent on failure (column missing → run migration,
@@ -6600,7 +6634,7 @@
     catch (e) { return []; }
   }
   function saveChannelGridOrder(arr) {
-    try { localStorage.setItem(CHANNEL_GRID_ORDER_KEY, JSON.stringify(arr)); } catch (e) {}
+    _safeSetItem(CHANNEL_GRID_ORDER_KEY, JSON.stringify(arr));
     // Best-effort sync to profiles.channel_grid_order so visitor portfolios
     // pick up the owner's chosen order. Silent on failure (missing column,
     // network) — the local order still works for the owner.
@@ -8420,10 +8454,31 @@
     try { localStorage.setItem(SEED_FLAG_KEY, '1'); } catch(e) {}
   }
 
-  function saveBlocks(arr) {
-    try { localStorage.setItem(BLOCK_KEY, JSON.stringify(arr)); return true; }
-    catch(e) { console.warn('block storage failed:', e); return false; }
+  // Centralized localStorage write with quota-exceeded handling. Most save
+  // helpers in this app silently swallowed quota errors with `catch(e){}`,
+  // which left the in-memory state updated but the persistent copy stale —
+  // user thinks they saved, then loses the change on reload. This helper
+  // surfaces the failure with a one-shot toast so the user knows to free
+  // up space (clear external_blocks snapshots, archive old channels).
+  let _quotaWarnedAt = 0;
+  function _safeSetItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      const isQuota = (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014));
+      console.warn('[storage] setItem failed:', key, e);
+      if (isQuota) {
+        const now = Date.now();
+        if (now - _quotaWarnedAt > 15000) {  // throttle to one toast per 15s
+          _quotaWarnedAt = now;
+          try { showToast('ローカル保存容量不足 — 一部の変更が保存されません'); } catch (_) {}
+        }
+      }
+      return false;
+    }
   }
+  function saveBlocks(arr) { return _safeSetItem(BLOCK_KEY, JSON.stringify(arr)); }
   function genBlockId(kind) {
     const arr = loadBlocks();
     const prefix = ({ audio:'a', image:'i', text:'t', url:'u' })[kind] || 'b';
@@ -8463,6 +8518,14 @@
   function convertImageUrl(input) {
     const url = (input || '').trim();
     if (!url) return '';
+    // Reject URLs containing characters that can break out of a CSS
+    // background-image:url('...') context. Quote/paren/backslash/newline
+    // would let a malicious user-pasted URL terminate the url() expression
+    // early and inject arbitrary CSS rules into the page (`x'); body{...`).
+    // Also reject non-http(s) and data: schemes — only Drive/Dropbox/direct
+    // image links are expected here.
+    if (/['"\\\(\)\n\r<>]/.test(url)) return '';
+    if (!/^https?:\/\//i.test(url)) return '';
     let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
     if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
     m = url.match(/[?&]id=([^&]+)/);
@@ -8660,7 +8723,7 @@
   }
   const USER_CHANNELS_KEY = 'atelier_user_channels_v1';
   function loadUserChannels() { try { return JSON.parse(localStorage.getItem(USER_CHANNELS_KEY)) || []; } catch(e) { return []; } }
-  function saveUserChannels(arr) { try { localStorage.setItem(USER_CHANNELS_KEY, JSON.stringify(arr)); } catch(e) {} }
+  function saveUserChannels(arr) { _safeSetItem(USER_CHANNELS_KEY, JSON.stringify(arr)); }
   function applyUserChannels() {
     const arr = loadUserChannels();
     arr.forEach(c => {
@@ -9207,14 +9270,14 @@
         }
       });
       if (mutated) {
-        try { localStorage.setItem(FP_KEY, JSON.stringify(arr)); } catch (e) {}
+        _safeSetItem(FP_KEY, JSON.stringify(arr));
       }
       return arr;
     } catch (e) {
       return [];
     }
   }
-  function saveFP(arr) { localStorage.setItem(FP_KEY, JSON.stringify(arr)); }
+  function saveFP(arr) { _safeSetItem(FP_KEY, JSON.stringify(arr)); }
   function fpOpacity(ts) {
     const ageDays = (Date.now() - ts) / (1000*60*60*24);
     if (ageDays < 1) return 1;
@@ -10955,6 +11018,18 @@
   // openUserChannel reads this to merge curated blocks into the channel
   // detail view without re-fetching.
   let _userConnectionsCache = {};
+  // Cap _explorePublicCache so a long browsing session (many portfolios
+  // visited) doesn't balloon the cache with thousands of full block
+  // payloads. FIFO eviction by insertion order — Object.keys yields keys
+  // in insertion order, which approximates least-recently-added. Good
+  // enough; full LRU isn't worth the bookkeeping at 4 active users.
+  const _EXPLORE_CACHE_CAP = 600;
+  function _capExplorePublicCache() {
+    const keys = Object.keys(_explorePublicCache);
+    const over = keys.length - _EXPLORE_CACHE_CAP;
+    if (over <= 0) return;
+    for (let i = 0; i < over; i++) delete _explorePublicCache[keys[i]];
+  }
   // Phase C-2: open an external (other-user) public block in preview mode.
   // We synthesize an enriched block object carrying _external markers so the
   // existing modal helpers swap to the read-only / connect action set.
@@ -11024,6 +11099,7 @@
     // "no public blocks" empty state. Merge is safe — rows are keyed by
     // unique block id, so newer fetches overwrite older snapshots.
     rows.forEach(r => { _explorePublicCache[r.id] = r; });
+    _capExplorePublicCache();
     if (rows.length === 0) {
       list.innerHTML = '<li class="explore-empty">他のユーザーの公開 block はまだありません。</li>';
       return;
@@ -11198,6 +11274,7 @@
       if (!m[c.channel_id]) m[c.channel_id] = [];
       if (!m[c.channel_id].includes(pb.id)) m[c.channel_id].push(pb.id);
     });
+    _capExplorePublicCache();
     const grid = document.getElementById('upGrid');
     const meta = document.getElementById('upMeta');
     const recentSection = document.getElementById('upRecentSection');
@@ -12387,6 +12464,15 @@
         ]);
         if (!res.ok) {
           const text = await res.text().catch(() => `HTTP ${res.status}`);
+          // 401 = access token expired. The Supabase SDK is configured to
+          // auto-refresh, but a long-lived tab can race against an in-flight
+          // request. Trigger an explicit refresh and surface a toast so the
+          // user knows the save didn't land — the next save attempt should
+          // succeed with the refreshed token.
+          if (res.status === 401) {
+            try { await supabaseClient?.auth?.refreshSession?.(); } catch (_) {}
+            try { showToast('セッションが切れました — もう一度保存してください'); } catch (_) {}
+          }
           throw new Error(`HTTP ${res.status}: ${text}`);
         }
         lastPushedJson = json;
@@ -12439,6 +12525,27 @@
 
     return { pull, push, pushDebounced };
   })();
+
+  // ──────────────── multi-tab sync (storage event) ────────────────
+  // When the user has multiple tabs open as the same Supabase user, a
+  // localStorage write in tab A doesn't propagate to tab B's in-memory
+  // CHANNELS/BLOCKS arrays. Tab B keeps showing stale data until reload,
+  // and a publish from tab B (built on stale state) can overwrite tab
+  // A's edits via user_state push. Listening for 'storage' events lets
+  // tab B re-hydrate from the fresh localStorage that tab A just wrote.
+  // We also debounce-trigger the views that visualize that state.
+  let _storageRehydrateScheduled = false;
+  window.addEventListener('storage', (ev) => {
+    if (!ev || !ev.key) return;
+    if (!SYNC_KEYS.includes(ev.key)) return;
+    if (_storageRehydrateScheduled) return;
+    _storageRehydrateScheduled = true;
+    setTimeout(() => {
+      _storageRehydrateScheduled = false;
+      try { if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage(); } catch (e) {}
+      try { if (typeof refreshAllViews === 'function') refreshAllViews(); } catch (e) {}
+    }, 80);
+  });
 
   // ──────────────── PUBLISH — atelierPublic (Phase C-1) ────────────────
   // Mirrors a block into public_blocks when the user marks it `isPublic: true`.
@@ -12516,6 +12623,12 @@
             } catch (re) {
               console.warn('[atelierPublic] id recovery failed:', re);
             }
+          }
+          // Same auth-recovery path as atelierSync.push: trigger a token
+          // refresh on 401 so the next operation has a valid token.
+          if (res.status === 401) {
+            try { await supabaseClient?.auth?.refreshSession?.(); } catch (_) {}
+            try { showToast('セッションが切れました — もう一度操作してください'); } catch (_) {}
           }
           throw new Error(`HTTP ${res.status}: ${txt}`);
         }
@@ -12665,6 +12778,7 @@
       // populates after the user opens the Explore tab, so navigating from
       // a TOP-marquee deep link landed on an empty visitor channel detail.
       rows.forEach(r => { _explorePublicCache[r.id] = r; });
+      _capExplorePublicCache();
       // Re-render TOP and Feed with new data
       try { if (typeof renderMarquees === 'function') renderMarquees(); } catch (e) {}
       try { if (typeof renderFeed === 'function') renderFeed(); } catch (e) {}
@@ -13254,6 +13368,10 @@
     // re-render was kicking the user off any in-flight upload form back
     // to the top, especially on mobile when switching tabs.
     let _greetedUserId = null;
+    // Track background refresh intervals so SIGNED_OUT can clean them up.
+    // gateAppByAuth populates this list; the SIGNED_OUT handler clears.
+    if (typeof window._appIntervalIds === 'undefined') window._appIntervalIds = [];
+    const _appIntervalIds = window._appIntervalIds;
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       updateUserMenu(session);
       if (event === 'SIGNED_IN' && session?.user) {
@@ -13324,6 +13442,22 @@
         if (typeof _resetInMemoryToSeed === 'function') _resetInMemoryToSeed();
         // Reset greeted flag so the next sign-in shows the welcome toast.
         _greetedUserId = null;
+        // Stop background refresh timers so they don't keep firing with a
+        // null currentUser (which would silently 401 on every tick) or
+        // leak into a different account's session if the user signs in
+        // again without a page reload.
+        _appIntervalIds.forEach(id => { try { clearInterval(id); } catch (e) {} });
+        _appIntervalIds.length = 0;
+        // Clear cross-user caches so a different account signing in on
+        // the same tab doesn't see leftover Explore data from the prior
+        // user. Without this, _explorePublicCache / _userConnectionsCache
+        // / _exploreProfilesCache / _marqueeShuffleCache / crossUserBlocksCache
+        // would mix yesterday's user's data into today's first paint.
+        try { _explorePublicCache = {}; } catch (e) {}
+        try { _userConnectionsCache = {}; } catch (e) {}
+        try { _exploreProfilesCache = {}; } catch (e) {}
+        try { if (_marqueeShuffleCache && _marqueeShuffleCache.clear) _marqueeShuffleCache.clear(); } catch (e) {}
+        try { if (Array.isArray(crossUserBlocksCache)) crossUserBlocksCache.length = 0; } catch (e) {}
         showLanding();
       }
     });
@@ -13372,17 +13506,23 @@
     try { syncChannelConnectionsToProfile().catch(() => {}); } catch (e) {}
     // Phase D-1: refresh the unread-traces badge once per app load.
     atelierTraces.refreshUnreadBadge();
-    // Periodic refresh while the tab is open so notifications appear without reload.
-    setInterval(() => atelierTraces.refreshUnreadBadge(), 60_000);
+    // Periodic refresh while the tab is open so notifications appear without
+    // reload. Track the interval ids so SIGNED_OUT can clear them — without
+    // this, the timers keep firing after sign-out, calling refresh helpers
+    // with stale `currentUser` references and wasting network/CPU. They
+    // also leak into the next user if a different account signs in on the
+    // same tab without a full reload.
+    if (typeof window._appIntervalIds === 'undefined') window._appIntervalIds = [];
+    window._appIntervalIds.push(setInterval(() => atelierTraces.refreshUnreadBadge(), 60_000));
     // Phase E-prep: prime cross-user broadcast pool, then refresh every 5 min
     // so TOP marquee and Feed reflect new public posts without reload.
     refreshCrossUserBlocks();
-    setInterval(() => refreshCrossUserBlocks(), 300_000);
+    window._appIntervalIds.push(setInterval(() => refreshCrossUserBlocks(), 300_000));
     // Same cadence for the profiles cache so updated avatars / handles
     // become visible to other viewers without a manual page refresh.
     if (typeof refreshProfilesCache === 'function') {
       refreshProfilesCache();
-      setInterval(() => refreshProfilesCache(), 300_000);
+      window._appIntervalIds.push(setInterval(() => refreshProfilesCache(), 300_000));
     }
   })();
 
