@@ -6309,7 +6309,33 @@
   // Custom-order storage: { [channelId]: [blockId, blockId, ...] }
   const CHANNEL_ORDER_KEY = 'atelier_channel_order_v1';
   function loadChannelOrder() { try { return JSON.parse(localStorage.getItem(CHANNEL_ORDER_KEY)) || {}; } catch(e) { return {}; } }
-  function saveChannelOrder(map) { try { localStorage.setItem(CHANNEL_ORDER_KEY, JSON.stringify(map)); } catch(e) {} }
+  function saveChannelOrder(map) {
+    try { localStorage.setItem(CHANNEL_ORDER_KEY, JSON.stringify(map)); } catch(e) {}
+    // Best-effort sync to profiles.block_order so visitors looking at this
+    // user's channels via Explore see the same per-channel block order the
+    // owner has arranged. Silent on failure (column missing → run migration,
+    // or network blip) — the local order still works for the owner.
+    _pushBlockOrderToProfile(map).catch(() => {});
+  }
+  async function _pushBlockOrderToProfile(map) {
+    if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
+    const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+    const accessToken = tokenData?.access_token;
+    if (!accessToken) return;
+    const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(currentUser.id)}`;
+    const headers = {
+      'apikey': SUPABASE_PUB_KEY,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    };
+    try {
+      await fetch(url, { method: 'PATCH', headers, body: JSON.stringify({ block_order: map }) });
+    } catch (e) {
+      // Ignore — column may not exist yet (run the SQL migration first).
+    }
+  }
   function moveBlockInChannel(cid, blockId, direction) {
     // direction: -1 = up, +1 = down
     const items = _itemsInChannel(cid);
@@ -11018,9 +11044,30 @@
     // had NULL channel_id (legacy: backfill only runs when each owner
     // signs in, so a user who hasn't logged in since the column was
     // added still has unfilled rows).
+    // Honor the owner's saved per-channel block order if available
+    // (profiles.block_order JSONB, mirrored from atelier_channel_order_v1).
+    // Items listed in the saved order come first in that exact sequence;
+    // items not in the saved order (newly published, or this user's
+    // block order isn't synced yet) fall through to the legacy
+    // audio-first / ts-ASC sort.
+    const _ownerProfileForOrder = (typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[ownerId] : null;
+    const _ownerBlockOrderMap = _ownerProfileForOrder?.block_order || null;
+    const _ownerBlockOrder = (_ownerBlockOrderMap && Array.isArray(_ownerBlockOrderMap[channelId]))
+      ? _ownerBlockOrderMap[channelId]
+      : [];
+    const _orderIndex = (id) => {
+      const i = _ownerBlockOrder.indexOf(id);
+      return i >= 0 ? i : -1;
+    };
     const rows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId)
       .sort((a, b) => {
+        const ai = _orderIndex(a.id);
+        const bi = _orderIndex(b.id);
+        if (ai !== -1 && bi !== -1) return ai - bi;          // both ranked → owner's order
+        if (ai !== -1) return -1;                            // only a ranked → a first
+        if (bi !== -1) return 1;                             // only b ranked → b first
+        // Neither in saved order — fall back to audio-first then ts-ASC.
         const aIsAudio = a.kind === 'audio';
         const bIsAudio = b.kind === 'audio';
         if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
