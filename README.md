@@ -4,7 +4,7 @@
 
 未発表曲のためのデジタル中庭。Spotify のような棚でも YouTube のような激流でもない、静寂とタイポグラフィに包まれた閉じた中庭としての音楽プラットフォーム。
 
-A single-file prototype of a music platform built around the metaphor of a closed courtyard — one that resists algorithmic dilution and preserves the human signature of unreleased works.
+A single-file music platform built around the metaphor of a closed courtyard — one that resists algorithmic dilution and preserves the human signature of unreleased works.
 
 ---
 
@@ -15,8 +15,8 @@ A single-file prototype of a music platform built around the metaphor of a close
 
 | | |
 |---|---|
-| 段階 | プロトタイプ（vanilla HTML 単一ファイル） + Supabase 多端末同期 + 公開／接続／コメント |
-| 本番 | <https://kinoshitastudio.github.io/Ateli.er/>（手動アップロード予定） |
+| 構成 | vanilla HTML 単一ファイル + Supabase 多端末同期 + 公開／接続／コメント |
+| 本番 | <https://atelistudio.com/> |
 | 開発リポ | この `projects/Ateli.er/` 配下（独立 git） |
 | バックエンド | **Supabase 無料枠** — auth + profiles + user_state (JSONB) + public_blocks + traces |
 | 招待 | 限定招待制（invite-only）。課金プラン無し |
@@ -170,7 +170,7 @@ projects/Ateli.er/
 
 ## ロードマップ
 
-- [x] vanilla プロトタイプ
+- [x] vanilla 単一ファイル基盤
 - [x] Block × Channel データモデル
 - [x] EN / JP 切替
 - [x] Sync URL（手動同期）
