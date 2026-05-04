@@ -2,29 +2,24 @@
 
 > a courtyard, not a shelf.
 
-未発表曲のためのデジタル中庭。Spotify のような棚でも YouTube のような激流でもない、静寂とタイポグラフィに包まれた閉じた中庭としての音楽プラットフォーム。
+未発表曲のための、静かな中庭。
+Spotify のような棚でも YouTube のような激流でもない、タイポグラフィと余白に包まれた **閉じた中庭** としての音楽プラットフォーム。
 
-A single-file music platform built around the metaphor of a closed courtyard — one that resists algorithmic dilution and preserves the human signature of unreleased works.
+A quiet courtyard for unreleased works — a third place that resists algorithmic dilution and preserves the human signature behind each track.
 
 ---
 
-## 状態
-
-🟢 **MULTI-USER 稼働中 — Phase B-3b + C-1 + C-2 + D-1 完了**
-最終更新: 2026-04-28
+## はじめに
 
 | | |
 |---|---|
-| 構成 | vanilla HTML 単一ファイル + Supabase 多端末同期 + 公開／接続／コメント |
-| 本番 | <https://atelistudio.com/> |
-| 開発リポ | この `projects/Ateli.er/` 配下（独立 git） |
-| バックエンド | **Supabase 無料枠** — auth + profiles + user_state (JSONB) + public_blocks + traces |
-| 招待 | 限定招待制（invite-only）。課金プラン無し |
-| Auth 方式 | magic link（パスワード不要、Supabase 実送信。Custom SMTP via Resend 設定済） |
-| データ | localStorage を一次キャッシュ、`user_state` JSONB 1 行に丸ごと sync（端末横断） |
-| 公開 | block 単位で `isPublic` フラグ → `public_blocks` に index → Explore で閲覧可能 |
-| 接続 | 他ユーザーの公開 block を自分の channel に snapshot として attach（Connect） |
-| コメント | `traces` テーブルで cross-user。新着は pill + Comment タブ + 個別行に ● で通知 |
+| 本番サイト | <https://atelistudio.com/> |
+| 入場 | **限定招待制（invite-only）** |
+| 利用料 | **無料**（課金プラン無し） |
+| 言語切替 | EN / JP |
+| 推奨ブラウザ | Safari / Chrome / Firefox（最新版） |
+
+招待コードをお持ちでない方は、お問い合わせください。
 
 ---
 
@@ -32,176 +27,66 @@ A single-file music platform built around the metaphor of a closed courtyard —
 
 > AI による音楽の希釈に対する反抗として、「クローズド・限定・未完成」という制約で音楽の意志を救出する聖域。
 
-**キーワード:** `courtyard` `unreleased` `human signature` `no algorithm` `Are.na-like depth` `Csocsán typography` `weathering` `graffiti` `invitation-based`
-
-**デザイン参照:**
-- 思想: [Are.na](https://are.na) — Block × Channel の構造的キュレーション
-- 視覚: [Laura Csocsán](https://lauracsocsan.com) — タイポグラフィのミニマリズム、等速マーキー、グレインのある余白
+**キーワード:** `courtyard` · `unreleased` · `human signature` · `no algorithm` · `Are.na-like depth` · `invitation-based`
 
 ---
 
-## クイックスタート
+## できること
 
-ローカルで動かすには静的サーバーを立てるだけ：
-
-```bash
-cd /path/to/99letters.github.io
-python3 -m http.server 8765
-# → http://localhost:8765/projects/Ateli.er/
-```
-
-または VS Code Live Server / `npx serve` などお好みで。
-
----
-
-## ファイル構造
-
-```
-projects/Ateli.er/
-├── index.html      ← 単一 HTML（vanilla JS / Web Audio synth / CSS marquee）
-├── README.md       ← このファイル
-└── USAGE.md        ← 私用の操作マニュアル
-```
-
----
-
-## 主な機能
-
-### Block × Channel データモデル（Are.na 準拠）
-- **Block**: audio / image / text / external url の 4 種
-- **Channel**: Block を束ねる場（号やテーマごと）
-- **Connect**: 1 Block を複数 Channel に接続可
+### Block × Channel — 音楽キュレーションの構造
+- **Block**: 1曲・1画像・1テキスト・1リンクなど、最小の表現単位
+- **Channel**: Block を束ねる場（号やテーマごとの集まり）
+- **Connect**: ひとつの Block を複数の Channel に接続できる
 
 ### コンテンツ管理
-- Block の追加・編集・削除（Block 単体 / 一括チェック削除）
+- Block の追加・編集・削除（個別 / 一括選択削除）
 - Channel の作成・編集・状態切替（current / future / past）
-- Channel 内ブロックの並び替え（edit モード時のみ、save で確定）
-- Channel 内検索 / Channel 共有（Web Share API）
+- Channel 内ブロックの並び替え（編集モード時）
+- Channel 内検索 / Channel の共有リンク発行
 
 ### 体験動線
-- ホームの 3 本マーキー（catchphrase / title / image）
+- ホーム画面の 3 本マーキー（catchphrase / title / image）
 - 楽曲詳細モーダル（個別アトリエ）
-- リアルタイム再生プレイヤー（HTML5 Audio）
-- インライン・コメント（block 単位の trace、風化で薄くなる）
+- インライン再生プレイヤー
+- ブロック単位のコメント（時間とともに薄くなる "trace"）
 - Feed タブ：全 Block の時系列ストリーム
-- EN / JP 言語切替
 
-### 永続化 / 同期（Phase B-3b 完了）
-- localStorage は一次キャッシュ（操作はローカルで即時反映 → スナピー）
-- `Storage.setItem` を monkey-patch して `SYNC_KEYS` への書き込みを 1.5 秒
-  debounce で `user_state` に push（生 REST 経由、SDK のハングを回避）
-- sign-in / reload 時に DB から pull → localStorage を上書き → 再描画。
-  別端末で行った編集が次回起動時に反映される
-- `beforeunload` で keepalive fetch flush（タブを閉じても in-flight な
-  debounce が落ちない）
-- 旧 Sync URL（手動 export / import）は引き続き動作。緊急用バックアップに
+### 端末横断
+- どの端末からログインしても、自分の Channel と Block が同期される
+- 操作はその場で反映されつつ、バックグラウンドで安全に保存
 
-### Auth（Phase B-3a 完了）
-- Landing ページ → Sign up / Log in モーダル
-- invite code は `invites` テーブルで実検証（max_uses / expires_at 確認）
-- handle は user_metadata + `profiles` テーブルの双方に保存
-- magic link を Supabase が実送信、リンククリック → onAuthStateChange で SIGNED_IN
-- Settings モーダルで handle / avatar URL の編集、log out
-- 開発用 URL: `?landing=1`（強制表示）/ `?logout=1`（session クリア）
+### Public / Explore
+- 自分の Block を **公開** に切り替えると Explore 一覧に表示される
+- 他のユーザーが公開している Block を眺めて気になったものを自分の Channel に **Connect** できる
+- Connect は元 Block のスナップショット — 元の作者が編集・削除しても自分の手元には残る
 
-### Public / Explore（Phase C-1 完了）
-- block の edit 画面に **`show on Explore`** トグル → `isPublic: true` で
-  `public_blocks` index に upsert、false にすると row を削除
-- block modal の head に **`公開中 / public`** pill、channel 一覧の各行にも
-  小さい `public` マーク
-- Explore タブが 2 段構成: `— residents`（profiles 一覧）+
-  `— public blocks`（最新 60 件、ts 降順、自分の block は除外）
-
-### Connect 他ユーザーブロック（Phase C-2 完了）
-- Explore の public block card をクリック → 読み取り専用プレビューで開く。
-  breadcrumb は `@otherHandle / theirChannel / blockTitle`（イタリック）
-- 「**+ connect to my channel**」 → overlay でチャンネル選択 →
-  block の **snapshot** が `atelier_external_blocks_v1` に保存
-- channel 詳細では external block に `— by @otherHandle` 帰属表記、
-  クリックで再度 read-only モーダル
-- 「**— disconnect**」 で channel から外す（snapshot は破棄、再 connect 可能）
-- snapshot 戦略: 上流 owner の編集／削除が下流に伝播しない（Are.na 流）。
-  代わりに renderer は常に local データを読むので high-perf + offline 耐性
-
-### Cross-user コメント + 通知（Phase D-1 完了）
-- `traces` テーブル（共有）に commit。author_id / author_handle / block_id /
-  block_owner_id / text / ts。RLS は誰でも read、authed user は自分の row を
-  insert / update / delete
-- block modal のコメント欄は local FP + remote traces を merge 表示。同 id は
-  remote が canonical。`@handle` で帰属が見える
-- 通知 UI 3 段:
-  1. **topbar pill** `@taka` の隣に ● 濃紺 pulse（全体気付き）
-  2. **Comment タブ**にも同じ ●（タブ単位の気付き）
-  3. **Comment ペイン上部**に `— incoming` セクション、各行に未読 ● + クリックで
-     該当 block へジャンプ
-- 既読管理は `atelier_traces_watermark_v1`（per-device localStorage、
-  user_state には sync しない）。pill ● クリックで `markAllRead()` →
-  watermark を server max(ts) + 1 にセット（client/server 時計ずれ吸収）
+### Cross-user コメント
+- 他ユーザーの Block にコメントを残せる
+- 自分の Block にコメントが付くと、ナビゲーション右上の ● で気付ける
 
 ---
 
-## 技術構成
+## ホスティング推奨
 
-| 項目 | 採用 |
-|---|---|
-| ランタイム | vanilla HTML（単一ファイル、ビルド工程なし） |
-| 音響再生 | HTML5 Audio（Drive 不可・Dropbox 推奨） |
-| プレースホルダ音 | Web Audio API（procedural ambient drone） |
-| 視覚 | CSS animation marquee × inline SVG |
-| フォント | Noto Sans JP / JetBrains Mono |
-| 永続化 | localStorage 一次 + Supabase Postgres `user_state` JSONB（端末横断） |
-| Auth | Supabase magic link（`@supabase/supabase-js@2` CDN） |
-| Realtime | 実装なし（pull-on-signin / pull-on-reload で十分） |
-| デプロイ | GitHub Pages（手動 upload）— launch 時に別アカウントへ移行予定 |
+Block に音源・画像を貼る場合のホスト推奨:
 
----
-
-## ホスティングルール
-
-| 用途 | 推奨ホスト | 備考 |
+| 種類 | 推奨ホスト | 備考 |
 |---|---|---|
-| **audio (.mp3)** | Dropbox 必須 | Drive は CORP `same-site` で再生不可 |
-| **image** | Drive OK / Dropbox / 任意 | Drive は内部で `lh3.googleusercontent.com` に変換 |
-| その他 | 任意 | |
+| **音源 (.mp3)** | **Dropbox 必須** | Google Drive は CORS の制限で再生不可 |
+| **画像** | Drive / Dropbox / 任意 | Google Drive は内部で `lh3.googleusercontent.com` に変換 |
+| **テキスト・リンク** | 任意 | |
 
-詳細は [USAGE.md](./USAGE.md) を参照。
-
----
-
-## ロードマップ
-
-- [x] vanilla 単一ファイル基盤
-- [x] Block × Channel データモデル
-- [x] EN / JP 切替
-- [x] Sync URL（手動同期）
-- [x] Are.na 風 Feed グルーピング表示
-- [x] kind icon (♪ ▣ ¶ ↗) + Channel 一覧サムネ表示
-- [x] 共有 URL deep link（`#b=` `#ch=` 受信処理）
-- [x] paper aesthetic 配色刷新（ink-blue + warm beige）
-- [x] **Phase A: Login/Signup UI モック**（2026-04-27）
-- [x] **Phase B-3a: Supabase 実認証**（magic link, profiles, invites, RLS）
-- [x] **Phase B-3b: 端末横断同期**（user_state JSONB + monkey-patch sync layer）
-- [x] **Phase C-1: Explore + 公開 block index**（profiles 一覧 + public_blocks）
-- [x] **Phase C-2: 他ユーザー block の Connect**（snapshot, attribution, disconnect）
-- [x] **Phase D-1: cross-user コメント + 通知**（traces table, ● badge 3 段）
-- [x] **Custom SMTP**: Resend 設定済 (Resend account email 宛のみ送信可)
-- [ ] **launch 準備**: 新 GitHub アカウント / 新 Supabase project / Resend ドメイン認証
-- [ ] アーティスト別ポートフォリオページ
-- [ ] iframe 埋め込み（外部記事を Ateli.er 内で展開）
-- [ ] 過去 Issue（−01）に風化された実データを置く
-- [ ] iCloud URL 解決ロジック
-- [ ] Phase C-3: external block の「refresh from upstream」アフォーダンス
-- [ ] Phase D-2: trace の email push 通知 (Database Webhook → Resend)
+詳しい貼り付け手順は [USAGE.md](./USAGE.md) を参照してください。
 
 ---
 
-## 一行で
+## 関連ドキュメント
 
-> 「音楽家が自分のためのアーカイブとして使っていたら、いつの間にかそれが最高のメディアになっていた」
-> — kinoshita studio
+- [USAGE.md](./USAGE.md) — 使い方マニュアル（日本語）
+- [USAGE.en.md](./USAGE.en.md) — Usage manual (English)
 
 ---
 
 ## ライセンス
 
-Personal project — kinoshita studio / 99letters · 2026
+Personal project — kinoshita studio · 99letters · 2026

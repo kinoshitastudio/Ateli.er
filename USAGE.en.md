@@ -1,6 +1,5 @@
 # Ateli.er — User Manual (English)
 
-> Last updated: 2026-04-28 / Multi-user live (Phase B-3b + C-1 + C-2 + D-1 complete)
 > 日本語版: [USAGE.md](./USAGE.md)
 
 ---
@@ -9,130 +8,97 @@
 
 - **The app hosts nothing**. All audio/image files live on your own Google Drive / Dropbox / iCloud / any host. Only the URL is pasted into Ateli.er.
 - What's stored is **only the catalog (text, URLs, references)**.
-- Persistence layer is localStorage as a hot cache, **synced as a single `user_state` JSONB row in Supabase Postgres** so the same data is visible across devices.
 - Structure follows **Are.na-style Block × Channel**. Block has 4 kinds (audio / image / text / url); Channel groups Blocks by issue or theme.
-- **Color scheme:** paper `#DCDBD5` (warm beige) + ink `#1600A2` (deep ink-blue). Independent of the studio-wide monochrome aesthetic — Ateli.er has its own key palette.
+- **Color scheme:** paper `#DCDBD5` (warm beige) + ink `#1600A2` (deep ink-blue) — Ateli.er's own key palette.
 
 ---
 
-## 0a. Login / Signup (Phase B-3a — Supabase real auth)
+## 0a. Login / Signup
 
 On first visit, the **landing screen** is shown.
 
 ### Sign up (new account)
 1. Click the `Sign up` button (top right)
 2. Fill three fields:
-   - **invite code**: Validated against the `invites` table (`max_uses`, `expires_at`)
-   - **email**: For magic link delivery
-   - **handle**: Display name. Stored in both `profiles` and user_metadata
-3. Click `— request access` → Supabase sends a magic link → click it in your inbox → enter
+   - **invite code**
+   - **email** (for magic link delivery)
+   - **handle** (display name)
+3. Click `— request access` → click the link in your inbox to enter
 
 ### Log in (return)
 1. Click `Log in` (top right)
 2. Enter **email** only
-3. Click `— send magic link` → check inbox → click → session restored
+3. Click `— send magic link` → click the link in your inbox
 
 ### Settings (the `@handle ⚙` pill bottom-right)
-- **avatar URL**: Direct image URL (Drive / Dropbox share URLs work; **Google Photos URLs do NOT work** — see 4-B below)
+- **avatar URL** — direct image URL (Google Drive / Dropbox share URLs work; ★Google Photos URLs do NOT work★ — see 4-B)
 - Edit **handle**
 - **email** is read-only
-- **log out** (red, with a confirm dialog → reload)
-
-### Dev URL helpers
-- `?landing=1` → forces landing even when a session exists
-- `?logout=1` → clears Supabase session and shows landing
-- Otherwise, while a Supabase session is in localStorage, landing is skipped
-
-### If you hit the email rate limit
-- Free Supabase allows ~3-4 emails/hour. Heavy testing will trip `email rate limit exceeded`
-- Wait an hour, or create a user manually via Supabase Studio → Authentication → Users → Add user
-- Before launch, switch to a Custom SMTP (Resend / Mailgun / SendGrid) to remove the cap
+- **log out** (with confirm)
 
 ---
 
-## 0b. Cross-Device Sync (Phase B-3b)
+## 0b. Cross-Device Sync
 
-- Every action is reflected in localStorage immediately (snappy UX)
-- `Storage.setItem` is monkey-patched, so writes to any `SYNC_KEYS` key trigger a 1.5s-debounced push of the whole state to a `user_state` JSONB row
-- On sign-in / reload, the state is pulled from the DB and overwrites localStorage; views re-render
-- A `beforeunload` keepalive fetch flushes any in-flight debounce so closing the tab doesn't lose the last write
-- The legacy Sync URL (manual export/import) still works as an emergency backup
+Once logged in, your work syncs automatically between PC and iPhone.
 
-Implementation note: Supabase JS SDK's query builder hangs in this environment, so `profiles.update`, `public_blocks` ops, and `user_state` ops are all written with raw `fetch` against the REST endpoint, with a 10s timeout.
+- Every action is reflected immediately (no waiting)
+- Saved safely in the background
+- Logging in on another device pulls in your latest state
+- Closing the tab doesn't lose your last edit
 
 ---
 
-## 0c. Public / Explore (Phase C-1)
+## 0c. Public / Explore
 
 ### Publishing a block
 1. Open one of your own blocks → `edit`
-2. Tick the new bottom row **`visibility — show on Explore`** → save
-3. The modal head shows a small `public` ink-blue pill, and the channel item list shows a small `public` mark next to it
+2. Tick **`visibility — show on Explore`** → save
+3. A `public` ink-blue pill appears on the block head; the channel item list also shows a small `public` mark
 
-### What happens internally
-- An `isPublic` flag is stored on the block
-- Every save triggers `atelierPublic.sync(block)`
-  - true → upsert to `public_blocks`
-  - false → delete the row
-- Deletes are mirrored too (`deleteBlock` → `atelierPublic.remove`)
-
-### Explore tab (top of the modal)
-- `— residents`: every profile (`@handle` + avatar + joined ago)
-- `— public blocks`: 60 most-recent public blocks across users (ts desc)
-  - Your own blocks are filtered out (it would just be Connecting to yourself)
+### Explore tab
+From the **Explore** tab at the top of the modal:
+- `— residents` — every user (`@handle` + avatar + joined ago)
+- `— public blocks` — 60 most-recent public blocks across users
+  - Your own blocks are not shown
   - Each card carries a `— by @handle · age` attribution
 
 ---
 
-## 0d. Connecting another user's block (Phase C-2)
+## 0d. Connecting another user's block
 
 ### Flow
 1. Explore → click any card in `— public blocks`
-2. The block modal opens in read-only mode (breadcrumb italicised: `@otherHandle / theirChannel / blockTitle`)
-3. The single action shown is **`+ connect to my channel`**
-4. Click → a centred overlay lists your active channels
-5. Pick one → toast `connect しました → [channel]` → action flips to `— disconnect`
-6. In that channel, the block now appears in the item list with a **`— by @otherHandle`** attribution
-7. Clicking it reopens the read-only modal; `— disconnect` removes it
+2. The block opens in read-only mode
+3. Click **`+ connect to my channel`**
+4. Pick one of your channels
+5. The block now appears in that channel with a **`— by @otherHandle`** attribution
+6. Open the block again and click **`— disconnect`** to remove
 
-### Snapshot semantics (important)
-- Connecting copies the block's full payload into `atelier_external_blocks_v1`
-- Edits / unpublish / delete by the upstream owner do **not** propagate
-- Pros: fast renders, no network calls per render, robust to upstream removal
-- Cons: connector's copy can drift. Phase C-3 will add a "refresh from upstream" affordance
+### Snapshot semantics
+- Connecting copies the block's content at that moment
+- Even if the original author edits or removes their block, your connected copy stays
+- You can disconnect and reconnect freely
 
 ---
 
-## 0e. Cross-user Comments + Notifications (Phase D-1)
+## 0e. Cross-user Comments + Notifications
 
 ### Posting a comment
-- Open a block, type into the comment composer at the bottom, confirm, submit
-- Cached locally and inserted into the shared `traces` table on Supabase
-  - On an external block, `block_owner_id` is set to the upstream owner
-  - On your own block, `block_owner_id` is yourself
+- Open a block, type in the comment composer, submit
+- Comments on your own blocks and on other users' blocks are both recorded
 
-### Receiving notifications (block owner side)
-- When another user comments on one of your blocks, three places light up
-  with a small pulsing ink-blue **●**:
-  1. **Next to the `@handle` pill** in the topbar (global awareness)
-  2. **The Comment tab** in the modal-tabs strip (and in the per-block-modal
-     tabs at the top of every block modal)
-  3. **The `— incoming` section** at the top of the Comment pane, with a
-     dot on each unread row
-- Click the **pill ●** → `既読にしました` toast → all three dots clear
-- The read watermark lives in `atelier_traces_watermark_v1` (localStorage,
-  per device — intentionally NOT synced via `user_state` so each device
-  tracks its own read state)
+### Receiving notifications
+- When another user comments on one of your blocks, **● ink-blue dots** appear in three places:
+  1. Next to the `@handle` pill at the top
+  2. The **Comment tab** also shows a **●**
+  3. The **`— incoming` section** at the top of the Comment tab — each unread row has a small **●**
+- Click the **●** in the topbar pill to mark all as read
+- Read state is per-device (intentionally — each device keeps its own)
 
 ### `— incoming` section
 - Lists every cross-user comment on your blocks, newest first
-- Each row: `@handle | comment text | ↗ block_id | age`
-- Clicking a row closes the modal and opens the source block
-
-### Mark-as-read timing
-- markAllRead sets the watermark to `max(server max(ts), Date.now()) + 1`,
-  absorbing any client/server clock skew so the dot stays cleared after
-  reload (the previous Date.now()-only version had a clock-skew bug)
+- Click a row to open the source block
 
 ---
 
@@ -406,40 +372,18 @@ Top right `— traces (n)`:
 
 ## 7. Where Data Lives
 
-All in `localStorage`. Inspect via Chrome DevTools.
-
-| Key | Content |
-|---|---|
-| `atelier_blocks_v1` | Your added blocks |
-| `atelier_footprints_v2` | Your comments (traces) |
-| `atelier_user_channels_v1` | Your created channels |
-| `atelier_channel_edits_v1` | Edit diffs on seed channels |
-| `atelier_track_edits_v1` | Edit diffs on seed TRACKs |
-| `atelier_track_connections_v1` | Placeholder TRACK channel connections |
-| `atelier_channel_order_v1` | Block order within channels |
-| `atelier_lang_v1` | Language (en / ja) |
-| `atelier_seeded_v2` | Seed-applied flag |
-| `atelier_session_v1` | **Phase A** — your local mock session |
+When logged in, your blocks / channels / comments are synced to the cloud (cross-device).
+Anything done while logged out (or offline) is held in your browser temporarily, and reconciled with the cloud the next time you sign in.
 
 ### Backup
-- DevTools → Application → Local Storage → copy keys to JSON
-- For cross-browser migration, use the Sync URL feature
-
-### Wipe everything
-```js
-['atelier_blocks_v1','atelier_footprints_v2','atelier_user_channels_v1',
- 'atelier_channel_edits_v1','atelier_track_edits_v1','atelier_track_connections_v1',
- 'atelier_channel_order_v1','atelier_lang_v1','atelier_seeded_v2',
- 'atelier_session_v1']
-  .forEach(k => localStorage.removeItem(k));
-location.reload();
-```
+- Migrating to another browser or device just needs you to log in
+- For an emergency backup, use **Sync URL** (next section) for a manual export / import
 
 ---
 
-## 8. Cross-device Sync (Sync URL)
+## 8. Cross-device Sync (Sync URL — emergency backup)
 
-Way to copy data between PC ↔ mobile until backend lands. Manual export/import.
+Manual way to copy data between PC ↔ mobile. The normal cross-device sync (via login) covers most cases; Sync URL is here for emergency backup.
 
 ### Use it
 
@@ -457,8 +401,7 @@ Way to copy data between PC ↔ mobile until backend lands. Manual export/import
 
 ### Caution
 - **"Whoever syncs last wins"** — if you edit independently on both devices, one side's changes are lost
-- Single-master use is fine
-- Will be replaced by Supabase auto-sync in Phase B
+- The normal logged-in auto-sync covers daily use; Sync URL is for emergency backup
 
 ### Manual paste import
 
@@ -509,35 +452,10 @@ A block can belong to multiple channels.
 | Upload fails | localStorage quota. Delete unused blocks from Your Blocks |
 | Image won't display | Try opening the URL directly. Some hosts have CORS limits |
 | New channel not in upload | state may be `past`. Edit → switch to `current` |
-| Back button needs two presses | Fixed |
-| Edit button unresponsive | Fixed (event delegation) |
-| Native confirm doesn't show on iOS | Replaced with custom confirm modal |
-| Tag click shows blank modal | Fixed (was `is-open` class missing in `openTagModal`) |
-| Channel mainPhrase click goes to generic Pieces tab | Fixed — now drills into the specific channel |
-| Same track restarts on click | Fixed — guard early-returns when same track is playing |
-| Browsing a non-playable track stops current music | Fixed — leaves playback alone |
-| Auto-play on navigation | Fixed — only the explicit Play button starts audio |
-| Edit removes tag but it comes back after save | Fixed — `metadata.tags` is now synced from `context` |
-| Share URL only shares index.html | Fixed — `#b=` `#ch=` deep links are now honored |
-| SHARE doesn't show "copied" feedback | Fixed — toast `URL をコピーしました` |
-| Channel/block update bumps you to TOP | Fixed — scroll position preserved across `refreshAllViews` |
-| Feed → block → back goes to TOP of Feed | Fixed — modal scroll cached and restored |
 
 ---
 
-## 13. Roadmap
-
-- [x] Phase A: Login/Signup UI mock (2026-04-27 done)
-- [ ] **Phase B: Supabase integration** (auth, profiles, channels, blocks, invites schema + real auth + import path for existing localStorage data)
-- [ ] **Phase C: Cross-user shared view** (Explore-style, public blocks across users)
-- [ ] Archive (−01) populated with weathered real data
-- [ ] Per-artist portfolio page
-- [ ] iCloud URL resolution
-- [ ] iframe embedding (external articles within Ateli.er)
-
----
-
-## 14. Cheatsheet
+## 13. Cheatsheet
 
 ```
 [Logo click] → home
