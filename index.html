@@ -1534,7 +1534,7 @@
     margin-left: 8px;
   }
 
-  /* MY CHANNEL — Are.na-style channel grid + drill-in */
+  /* MY CHANNEL — channel grid + drill-in */
   .ch-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -3032,7 +3032,7 @@
   }
   .ptc-composer-submit:hover { opacity: 0.55; }
 
-  /* CONNECT — Are.na-style multi-channel pills */
+  /* CONNECT — multi-channel pills */
   .piece-connect-channels {
     margin: 36px 0 48px;
     padding: 24px 0 8px;
@@ -4589,7 +4589,7 @@
     // user data and polished block modals continue to resolve channel context.
   ];
 
-  // Channels (Are.na-like boxes). Each holds blocks (audio/image/text/url).
+  // Channels (containers). Each holds blocks (audio/image/text/url).
   // mainPhrase is the headline that drifts in the top marquee row.
   const CHANNELS = [
     { id:'-01', label:'Archive −01', meta:'archived · weathered',   lang:'mixed',
@@ -6267,7 +6267,7 @@
     try { atelierPublic?.remove(id); } catch (e) {}
   }
 
-  // ──────────────── BLOCK ⇄ CHANNEL CONNECTIONS (Are.na "Connect") ────────────────
+  // ──────────────── BLOCK ⇄ CHANNEL CONNECTIONS ────────────────
   // Each block has a primary channelId (its owner / atelier of origin) and
   // an optional connectedTo[] of additional channelIds where it also appears.
   const TRACK_CONN_KEY = 'atelier_track_connections_v1';
@@ -6407,7 +6407,7 @@
     return false;
   }
 
-  // ──────────────── MY CHANNEL — Are.na grid + drill-in ────────────────
+  // ──────────────── MY CHANNEL — grid + drill-in ────────────────
   // Default view: cards (one per channel), each with a 2×2 mini-thumbnail of
   // its inner blocks. Click → drill into the channel and list all blocks.
   // Items in a channel = primary OR connected via "Connect".
@@ -8255,7 +8255,7 @@
   // Keep the existing entry point name so other code paths still work
   function renderIndex() { renderChannelGrid(); backToChannelGrid(); }
 
-  // ──────────────── BLOCKS & CHANNELS (Are.na-like, URL-based) ────────────────
+  // ──────────────── BLOCKS & CHANNELS (URL-based) ────────────────
   // Block kinds: 'audio' | 'image' | 'text' | 'url'
   // All assets remain external (Drive / Dropbox / iCloud / etc.); we only store the
   // index — text, urls, references — in this browser. No file uploads.
@@ -8307,8 +8307,8 @@
         url:'https://note.com/example/n/staying-unreleased',
         title:'on staying unreleased', source:'note.com', ts: now - day*8 },
       { id:'u002', kind:'url', channelId:'00',
-        url:'https://www.are.na/explore',
-        title:'Are.na — channels worth getting lost in', source:'are.na', ts: now - day*14 },
+        url:'https://example.com/cabinet',
+        title:'a quiet cabinet, kept off the index', source:'note', ts: now - day*14 },
 
       // ─── Archive −01 (weathered) ───
       { id:'i011', kind:'image', channelId:'-01',
@@ -8399,14 +8399,14 @@
       { id:'t-studio-2', kind:'text', channelId:'ch-studio', style:'lyric',
         text:'not a shelf. a courtyard.', ts: now - day*11 },
       { id:'t-studio-3', kind:'text', channelId:'ch-studio', style:'prose',
-        text:'制作の余白こそが、作品の輪郭をつくる。Are.na 的に、Block と Block の間に思想が立ち上がる。',
+        text:'制作の余白こそが、作品の輪郭をつくる。Block と Block の間にこそ、思想が立ち上がる。',
         ts: now - day*15 },
       { id:'u-studio-1', kind:'url', channelId:'ch-studio',
         url:'https://lauracsocsan.com',
         title:'Laura Csocsán', source:'visual reference', ts: now - day*13 },
       { id:'u-studio-2', kind:'url', channelId:'ch-studio',
-        url:'https://www.are.na',
-        title:'Are.na — block & channel', source:'thinking reference', ts: now - day*14 },
+        url:'https://example.com/notebook',
+        title:'a scattered notebook', source:'thinking reference', ts: now - day*14 },
       { id:'u-studio-3', kind:'url', channelId:'ch-studio',
         url:'https://www.youtube.com/watch?v=_tarkovsky',
         title:'Tarkovsky on time', source:'video reference', ts: now - day*17 },
@@ -9424,7 +9424,7 @@
     if (sec < 86400) return Math.floor(sec/3600) + 'h ago';
     return new Date(ts).toISOString().slice(0,10);
   }
-  // Group traces by trackId — your personal "channel" view (Are.na-like).
+  // Group traces by trackId — your personal "channel" view.
   // Each group: a piece header + your comments on it, ordered newest first.
   // Phase D-1 polish: fetch + render incoming traces (cross-user comments
   // on the viewer's own blocks). Unread (ts > watermark) entries get a

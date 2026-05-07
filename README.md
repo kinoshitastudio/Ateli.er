@@ -27,7 +27,7 @@ A quiet courtyard for unreleased works — a third place that resists algorithmi
 
 > AI による音楽の希釈に対する反抗として、「クローズド・限定・未完成」という制約で音楽の意志を救出する聖域。
 
-**キーワード:** `courtyard` · `unreleased` · `human signature` · `no algorithm` · `Are.na-like depth` · `invitation-based`
+**キーワード:** `courtyard` · `unreleased` · `human signature` · `no algorithm` · `interconnected depth` · `invitation-based`
 
 ---
 

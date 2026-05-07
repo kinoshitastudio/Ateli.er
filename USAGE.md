@@ -8,7 +8,7 @@
 
 - **アプリは何もホストしない**。音源・画像はすべて自分の Google Drive / Dropbox / iCloud / 任意のホスティング先に置き、URL だけを Ateli.er に貼る。
 - 保存されるのは **目録（テキスト・URL・参照）だけ**。
-- 構造は **Are.na 的な Block × Channel**。Block は 4 種類（audio / image / text / url）、Channel は号や主題ごとの束。
+- 構造は **Block × Channel** の二層モデル。Block は 4 種類（audio / image / text / url）、Channel は号や主題ごとの束。
 - **配色:** paper `#DCDBD5` (warm beige) + ink `#1600A2` (deep ink-blue)。Ateli.er 固有のキーカラー。
 
 ---
@@ -110,7 +110,7 @@
 | **Block** | 最小単位。種類は audio / image / text / url の 4 つ |
 | **Channel** | Block を束ねる場。例：`Issue 00`, `森と音楽`, `Tape Letters` |
 | **state** | Channel の状態。`current`（稼働中）/ `future`（未公開ドラフト）/ `past`（アーカイブ＝読み取り専用） |
-| **connectedTo** | Block が複数の Channel に属する仕組み（Are.na の Connect） |
+| **connectedTo** | Block が複数の Channel に属する仕組み（多重所属） |
 | **trace（足跡 / コメント）** | 短いテキストコメント。曲に紐付くか untethered |
 
 ---

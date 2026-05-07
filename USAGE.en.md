@@ -8,7 +8,7 @@
 
 - **The app hosts nothing**. All audio/image files live on your own Google Drive / Dropbox / iCloud / any host. Only the URL is pasted into Ateli.er.
 - What's stored is **only the catalog (text, URLs, references)**.
-- Structure follows **Are.na-style Block × Channel**. Block has 4 kinds (audio / image / text / url); Channel groups Blocks by issue or theme.
+- Structure is a two-layer **Block × Channel** model. Block has 4 kinds (audio / image / text / url); Channel groups Blocks by issue or theme.
 - **Color scheme:** paper `#DCDBD5` (warm beige) + ink `#1600A2` (deep ink-blue) — Ateli.er's own key palette.
 
 ---
@@ -109,7 +109,7 @@ From the **Explore** tab at the top of the modal:
 | **Block** | Smallest unit. Kinds: audio / image / text / url |
 | **Channel** | Container that groups Blocks. e.g. `Issue 00`, `Forest & Music`, `Tape Letters` |
 | **state** | Channel state. `current` (active) / `future` (unpublished draft) / `past` (archived = read-only) |
-| **connectedTo** | Mechanism for a Block to belong to multiple Channels (Are.na's Connect) |
+| **connectedTo** | Mechanism for a Block to belong to multiple Channels (multi-attach) |
 | **trace (footprint / comment)** | Short text comment. Either tied to a track or untethered |
 
 ---
@@ -364,7 +364,7 @@ Drill-in `— all delete` removes the channel itself and all its blocks. Differe
 
 Top right `— traces (n)`:
 - **Channel**: grid of your channels
-- **Feed**: cross-channel chronological stream (Are.na-style grouping)
+- **Feed**: cross-channel chronological stream (grouped by channel)
 - **Comment**: list of your traces (grouped by track)
 - **Upload**: new block form + Sync
 
