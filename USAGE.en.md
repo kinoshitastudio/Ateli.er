@@ -100,6 +100,12 @@ From the **Explore** tab at the top of the modal:
 - Lists every cross-user comment on your blocks, newest first
 - Click a row to open the source block
 
+### Notification rule for Connected Blocks (by design)
+- Comment notifications are pushed **only to the Block's author**. The user who Connected the Block to their own Channel (the curator) does **not** receive push notifications.
+- Rationale: Connect is a **curate** gesture, not a claim of ownership. Comments are letters addressed to the author of the work; the curator is not the recipient.
+- The curator can still **pull** — opening their own Channel surfaces all comments on Connected Blocks. They just don't get pinged.
+- This is an intentional design choice aligned with Atelier's "no algorithm / human signature" principles.
+
 ---
 
 ## 1. Vocabulary & Data Model

@@ -101,6 +101,12 @@
 - 自分の Block へのコメントが新しい順に並ぶ
 - 行クリックで該当 Block を開く
 
+### Connect された Block の通知ルール（仕様）
+- コメント通知は **Block の作者のみ** に届きます。Block を自分の Channel に Connect した側（curator）には push 通知しません。
+- 理由: Connect は **curate（配置）** であって所有ではないため。コメントは作品への返信として作者に届くべきもので、curator は宛先ではない。
+- Curator は自分の Channel を開けば、Connect 済み Block へのコメントを **pull で読める** ようになっています（push されないだけ）。
+- これは "no algorithm / human signature" の思想に沿った意図的な設計判断です。
+
 ---
 
 ## 1. 用語・データ構造
