@@ -601,8 +601,8 @@ footer.foot a:hover { color: var(--ink); text-decoration: underline; }
       Leave things here, quietly.
     </p>
     <div class="notice">
-      <span class="lang-ja"><b>わかりづらいポイント (1):</b><br>このプロトタイプの段階では、データは <code>このブラウザのなか</code> にだけ保存されます (= localStorage)。別端末で開きたい時は画面上部の <b>SYNC TO ANOTHER DEVICE</b> から URL を発行して、移行先で貼り付けてください。</span>
-      <span class="lang-en"><b>Tip 1:</b><br>For the prototype, data is stored <code>only in this browser</code> (localStorage). To open on another device, use <b>SYNC TO ANOTHER DEVICE</b> at the top, generate a URL, and paste it on the other side.</span>
+      <span class="lang-ja"><b>わかりづらいポイント (1):</b><br>あなたの channel と block は <b>Supabase 上に保存</b>されます (アカウント連携)。<br>同時にこのブラウザにも <code>localStorage</code> でローカルキャッシュとして残っているので、オフラインでも自分のものは見られます。<br>もし別端末に <b>ローカルキャッシュごと</b> 移したい場合は、画面上部の <b>SYNC TO ANOTHER DEVICE</b> から URL を発行 → 移行先で貼り付けてください (補助機能)。</span>
+      <span class="lang-en"><b>Tip 1:</b><br>Your channels and blocks are saved on <b>Supabase</b> (linked to your account).<br>They're also cached in this browser's <code>localStorage</code> so you can browse your own offline.<br>To migrate the <b>local cache</b> across devices, use <b>SYNC TO ANOTHER DEVICE</b> at the top to generate a URL and paste it elsewhere (an optional helper).</span>
     </div>
   </div>
   <figure class="shot">
