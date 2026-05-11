@@ -587,7 +587,10 @@ section.block.is-alt {
 }
 
 /* ──────────────── モバイル/タブレット: イラスト画像を更に小さく ──────────────── */
-/* ユーザー要望で大幅縮小 (ステップ 3 目): unit-art は 64px 上限の小さなアイコンに */
+/* ユーザー要望で大幅縮小 + per-unit サイズ調整:
+   - 01 block: 一番小さく
+   - 02 channel: もう少し大きく
+   - 03 connect / 04 footprint: 中間 */
 @media (max-width: 999px) {
   .hero-art {
     max-width: 140px;
@@ -601,6 +604,10 @@ section.block.is-alt {
     border-radius: 10px;
     margin-bottom: 12px;
   }
+  .unit-art[data-art-slot="unit-block"]   { max-width: 56px; }
+  .unit-art[data-art-slot="unit-channel"] { max-width: 110px; }
+  .unit-art[data-art-slot="unit-connect"] { max-width: 80px; }
+  .unit-art[data-art-slot="unit-footprint"] { max-width: 80px; }
   .illustration {
     margin: 16px auto;
     padding: 0 20px;
@@ -621,6 +628,10 @@ section.block.is-alt {
 }
 @media (max-width: 640px) {
   .unit-art    { max-width: 56px; }
+  .unit-art[data-art-slot="unit-block"]   { max-width: 44px; }
+  .unit-art[data-art-slot="unit-channel"] { max-width: 96px; }
+  .unit-art[data-art-slot="unit-connect"] { max-width: 64px; }
+  .unit-art[data-art-slot="unit-footprint"] { max-width: 64px; }
   .hero-art    { max-width: 120px; }
   .final-art   { max-width: 96px; }
   .illustration-box { max-width: 260px; }
