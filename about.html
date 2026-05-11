@@ -367,6 +367,10 @@ section.block.is-alt {
   color: var(--gray-2);
   text-transform: uppercase;
 }
+/* PC: channel (テーマの集合) のイラストは他より2倍大きく */
+.unit-art[data-art-slot="unit-channel"] { max-width: 220px; }
+/* PC: 01 manifesto (なぜつくったのか) のイラストは半分に */
+.illustration-box[data-art-slot="manifesto"] { max-width: 210px; aspect-ratio: 4 / 3; margin: 0 auto; }
 .unit-num {
   position: absolute;
   top: 14px;
