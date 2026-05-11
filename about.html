@@ -585,6 +585,40 @@ section.block.is-alt {
   background: var(--paper-3);
 }
 
+/* ──────────────── モバイル: イラスト画像を小さく ──────────────── */
+/* 縦長スマホで画像がデカすぎ問題の対処。
+   - hero-art (1:1) は 200px 上限に
+   - unit-art (16:9) は 180px 上限で中央寄せ
+   - illustration-box (16:5) は元のままで OK だが padding を詰めて全体を小さく */
+@media (max-width: 640px) {
+  .hero-art {
+    max-width: 200px;
+    border-radius: 18px;
+  }
+  .unit-art {
+    max-width: 180px;
+    margin-left: auto;
+    margin-right: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+  }
+  .illustration {
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+  .illustration-box {
+    aspect-ratio: 16 / 6;
+    border-radius: 18px;
+  }
+  .illustration-box > img[src$=".svg"] {
+    padding: 22px;
+  }
+  .final-art {
+    max-width: 220px;
+    aspect-ratio: 1 / 1;
+  }
+}
+
 /* ──────────────── FOOTER ──────────────── */
 footer.foot {
   padding: 36px 28px 56px;
