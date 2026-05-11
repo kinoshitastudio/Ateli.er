@@ -3968,6 +3968,37 @@
   }
   .auth-form-status.is-ok { color: var(--ink); }
   .auth-form-status.is-err { color: #C8392E; }
+
+  /* ─── Image zoom modal (lightweight) ─── */
+  .img-zoom-bg {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.86);
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .img-zoom-bg.is-open { display: flex; }
+  .img-zoom-bg img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    cursor: zoom-out;
+    user-select: none; -webkit-user-drag: none;
+  }
+  .img-zoom-close {
+    position: absolute; top: 14px; right: 18px;
+    background: transparent; border: 0;
+    color: rgba(255,255,255,0.85);
+    font-size: 28px; line-height: 1; cursor: pointer;
+    padding: 6px 10px;
+    font-family: inherit;
+  }
+  .img-zoom-close:hover { color: #fff; }
+  @media (max-width: 600px) {
+    .img-zoom-bg { padding: 12px; }
+    .img-zoom-close { top: 8px; right: 10px; font-size: 24px; }
+  }
 </style>
 </head>
 <body>
@@ -5388,7 +5419,7 @@
       // late paints that look like images flickering in/out of the lane.
       // onload class swap fades the img in so a still-decoding frame
       // doesn't slide in as a gray rectangle.
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
+      return `<img src="${src}" alt="" data-zoomable="1" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
     }
     // Phase A-refactor 2 (2026-04-29): no picsum fallback for audio. The
     // random per-seed image was confusing — visitor saw mountain / lake /
@@ -5401,7 +5432,7 @@
   function buildBlockImage(block, w=240, h=240) {
     const src = block.imageUrl;
     if (src) {
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
+      return `<img src="${src}" alt="" data-zoomable="1" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
     }
     // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
     // as buildPieceImage. Image blocks should always have imageUrl, but if
@@ -8681,7 +8712,7 @@
     if (cancelBtn) cancelBtn.disabled = true;
     try {
       // Mainphrase / lang / meta default — owner can refine via channel EDIT.
-      const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: 'now playing' });
+      const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: '' });
       refreshAllViews();
       const sel = document.getElementById('bChannel');
       if (sel && newId) sel.value = newId;
@@ -8748,7 +8779,7 @@
     // Phase E-prep: new channels default to public visibility.
     // Owner can flip to draft in channel edit form; cascade hides all
     // contained blocks from courtyard view.
-    const c = { id, label, mainPhrase, lang: lang || 'mixed', meta: meta || 'now playing', isPublic: true, userCreated: true, createdAt: now, updatedAt: now };
+    const c = { id, label, mainPhrase, lang: lang || 'mixed', meta: meta == null ? '' : meta, isPublic: true, userCreated: true, createdAt: now, updatedAt: now };
     CHANNELS.push(c);
     // Persist via channel edits (treat user-created as a patch on a non-existent base + a marker).
     // Simpler: keep a separate localStorage list for user-created channels.
@@ -10114,7 +10145,7 @@
           label: label.trim(),
           mainPhrase: phrase.trim(),
           lang: 'mixed',
-          meta: 'now playing',
+          meta: '',
         });
         if (newId) {
           const ok = _tryConnect(id, newId);
@@ -13618,6 +13649,54 @@
   ['touchstart','click','scroll'].forEach(ev => {
     window.addEventListener(ev, ensureMarqueesPlaying, { once: true, passive: true });
   });
+</script>
+
+<!-- Image zoom modal -->
+<div class="img-zoom-bg" id="imgZoomBg" aria-hidden="true">
+  <button class="img-zoom-close" id="imgZoomClose" type="button" aria-label="閉じる">×</button>
+  <img id="imgZoomImg" alt="">
+</div>
+<script>
+(function () {
+  const bg = document.getElementById('imgZoomBg');
+  const im = document.getElementById('imgZoomImg');
+  const close = document.getElementById('imgZoomClose');
+  if (!bg || !im) return;
+
+  function open(src) {
+    im.src = src;
+    bg.classList.add('is-open');
+    bg.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function shut() {
+    bg.classList.remove('is-open');
+    bg.setAttribute('aria-hidden', 'true');
+    im.src = '';
+    document.body.style.overflow = '';
+  }
+
+  // Delegate clicks on any data-zoomable image
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t && t.tagName === 'IMG' && t.dataset.zoomable === '1' && t.src) {
+      // Skip if inside an editing form / drag handle / etc.
+      if (t.closest('[contenteditable="true"]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      open(t.src);
+    }
+  }, true);
+
+  bg.addEventListener('click', (e) => {
+    // Click anywhere on the backdrop (including the image itself) closes
+    if (e.target === bg || e.target === im || e.target === close) shut();
+  });
+  close.addEventListener('click', shut);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && bg.classList.contains('is-open')) shut();
+  });
+})();
 </script>
 
 </body>
