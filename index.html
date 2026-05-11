@@ -2545,6 +2545,7 @@
     margin: 0 auto 56px;    /* center horizontally */
   }
   .piece-modal-image svg { width: 100%; height: 100%; display: block; }
+  .piece-modal-image img { cursor: zoom-in; }
 
   .piece-modal-num {
     font-family: var(--mono);
@@ -5419,7 +5420,7 @@
       // late paints that look like images flickering in/out of the lane.
       // onload class swap fades the img in so a still-decoding frame
       // doesn't slide in as a gray rectangle.
-      return `<img src="${src}" alt="" data-zoomable="1" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
     }
     // Phase A-refactor 2 (2026-04-29): no picsum fallback for audio. The
     // random per-seed image was confusing — visitor saw mountain / lake /
@@ -5432,7 +5433,7 @@
   function buildBlockImage(block, w=240, h=240) {
     const src = block.imageUrl;
     if (src) {
-      return `<img src="${src}" alt="" data-zoomable="1" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
     }
     // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
     // as buildPieceImage. Image blocks should always have imageUrl, but if
@@ -13676,16 +13677,18 @@
     document.body.style.overflow = '';
   }
 
-  // Delegate clicks on any data-zoomable image
+  // Delegate clicks: ブロック詳細 (piece-modal-image) 内の画像だけズーム発動。
+  // ※ 以前は data-zoomable="1" の付いた全画像を対象にしていたが、それだと
+  //   フィード/マーキー/サムネをタップしてもポップアップしてしまう。
+  //   要件は「ブロックを開いた詳細ビュー内の画像を拡大」のみ。
   document.addEventListener('click', (e) => {
     const t = e.target;
-    if (t && t.tagName === 'IMG' && t.dataset.zoomable === '1' && t.src) {
-      // Skip if inside an editing form / drag handle / etc.
-      if (t.closest('[contenteditable="true"]')) return;
-      e.preventDefault();
-      e.stopPropagation();
-      open(t.src);
-    }
+    if (!t || t.tagName !== 'IMG' || !t.src) return;
+    if (!t.closest('.piece-modal-image')) return;
+    if (t.closest('[contenteditable="true"]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    open(t.src);
   }, true);
 
   bg.addEventListener('click', (e) => {
