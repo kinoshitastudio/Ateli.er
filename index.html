@@ -12034,8 +12034,20 @@
         if (feedBackBtn) {
           e.preventDefault();
           _returnToFeed = false;
-          closePieceModal();
-          openModal('pieces');
+          // 修正 (2026-05-11): about.html 経由でアプリに来た時、
+          // closePieceModal() の history.back() がブラウザ履歴を消費して
+          // 結果 about.html まで戻ってしまうバグ対処。
+          // history.back を使わず silently に DOM/navStack を更新 +
+          // history.replaceState で pieceModal エントリを modal エントリに置換する。
+          $('#pieceModal').classList.remove('is-open');
+          const _pmIdx = navStack.lastIndexOf('pieceModal');
+          if (_pmIdx >= 0) navStack.splice(_pmIdx, 1);
+          currentBlockModalId = null;
+          $('#modal').classList.add('is-open');
+          if (!navStack.includes('modal')) navStack.push('modal');
+          if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
+          // 履歴エントリを pieceModal → modal に置換 (back ボタンで戻る先は変更前と同じ)
+          try { history.replaceState({ atelierNav: 'modal' }, ''); } catch (_) {}
           setTimeout(() => {
             setTab('feed');
             // Restore scroll AFTER the feed pane is active (its content height
