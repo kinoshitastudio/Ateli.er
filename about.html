@@ -585,22 +585,21 @@ section.block.is-alt {
   background: var(--paper-3);
 }
 
-/* ──────────────── モバイル: イラスト画像を小さく ──────────────── */
-/* 縦長スマホで画像がデカすぎ問題の対処。
-   - hero-art (1:1) は 200px 上限に
-   - unit-art (16:9) は 180px 上限で中央寄せ
-   - illustration-box (16:5) は元のままで OK だが padding を詰めて全体を小さく */
-@media (max-width: 640px) {
+/* ──────────────── モバイル/タブレット: イラスト画像を小さく ──────────────── */
+/* 縦長スマホ + タブレット (1col / 2col) で画像がカード幅占有しすぎ問題の対処。
+   ユーザー要望で更にコンパクトに (120px 上限) */
+@media (max-width: 999px) {
   .hero-art {
-    max-width: 200px;
+    max-width: 180px;
     border-radius: 18px;
   }
   .unit-art {
-    max-width: 180px;
+    max-width: 120px;
     margin-left: auto;
     margin-right: auto;
     aspect-ratio: 1 / 1;
     border-radius: 12px;
+    margin-bottom: 14px;
   }
   .illustration {
     margin: 20px auto;
@@ -614,9 +613,14 @@ section.block.is-alt {
     padding: 22px;
   }
   .final-art {
-    max-width: 220px;
+    max-width: 180px;
     aspect-ratio: 1 / 1;
   }
+}
+@media (max-width: 640px) {
+  .unit-art { max-width: 100px; }
+  .hero-art { max-width: 160px; }
+  .final-art { max-width: 140px; }
 }
 
 /* ──────────────── FOOTER ──────────────── */
