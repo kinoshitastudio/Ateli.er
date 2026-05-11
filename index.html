@@ -8662,7 +8662,13 @@
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
     const writeable = CHANNELS.filter(c => _cwc.has(c.id) || _uci.has(c.id));
-    sel.innerHTML = writeable.map(c => `<option value="${c.id}">${escapeHtml(c.label)} — ${escapeHtml(c.meta)}</option>`).join('')
+    // meta が空のチャンネルで "label — " と空ダッシュが出るバグ対策:
+    // meta が truthy なときだけ "— meta" を付ける
+    sel.innerHTML = writeable.map(c => {
+      const lbl = escapeHtml(c.label);
+      const m = (c.meta || '').trim();
+      return `<option value="${c.id}">${lbl}${m ? ' — ' + escapeHtml(m) : ''}</option>`;
+    }).join('')
                    + `<option value="__new__">+ create new channel…</option>`;
     // Preserve previous selection if still valid; otherwise default to first
     if (prev && writeable.some(c => c.id === prev)) {
@@ -10862,9 +10868,10 @@
     const lastActivityTs = Math.max(channel.updatedAt || 0, ...(itemTs.length ? itemTs : [0]));
     const createdLabel = channel.createdAt ? ageString(channel.createdAt) : '—';
     const editedLabel  = lastActivityTs ? ageString(lastActivityTs) : '—';
+    const _m1 = (channel.meta || '').trim();
     return `
       <div class="block-channel-info">
-        <span class="meta">${escapeHtml(channel.meta || '')} · ${count} ${blocksLabel}</span>
+        <span class="meta">${_m1 ? escapeHtml(_m1) + ' · ' : ''}${count} ${blocksLabel}</span>
         <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${_ownerTextLink()}</span>
       </div>
     `;
@@ -10944,10 +10951,13 @@
             </div>
           </div>
         </div>
-        ${ channel ? `
-          <span class="meta">${escapeHtml(channel.meta || '')} · ${count} ${blocksLabel}</span>
+        ${ channel ? (() => {
+          const _m = (channel.meta || '').trim();
+          return `
+          <span class="meta">${_m ? escapeHtml(_m) + ' · ' : ''}${count} ${blocksLabel}</span>
           <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${isExternal ? `<a class="bc-owner-text bc-external" data-bc="user" data-uid="${escapeHtml(block?._ownerId || '')}" data-handle="${escapeHtml(ownerHandle)}" style="cursor:pointer;">@${escapeHtml(ownerHandle)}</a>` : _ownerTextLink()}</span>
-        ` : '' }
+          `;
+        })() : '' }
       </div>
     `;
   }
