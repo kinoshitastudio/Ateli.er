@@ -2377,6 +2377,106 @@
   .issue-popover .it .ipmeta { font-size: 9.5px; color: var(--gray); }
 
   /* ──────────────── MANIFESTO MODAL ──────────────── */
+  /* ──────── BRAND INFO MODAL (ロゴクリックで開く) ──────── */
+  .brand-info-modal {
+    position: fixed; inset: 0;
+    z-index: 240; /* above piece-modal */
+    display: none;
+    align-items: flex-start; justify-content: center;
+    padding: 56px 24px 56px;
+    overflow-y: auto;
+  }
+  .brand-info-modal.is-open { display: flex; }
+  .brand-info-modal::before {
+    content: ""; position: absolute; inset: 0;
+    background: var(--paper);
+  }
+  .brand-info-shell {
+    position: relative;
+    width: 480px; max-width: 100%;
+    padding: 0;
+  }
+  .brand-info-close {
+    position: absolute; top: -34px; right: 0;
+    background: transparent; border: 0;
+    color: var(--gray); font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em;
+    cursor: pointer; padding: 6px;
+    text-transform: uppercase;
+  }
+  .brand-info-close:hover { color: var(--ink); }
+  .brand-info-logo {
+    font-family: var(--mono);
+    font-weight: 500; font-size: 22px;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+  .brand-info-logo sup { font-size: 0.5em; vertical-align: super; color: var(--gray); }
+  .brand-info-tag {
+    font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: 0.18em; color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .brand-info-lang {
+    display: inline-flex; gap: 0;
+    margin-bottom: 22px;
+  }
+  .brand-info-lang button {
+    background: transparent; border: 1px solid var(--line);
+    color: var(--gray); font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.04em;
+    padding: 4px 12px; cursor: pointer;
+  }
+  .brand-info-lang button + button { border-left: 0; }
+  .brand-info-lang button.is-active {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+  }
+  .brand-info-modal .bi-ja, .brand-info-modal .bi-en { display: none; }
+  .brand-info-modal[data-lang="ja"] .bi-ja { display: block; }
+  .brand-info-modal[data-lang="en"] .bi-en { display: block; }
+  .brand-info-modal[data-lang="ja"] .bi-ja-inline,
+  .brand-info-modal[data-lang="en"] .bi-en-inline { display: inline; }
+  .brand-info-modal .bi-ja-inline, .brand-info-modal .bi-en-inline { display: none; }
+  .brand-info-desc {
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    margin-bottom: 28px;
+  }
+  .brand-info-section {
+    border-top: 1px solid var(--line-soft);
+    padding: 18px 0 0;
+    margin-bottom: 18px;
+  }
+  .brand-info-section h4 {
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.22em; color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .brand-info-section ul { list-style: none; padding: 0; }
+  .brand-info-section li {
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+  .brand-info-section a {
+    color: var(--ink); text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .brand-info-section a:hover {
+    border-bottom-color: var(--ink);
+  }
+  .brand-info-section .small {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--gray);
+    letter-spacing: 0.08em;
+    margin-left: 6px;
+  }
   .manifesto-modal {
     position: fixed; inset: 0;
     z-index: 220;
@@ -4576,6 +4676,77 @@
       <input id="searchInput" type="search" placeholder="search channels and blocks…" autocomplete="off" spellcheck="false"
              style="width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--line); padding: 14px 0; font-family: var(--sans-jp); font-weight: 400; font-size: 16px; color: var(--ink); outline: none; margin-bottom: 36px; letter-spacing: -0.005em;">
       <div id="searchResults"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BRAND INFO MODAL (ロゴクリックで開く) -->
+<div class="brand-info-modal" id="brandInfoModal" data-lang="ja">
+  <div class="brand-info-shell">
+    <button class="brand-info-close" id="brandInfoClose">— close</button>
+
+    <div class="brand-info-logo">Ateli<span style="color:var(--ink);">.</span>er<sup>0</sup></div>
+    <div class="brand-info-tag">
+      <span class="bi-ja-inline">招待制 · 静かな中庭</span>
+      <span class="bi-en-inline">invite only · quiet courtyard</span>
+    </div>
+
+    <div class="brand-info-lang" role="tablist">
+      <button type="button" data-lang="ja" class="is-active">JA</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+
+    <div class="brand-info-desc">
+      <span class="bi-ja">未完成のまま、そっと置いておく場所。<br>アルゴリズムも、ランキングも、いいね数もありません。<br>静かな対話のための小さな中庭です。</span>
+      <span class="bi-en">A place to leave things, still unfinished.<br>No algorithms, no rankings, no like counts.<br>A small courtyard for quiet exchange.</span>
+    </div>
+
+    <div class="brand-info-section">
+      <h4><span class="bi-ja-inline">読む</span><span class="bi-en-inline">read</span></h4>
+      <ul>
+        <li>
+          <a href="about.html">
+            <span class="bi-ja-inline">about / アトリエとは</span>
+            <span class="bi-en-inline">about / what is Atelier</span>
+          </a>
+          <span class="small">→</span>
+        </li>
+        <li>
+          <a href="howto.html">
+            <span class="bi-ja-inline">how to / 使い方</span>
+            <span class="bi-en-inline">how to / usage walk-through</span>
+          </a>
+          <span class="small">→</span>
+        </li>
+        <li>
+          <a href="terms.html">terms · privacy · community</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="brand-info-section">
+      <h4><span class="bi-ja-inline">フォロー</span><span class="bi-en-inline">follow</span></h4>
+      <ul>
+        <li>
+          <a href="https://x.com/atelistudio" target="_blank" rel="noopener">X · @atelistudio</a>
+        </li>
+        <li>
+          <a href="https://www.instagram.com/atelistudio.er/" target="_blank" rel="noopener">Instagram · @atelistudio.er</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="brand-info-section">
+      <h4><span class="bi-ja-inline">問い合わせ / サポート</span><span class="bi-en-inline">contact / support</span></h4>
+      <ul>
+        <li>
+          <a href="mailto:tkinoshita.studio@gmail.com">tkinoshita.studio@gmail.com</a>
+        </li>
+        <li style="color:var(--gray);font-size:11.5px;line-height:1.7;font-family:var(--mono);letter-spacing:0.04em;">
+          <span class="bi-ja-inline">運営: kinoshita studio (個人プロジェクト)</span>
+          <span class="bi-en-inline">operated by kinoshita studio (indie project)</span>
+        </li>
+      </ul>
     </div>
   </div>
 </div>
@@ -11914,10 +12085,33 @@
     if (navStack.includes('manifesto')) navCloseExternal('manifesto');
     else $('#manifestoModal').classList.remove('is-open');
   }
-  // Topbar logo → home (close all overlays + scroll to top)
-  $('#brandTrigger').addEventListener('click', goHome);
+  // Topbar logo → brand info modal (about / howto / SNS / contact)
+  // ※ ホームに戻りたい場合は ESC か piece-modal の breadcrumb "Ateli.er" から
+  function openBrandInfo() {
+    if (!$('#brandInfoModal').classList.contains('is-open')) navOpen('brandInfo');
+    $('#brandInfoModal').classList.add('is-open');
+  }
+  function closeBrandInfo() {
+    if (navStack.includes('brandInfo')) navCloseExternal('brandInfo');
+    else $('#brandInfoModal').classList.remove('is-open');
+  }
+  $('#brandTrigger').addEventListener('click', openBrandInfo);
   $('#brandTrigger').style.cursor = 'pointer';
-  $('#brandTrigger').setAttribute('title', 'home');
+  $('#brandTrigger').setAttribute('title', 'about · how to · contact');
+  $('#brandInfoClose').addEventListener('click', closeBrandInfo);
+  $('#brandInfoModal').addEventListener('click', (e) => {
+    if (e.target.id === 'brandInfoModal') closeBrandInfo();
+  });
+  // JA/EN タブ切替
+  document.querySelectorAll('#brandInfoModal .brand-info-lang button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang;
+      $('#brandInfoModal').setAttribute('data-lang', lang);
+      document.querySelectorAll('#brandInfoModal .brand-info-lang button').forEach(b => {
+        b.classList.toggle('is-active', b.dataset.lang === lang);
+      });
+    });
+  });
   $('#manifestoClose').addEventListener('click', closeManifesto);
   $('#manifestoModal').addEventListener('click', (e) => {
     if (e.target.id === 'manifestoModal') closeManifesto();
@@ -11950,6 +12144,7 @@
       case 'pieceModal':    closePieceModalInner(); break;
       case 'searchModal':   closeSearchInner(); break;
       case 'manifesto':     $('#manifestoModal').classList.remove('is-open'); break;
+      case 'brandInfo':     $('#brandInfoModal').classList.remove('is-open'); break;
       case 'channelDetail': backToChannelGridInner(); break;
     }
   }
