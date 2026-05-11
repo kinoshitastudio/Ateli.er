@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ateli.er — how to / 使い方</title>
+<meta name="description" content="Atelier の使い方を実画面で解説。My Channel / Feed / Explore / Comment / Upload / Connect の各機能をスクショと図解で。">
+<meta name="theme-color" content="#DCDBD5">
+
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+
+<meta property="og:title" content="Ateli.er — how to / 使い方">
+<meta property="og:description" content="Atelier の使い方を実画面で解説。">
+<meta property="og:image" content="https://atelistudio.com/og-image.png">
+<meta property="og:url" content="https://atelistudio.com/howto.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Ateli.er">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ateli.er — how to">
+<meta name="twitter:description" content="Atelier の使い方を実画面で解説。">
+<meta name="twitter:image" content="https://atelistudio.com/og-image.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --paper:    #DCDBD5;
+  --paper-2:  #D2D1CB;
+  --paper-3:  #E5E2DA;
+  --ink:      #1600A2;
+  --ink-2:    #1600A2;
+  --gray:     rgba(22,0,162,0.62);
+  --gray-2:   rgba(22,0,162,0.42);
+  --gray-3:   rgba(22,0,162,0.22);
+  --line:     rgba(22,0,162,0.32);
+  --line-soft:rgba(22,0,162,0.16);
+  --sans:    'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  --mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.85;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: inherit; }
+
+/* ──────── RAIL (top nav) ──────── */
+.rail {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--paper);
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(8px);
+}
+.rail-brand a {
+  font-family: var(--mono); font-weight: 500;
+  font-size: 14px; text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.rail-right { display: flex; align-items: center; gap: 14px; font-family: var(--mono); font-size: 12px; }
+.rail-link { text-decoration: none; color: var(--ink); }
+.rail-link:hover { text-decoration: underline; }
+.rail-link.is-here { color: var(--gray-2); pointer-events: none; }
+.lang-toggle button {
+  background: transparent; border: 1px solid var(--line);
+  color: var(--ink); font-family: var(--mono); font-size: 11px;
+  padding: 3px 9px; cursor: pointer; letter-spacing: 0.04em;
+}
+.lang-toggle button.is-active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.lang-toggle button + button { border-left: 0; }
+.lang-ja, .lang-en { display: none; }
+html[data-lang="ja"] .lang-ja { display: inline; }
+html[data-lang="en"] .lang-en { display: inline; }
+html[data-lang="ja"] .lang-ja.is-block { display: block; }
+html[data-lang="en"] .lang-en.is-block { display: block; }
+
+/* ──────── HERO ──────── */
+.hero {
+  padding: 80px 24px 56px;
+  max-width: 880px; margin: 0 auto;
+  text-align: center;
+}
+.hero-eyebrow {
+  display: inline-block;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.22em; color: var(--gray);
+  border: 1px solid var(--line);
+  padding: 4px 12px;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+.hero h1 {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 300; line-height: 1.35;
+  letter-spacing: -0.02em;
+  margin-bottom: 18px;
+}
+.hero h1 em { font-style: italic; font-weight: 500; }
+.hero-sub {
+  font-size: 15px; color: var(--gray);
+  line-height: 1.95; max-width: 620px;
+  margin: 0 auto;
+}
+
+/* ──────── TOC (5 tabs) ──────── */
+.toc {
+  max-width: 880px; margin: 0 auto;
+  padding: 40px 24px;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+.toc-head {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.22em; color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 22px;
+}
+.toc-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+.toc-tile {
+  border: 1px solid var(--line);
+  padding: 16px 12px;
+  text-decoration: none;
+  text-align: center;
+  transition: background 0.2s, transform 0.2s;
+}
+.toc-tile:hover {
+  background: var(--paper-3);
+  transform: translateY(-2px);
+}
+.toc-tile-num {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--gray-2); letter-spacing: 0.15em;
+  margin-bottom: 6px;
+}
+.toc-tile-name {
+  font-family: var(--mono);
+  font-size: 13px; font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.toc-tile-name em { color: var(--ink); font-style: normal; }
+@media (max-width: 720px) {
+  .toc-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ──────── SECTION ──────── */
+.section {
+  max-width: 980px; margin: 0 auto;
+  padding: 72px 24px 24px;
+}
+.section + .section {
+  border-top: 1px dashed var(--line-soft);
+  margin-top: 16px;
+}
+.section-num {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.22em; color: var(--gray);
+  margin-bottom: 12px;
+}
+.section-num em { color: var(--ink); font-style: normal; }
+.section-title {
+  font-size: clamp(24px, 3.5vw, 34px);
+  font-weight: 400; line-height: 1.4;
+  letter-spacing: -0.015em;
+  margin-bottom: 18px;
+}
+.section-title em {
+  font-family: var(--mono);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.92em;
+}
+.section-desc {
+  font-size: 15px; line-height: 1.95;
+  color: var(--ink); max-width: 720px;
+  margin-bottom: 28px;
+}
+.section-desc p + p { margin-top: 12px; }
+.section-desc strong { font-weight: 500; }
+.section-desc code {
+  font-family: var(--mono); font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 1px 6px;
+  border: 1px solid var(--line-soft);
+}
+
+/* screenshot frame */
+.shot {
+  margin: 0 0 32px;
+  border: 1px solid var(--line);
+  background: var(--paper-3);
+  padding: 14px;
+}
+.shot img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--line-soft);
+}
+.shot-caption {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--gray); margin-top: 10px;
+  letter-spacing: 0.06em;
+  display: flex; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.shot-caption b {
+  color: var(--ink); font-weight: 500;
+  font-family: inherit;
+}
+
+/* annotated callouts (right of screenshots) */
+.shot-callouts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+@media (min-width: 880px) {
+  .shot-callouts { grid-template-columns: 1fr 1fr 1fr; }
+}
+.callout {
+  background: var(--paper-3);
+  border: 1px solid var(--line-soft);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.callout-tag {
+  display: inline-block;
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.16em;
+  background: var(--ink); color: var(--paper);
+  padding: 2px 7px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+/* notice box for confusing parts */
+.notice {
+  background: rgba(22,0,162,0.04);
+  border-left: 3px solid var(--ink);
+  padding: 14px 18px;
+  margin: 0 0 28px;
+  font-size: 13.5px;
+  line-height: 1.85;
+}
+.notice b { font-weight: 500; }
+
+/* connect diagram (key feature visual) */
+.diagram {
+  background: var(--paper-3);
+  border: 1px solid var(--line);
+  padding: 28px 22px;
+  margin: 0 0 28px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.85;
+  text-align: center;
+  color: var(--ink);
+  overflow-x: auto;
+}
+.diagram pre {
+  font-family: inherit;
+  white-space: pre;
+  text-align: left;
+  display: inline-block;
+}
+
+/* ──────── FINAL CTA ──────── */
+.final {
+  margin: 48px 16px 24px;
+  padding: 48px 28px;
+  background: var(--ink);
+  color: var(--paper);
+  text-align: center;
+}
+@media (min-width: 720px) {
+  .final { margin: 48px 32px 24px; padding: 64px 40px; }
+}
+.final-title {
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 300; line-height: 1.4;
+  margin-bottom: 16px;
+}
+.final-sub {
+  font-size: 14px; color: rgba(220,219,213,0.7);
+  margin-bottom: 28px;
+  line-height: 1.85;
+}
+.btn {
+  display: inline-block;
+  padding: 12px 28px;
+  border: 1px solid currentColor;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.btn-invert {
+  background: var(--paper); color: var(--ink);
+  border-color: var(--paper);
+}
+.btn-invert:hover { background: transparent; color: var(--paper); }
+
+/* ──────── FOOTER ──────── */
+footer.foot {
+  padding: 28px 24px 48px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--gray);
+  text-align: center;
+}
+footer.foot a { color: var(--gray); text-decoration: none; margin: 0 8px; }
+footer.foot a:hover { color: var(--ink); text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .hero { padding: 56px 18px 40px; }
+  .section { padding: 48px 18px 20px; }
+  .toc { padding: 32px 18px; }
+  .shot { padding: 8px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ──────── RAIL ──────── -->
+<div class="rail">
+  <div class="rail-brand"><a href="/">Ateli.er</a></div>
+  <div class="rail-right">
+    <a href="about.html" class="rail-link">about</a>
+    <span style="color:var(--line-soft);">·</span>
+    <a href="/" class="rail-link">open</a>
+    <span style="color:var(--line-soft);">·</span>
+    <div class="lang-toggle" role="tablist">
+      <button type="button" data-lang="ja" class="is-active">JA</button>
+      <button type="button" data-lang="en">EN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ──────── HERO ──────── -->
+<section class="hero">
+  <span class="hero-eyebrow">
+    <span class="lang-ja">使い方</span><span class="lang-en">How to</span>
+  </span>
+  <h1>
+    <span class="lang-ja">Ateli.er の <em>歩き方</em>。</span>
+    <span class="lang-en">A short <em>walk</em> through Ateli.er.</span>
+  </h1>
+  <p class="hero-sub">
+    <span class="lang-ja">画面のスクショで、5 つのタブと core 機能 (Connect) を解説します。<br>はじめての方は上から順に。慣れている方は気になる項目に飛んでください。</span>
+    <span class="lang-en">A visual walk-through of the 5 tabs and the core <em>Connect</em> feature.<br>New users: read top to bottom. Returning: jump to what interests you.</span>
+  </p>
+</section>
+
+<!-- ──────── TOC ──────── -->
+<nav class="toc" aria-label="contents">
+  <div class="toc-head">— 5 tabs · 1 core feature</div>
+  <div class="toc-grid">
+    <a href="#my-channel" class="toc-tile">
+      <div class="toc-tile-num">01</div>
+      <div class="toc-tile-name"><em>my channel</em></div>
+    </a>
+    <a href="#feed" class="toc-tile">
+      <div class="toc-tile-num">02</div>
+      <div class="toc-tile-name"><em>feed</em></div>
+    </a>
+    <a href="#explore" class="toc-tile">
+      <div class="toc-tile-num">03</div>
+      <div class="toc-tile-name"><em>explore</em></div>
+    </a>
+    <a href="#comment" class="toc-tile">
+      <div class="toc-tile-num">04</div>
+      <div class="toc-tile-name"><em>comment</em></div>
+    </a>
+    <a href="#upload" class="toc-tile">
+      <div class="toc-tile-num">05</div>
+      <div class="toc-tile-name"><em>upload</em></div>
+    </a>
+  </div>
+</nav>
+
+<!-- ──────── TOP PAGE ──────── -->
+<section class="section" id="top">
+  <div class="section-num">— <em>00</em> / TOP</div>
+  <h2 class="section-title">
+    <span class="lang-ja">トップページ <em>— ateli.er</em></span>
+    <span class="lang-en">Top page <em>— ateli.er</em></span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      アクセスして最初に出てくるのが <strong>トップページ</strong>。横スクロールするテキストの帯と、画像のサムネイル列で、住人たちが置いた block がランダムに流れます。
+    </p>
+    <p class="lang-en">
+      The <strong>top page</strong> is what you see first. Horizontal marquees of text and image thumbnails — blocks left by residents, scrolling at their own pace.
+    </p>
+    <p class="lang-ja">
+      右上に <code>my channel · feed · comment · upload</code> のタブ。これがアトリエの心臓部です。
+    </p>
+    <p class="lang-en">
+      The top-right has tabs: <code>my channel · feed · comment · upload</code>. This is the heart of Atelier.
+    </p>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/01-top.png" alt="Atelier top page">
+    <figcaption class="shot-caption">
+      <span><b>top page</b> / 最初の画面</span>
+      <span>marquees + 4 tabs</span>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ──────── MY CHANNEL ──────── -->
+<section class="section" id="my-channel">
+  <div class="section-num">— <em>01</em> / MY CHANNEL</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>My Channel</em> — 自分の作品置き場</span>
+    <span class="lang-en"><em>My Channel</em> — your own shelf</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      自分が作った <strong>channel</strong> と、その中に置いた <strong>block</strong> の一覧。アトリエの中で「自分の場所」になります。
+    </p>
+    <p class="lang-en">
+      A list of <strong>channels</strong> you've created and the <strong>blocks</strong> you've placed inside them. Your space within Atelier.
+    </p>
+    <div class="notice">
+      <span class="lang-ja"><b>わかりづらいポイント:</b><br>「My Channel」の名前にハンドル名 (例: <code>Taka</code>) が出るので、自分が誰として見えてるかがわかります。タイトル直下に <code>6 channels · 23 blocks</code> のように数字が出ます。グリッドはすべて自分が置いた block。</span>
+      <span class="lang-en"><b>Tip:</b><br>Your handle (e.g. <code>Taka</code>) is shown in the title, so you know how others see you. Right under the title: <code>6 channels · 23 blocks</code>. Every card in the grid is something you placed.</span>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/02-mychannel.png" alt="My Channel view">
+    <figcaption class="shot-caption">
+      <span><b>My Channel</b> / 自分の channel 一覧</span>
+      <span>+ edit ボタンで並び替え</span>
+    </figcaption>
+  </figure>
+  <div class="shot-callouts">
+    <div class="callout">
+      <span class="callout-tag">channel</span>
+      <span class="lang-ja"><b>channel</b> = 連作のテーマ。ひとつの作品郡を入れる "枠"。</span>
+      <span class="lang-en"><b>channel</b> = a theme. A "shelf" for a related set of works.</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">block</span>
+      <span class="lang-ja"><b>block</b> = 1 つの作品。audio / image / text / url の 4 種類のいずれか。</span>
+      <span class="lang-en"><b>block</b> = a single work. One of: audio / image / text / url.</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">edit</span>
+      <span class="lang-ja"><b>— edit</b> でグリッドの並び替え、 channel 名の変更、削除など。</span>
+      <span class="lang-en"><b>— edit</b> to reorder, rename channels, delete blocks, etc.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ──────── FEED ──────── -->
+<section class="section" id="feed">
+  <div class="section-num">— <em>02</em> / FEED</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Feed</em> — 全 channel の活動を時系列で</span>
+    <span class="lang-en"><em>Feed</em> — all activity, newest first</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      自分のすべての channel に置いた block を <strong>新しい順</strong> にまとめたタイムライン。アルゴリズムなし、ランキングなし、いいね数なし。<strong>flat な記録</strong> です。
+    </p>
+    <p class="lang-en">
+      A flat, chronological timeline of every block you've placed — newest first. No algorithm. No ranking. No like counts. Just a record.
+    </p>
+    <p class="lang-ja">
+      例: <code>@Taka placed 2 images in BMboard</code> のように、誰が・どの channel に・何を置いたかが 1 行で出ます。
+    </p>
+    <p class="lang-en">
+      Format: <code>@Taka placed 2 images in BMboard</code> — who, what, where, in one line.
+    </p>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/03-feed.png" alt="Feed view">
+    <figcaption class="shot-caption">
+      <span><b>Feed</b> / 時系列の活動</span>
+      <span>26 blocks · 6 channels</span>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ──────── EXPLORE ──────── -->
+<section class="section" id="explore">
+  <div class="section-num">— <em>03</em> / EXPLORE</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Explore</em> — 他の住人を見にいく</span>
+    <span class="lang-en"><em>Explore</em> — visit other tenants</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      アトリエに住む <strong>他の人たち (Residents)</strong> と、彼らが <strong>Public に公開した block</strong> をまとめて見る場所。
+    </p>
+    <p class="lang-en">
+      A list of <strong>other residents</strong> and the <strong>blocks they've made public</strong>.
+    </p>
+    <div class="notice">
+      <span class="lang-ja"><b>わかりづらいポイント:</b><br>「My Channel」が <em>自分</em> の作品なら、「Explore」は <em>他人</em> の作品。residents セクションでハンドル名と参加日が、その下に public blocks の thumbnail が並びます。クリックで block 詳細へ。</span>
+      <span class="lang-en"><b>Tip:</b><br>My Channel = your own. Explore = everyone else. The residents row shows other users' handles + join date; below is a grid of their public blocks. Click any to see the full block.</span>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/04-explore.png" alt="Explore view">
+    <figcaption class="shot-caption">
+      <span><b>Explore</b> / 他のテナント・public blocks</span>
+      <span>residents + grid</span>
+    </figcaption>
+  </figure>
+  <div class="shot-callouts">
+    <div class="callout">
+      <span class="callout-tag">residents</span>
+      <span class="lang-ja">アトリエに住む人のリスト。ハンドル + 参加日。クリックでその人の public channel へ。</span>
+      <span class="lang-en">List of residents — handle + join date. Click to see their public channels.</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">public</span>
+      <span class="lang-ja">他の人が <b>Public に設定した block のみ</b> がここに出ます。Draft はオーナーだけが見られる。</span>
+      <span class="lang-en">Only <b>blocks set to Public</b> appear here. Drafts stay with the owner.</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">silent</span>
+      <span class="lang-ja">フォロー機能なし、いいねなし。<b>静かに見にいくだけ</b>の場所。</span>
+      <span class="lang-en">No follow, no like. Just a place to <b>quietly look in</b>.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ──────── COMMENT ──────── -->
+<section class="section" id="comment">
+  <div class="section-num">— <em>04</em> / COMMENT</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Comment</em> — 短いひとこと</span>
+    <span class="lang-en"><em>Comment</em> — single-line replies</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      自分の block に届いた <strong>短いコメント</strong> の一覧。アトリエでは「コメント = ひとこと」と決めています。
+      返信通知も、ネストも、長文もありません。<strong>短く・ひとつだけ</strong>。
+    </p>
+    <p class="lang-en">
+      A list of <strong>short single-line replies</strong> placed on your blocks.
+      No reply threads. No nesting. No long-form. Just <strong>brief, singular</strong>.
+    </p>
+    <p class="lang-ja">
+      画像のように <code>@DDD「後で聞きます！」</code> といった一言が時系列で並びます。
+    </p>
+    <p class="lang-en">
+      As shown: <code>@DDD "後で聞きます!"</code> — listed in time order.
+    </p>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/05-comment.png" alt="Comment view">
+    <figcaption class="shot-caption">
+      <span><b>Comment</b> / incoming だけ</span>
+      <span>5 pieces · 5 comments</span>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ──────── UPLOAD ──────── -->
+<section class="section" id="upload">
+  <div class="section-num">— <em>05</em> / UPLOAD</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Upload</em> — block を置く</span>
+    <span class="lang-en"><em>Upload</em> — place a block</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      アトリエの central な動作: <strong>block を channel に置く</strong> こと。
+      Atelier は完成品を売る場ではなく、<strong>何かが生まれる現場</strong>です。
+      ここはあなたの制作物を、静かに置いておく場所です。
+    </p>
+    <p class="lang-en">
+      The central action: <strong>place a block in a channel</strong>.
+      Atelier isn't a place to sell finished work — it's a <strong>working site</strong>.
+      Leave things here, quietly.
+    </p>
+    <div class="notice">
+      <span class="lang-ja"><b>わかりづらいポイント (1):</b><br>このプロトタイプの段階では、データは <code>このブラウザのなか</code> にだけ保存されます (= localStorage)。別端末で開きたい時は画面上部の <b>SYNC TO ANOTHER DEVICE</b> から URL を発行して、移行先で貼り付けてください。</span>
+      <span class="lang-en"><b>Tip 1:</b><br>For the prototype, data is stored <code>only in this browser</code> (localStorage). To open on another device, use <b>SYNC TO ANOTHER DEVICE</b> at the top, generate a URL, and paste it on the other side.</span>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/06-upload.png" alt="Upload landing">
+    <figcaption class="shot-caption">
+      <span><b>Upload</b> / 入口画面</span>
+      <span>sync to another device / add block</span>
+    </figcaption>
+  </figure>
+
+  <div class="section-desc" style="margin-top: 24px;">
+    <p class="lang-ja">
+      画面を下にスクロールすると <strong>「add a block to a channel」</strong> フォームが出ます。
+    </p>
+    <p class="lang-en">
+      Scroll down to find the <strong>"add a block to a channel"</strong> form.
+    </p>
+    <div class="notice">
+      <span class="lang-ja"><b>わかりづらいポイント (2):</b><br>上部に <code>AUDIO LINK · IMAGE LINK · TEXT · URL</code> の 4 タブ。これが <b>block の 4 種類</b> です。先に種類を選ぶ → channel を選ぶ → タイトル等を入力 → 保存。<br><br>
+      AUDIO は <code>Google Drive / Dropbox / 直接 mp3 url</code> のような <b>外部リンク方式</b>。アップロードではなく URL を貼ります。</span>
+      <span class="lang-en"><b>Tip 2:</b><br>4 tabs at the top: <code>AUDIO LINK · IMAGE LINK · TEXT · URL</code>. These are the <b>4 block types</b>. Choose a type → pick a channel → fill in the title and details → save.<br><br>
+      AUDIO uses <b>external links</b> (<code>Google Drive / Dropbox / direct mp3 url</code>). You paste a URL, not upload a file.</span>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/07-upload-form.png" alt="Upload form">
+    <figcaption class="shot-caption">
+      <span><b>add a block</b> / フォーム</span>
+      <span>type → channel → title</span>
+    </figcaption>
+  </figure>
+  <div class="shot-callouts">
+    <div class="callout">
+      <span class="callout-tag">type</span>
+      <span class="lang-ja"><b>type</b> = block の種類。AUDIO LINK / IMAGE LINK / TEXT / URL。</span>
+      <span class="lang-en"><b>type</b> = block kind. AUDIO LINK / IMAGE LINK / TEXT / URL.</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">channel</span>
+      <span class="lang-ja"><b>channel</b> = どの "枠" に入れるか。既存から選ぶ or <b>+ new</b> で新しく作る。</span>
+      <span class="lang-en"><b>channel</b> = which "shelf" to put it in. Pick an existing one or <b>+ new</b>.</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">link</span>
+      <span class="lang-ja"><b>audio url / image url</b> は <b>外部のリンク</b>。Google Drive / Dropbox の直リンクを貼ってください。</span>
+      <span class="lang-en"><b>audio url / image url</b> are <b>external links</b>. Use direct links from Google Drive / Dropbox.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ──────── CHANNEL VIEW ──────── -->
+<section class="section" id="channel-view">
+  <div class="section-num">— <em>06</em> / CHANNEL VIEW</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Channel view</em> — 連作の中</span>
+    <span class="lang-en"><em>Channel view</em> — inside a series</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      My Channel から channel を 1 つ選ぶと、その中の <strong>block 一覧</strong> が出ます。
+      画像の例は <code>Taka / Demos / 99letters demos</code> — 6 blocks。
+      パンくず (<code>Taka / Demos</code>) で 1 つ上の階層に戻れます。
+    </p>
+    <p class="lang-en">
+      Tap a channel from My Channel to see the <strong>blocks inside it</strong>.
+      In the example: <code>Taka / Demos / 99letters demos</code> with 6 blocks.
+      Use the breadcrumb (<code>Taka / Demos</code>) to step back.
+    </p>
+    <p class="lang-ja">
+      block の右上の <code>□</code> アイコンは Public / Draft の表示。Public は他の住人にも見える、Draft は自分だけ。
+    </p>
+    <p class="lang-en">
+      The <code>□</code> badge on each block shows Public / Draft state. Public is visible to residents; Draft is only you.
+    </p>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/08-channel.png" alt="Channel view">
+    <figcaption class="shot-caption">
+      <span><b>channel view</b> / Demos の中</span>
+      <span>6 blocks</span>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ──────── BLOCK VIEW ──────── -->
+<section class="section" id="block-view">
+  <div class="section-num">— <em>07</em> / BLOCK VIEW</div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Block view</em> — 1 つの作品ページ</span>
+    <span class="lang-en"><em>Block view</em> — a single work</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      block 1 つを開いた画面。パンくず + メタ情報 (channel, blocks 数) + 本体 (画像 / 音 / テキスト / URL) + コメント欄。
+      AUDIO block の場合は <code>PLAY HERE</code> ボタンで再生開始。再生中は画面下にプレイヤーバーが固定されます。
+    </p>
+    <p class="lang-en">
+      A single block opened. Breadcrumb + meta (channel, block count) + body (image / audio / text / url) + comments.
+      For AUDIO: tap <code>PLAY HERE</code>. A player bar fixes to the bottom while playing.
+    </p>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/09-block-image.png" alt="Block detail (image with audio)">
+    <figcaption class="shot-caption">
+      <span><b>block view</b> / 黙認 — audio + image</span>
+      <span>PLAY HERE で再生開始</span>
+    </figcaption>
+  </figure>
+  <figure class="shot">
+    <img src="img/howto/10-block-audio.png" alt="Block with audio playing">
+    <figcaption class="shot-caption">
+      <span><b>now playing</b> / 画面下にプレイヤー</span>
+      <span>BITTB · 0:35 / 4:36</span>
+    </figcaption>
+  </figure>
+</section>
+
+<!-- ──────── CONNECT ──────── -->
+<section class="section" id="connect">
+  <div class="section-num">— <em>08</em> / CONNECT <span style="color:var(--ink);">(core feature)</span></div>
+  <h2 class="section-title">
+    <span class="lang-ja"><em>Connect</em> — 他人の作品を自分の channel に呼ぶ</span>
+    <span class="lang-en"><em>Connect</em> — pin another's work into your channel</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      Atelier ならではの機能 「<strong>connect</strong>」。
+      Explore で見つけた <strong>他人の public block</strong> を、自分の channel に <strong>紐付ける (pin)</strong> 動作です。
+      reblog / repost と似ているけど、<strong>並べる側の文脈</strong>を主役にする違いがあります。
+    </p>
+    <p class="lang-en">
+      The core feature: <strong>connect</strong>.
+      Pin <strong>another resident's public block</strong> into your own channel.
+      Similar to reblog / repost — but the emphasis here is on <strong>your context of placement</strong>, not the reblog itself.
+    </p>
+    <p class="lang-ja">
+      たとえば 「@DDD の音源」と「@BMBoard の画像」を、 <strong>自分の channel "影響源" に並べる</strong>。すると、複数の住人の作品が、あなたの編集行為によって <strong>新しい意味</strong>を持つ。これが connect の本質です。
+    </p>
+    <p class="lang-en">
+      Example: pin <strong>@DDD's audio</strong> and <strong>@BMBoard's image</strong> into your channel called "influences". The blocks gain new meaning through <strong>your editorial act</strong> — this is the core of connect.
+    </p>
+  </div>
+  <div class="diagram">
+<pre><span class="lang-ja">
+  Explore でみつけた block
+       ↓
+  ┌─────────────┐         ┌─────────────┐
+  │ @DDD        │         │ @BMBoard    │
+  │ audio block │         │ image block │
+  │ "夜の音"     │         │ "黒板の渦"   │
+  └─────┬───────┘         └─────┬───────┘
+        │   ↓ connect            │
+        └───→ "影響源" channel ←──┘
+                   ↑
+              (あなたの channel)
+
+  → あなたの編集行為で、別の文脈が生まれる
+</span><span class="lang-en">
+  Found in Explore
+       ↓
+  ┌─────────────┐         ┌─────────────┐
+  │ @DDD        │         │ @BMBoard    │
+  │ audio block │         │ image block │
+  │ "Night Air" │         │ "Blackboard"│
+  └─────┬───────┘         └─────┬───────┘
+        │   ↓ connect            │
+        └───→ "Influences" ←─────┘
+                   ↑
+              (your channel)
+
+  → Your placement creates a new context
+</span></pre>
+  </div>
+  <div class="notice">
+    <span class="lang-ja"><b>connect の使い方:</b><br>
+    1. Explore で気になる public block を開く<br>
+    2. 画面の <code>→ connect</code> ボタンをタップ<br>
+    3. 自分のどの channel に紐付けるかを選ぶ<br>
+    4. 自分の My Channel に "pin した block" として現れる<br><br>
+    元の block は所有者のもののまま。あなたは <b>選んで並べた</b>だけ。それがアトリエの "編集者性" です。</span>
+    <span class="lang-en"><b>How to use connect:</b><br>
+    1. Open a public block in Explore<br>
+    2. Tap the <code>→ connect</code> button<br>
+    3. Pick which of your channels to pin it into<br>
+    4. It appears in your My Channel as a "pinned block"<br><br>
+    The original block stays with its owner. You <b>chose and placed</b> it — that's the "editorial act" Atelier is built around.</span>
+  </div>
+</section>
+
+<!-- ──────── FINAL CTA ──────── -->
+<div class="final">
+  <h3 class="final-title">
+    <span class="lang-ja">わかったら、<br>そっと <em style="font-style:italic;">開いてみてください</em>。</span>
+    <span class="lang-en">When you're ready,<br><em style="font-style:italic;">quietly open it</em>.</span>
+  </h3>
+  <p class="final-sub">
+    <span class="lang-ja">招待制ですが、コードがあれば、どなたでも。</span>
+    <span class="lang-en">Invite-only. With a code, anyone is welcome.</span>
+  </p>
+  <a class="btn btn-invert" href="/">
+    <span class="lang-ja">Atelier を開く →</span>
+    <span class="lang-en">open Ateli.er →</span>
+  </a>
+</div>
+
+<!-- ──────── FOOTER ──────── -->
+<footer class="foot">
+  <a href="/">open</a> ·
+  <a href="about.html">about</a> ·
+  <a href="terms.html">terms</a> ·
+  <a href="privacy.html">privacy</a> ·
+  <a href="community.html">community</a>
+</footer>
+
+<script>
+// Language toggle (defaults to JA)
+(function () {
+  const saved = localStorage.getItem('atelier_howto_lang') || 'ja';
+  document.documentElement.setAttribute('data-lang', saved);
+  document.querySelectorAll('.lang-toggle button').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.lang === saved);
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang;
+      document.documentElement.setAttribute('data-lang', lang);
+      localStorage.setItem('atelier_howto_lang', lang);
+      document.querySelectorAll('.lang-toggle button').forEach(b => {
+        b.classList.toggle('is-active', b.dataset.lang === lang);
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
