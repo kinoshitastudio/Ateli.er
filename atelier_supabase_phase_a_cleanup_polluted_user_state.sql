@@ -17,10 +17,10 @@
 -- 削除前に確認:
 --   SELECT user_id, jsonb_object_keys(state) FROM user_state;
 
--- ──────────────── STEP 1: Taka の user_id を確認 ────────────────
--- Taka のメール (99letters99@gmail.com) から user_id を取得
--- 結果をメモして STEP 2 で使う
-SELECT id, email FROM auth.users WHERE email = '99letters99@gmail.com';
+-- ──────────────── STEP 1: 運営者の user_id を確認 ────────────────
+-- 運営者の email から user_id を取得 (placeholder を実 email に置き換えて実行)
+-- 結果をメモして STEP 2 で使う。公開リポジトリに実メールを含めないため placeholder にしている。
+SELECT id, email FROM auth.users WHERE email = 'OWNER_EMAIL@example.com';
 
 -- ──────────────── STEP 2: Taka 以外の user_state を削除 ────────────────
 -- 上で確認した Taka の user_id を <TAKA_USER_ID> に置き換えて実行

@@ -74,10 +74,11 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION public.handle_new_user();
 
 -- ──────────────── STEP 3: 検証 ────────────────
--- DDD / DPRB が backfill されたか確認
+-- backfill 検証時は実行者の email を以下 IN 句に書き換えて実行する。
+-- 公開リポジトリに実メールを含めないために placeholder にしている。
 SELECT id, handle, avatar_url
 FROM public.profiles
 WHERE id IN (
   SELECT id FROM auth.users
-  WHERE email IN ('ddd.todo.ddd@gmail.com', 'dprbrecords@gmail.com', '99letters99@gmail.com')
+  WHERE email IN ('EMAIL_1@example.com', 'EMAIL_2@example.com', 'EMAIL_3@example.com')
 );
