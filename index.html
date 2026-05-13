@@ -6783,7 +6783,7 @@
     const headers = _supabaseHeaders();
     if (!headers) return;
     headers['Prefer'] = 'resolution=merge-duplicates,return=minimal';
-    const row = { owner_id: currentUser.id, channel_id: cid, block_id: blockId };
+    const row = { owner_id: currentUser.id, channel_id: cid, block_id: blockId, channel_label: (CHANNELS.find(c => c.id === cid)?.label) || null };
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/channel_connections?on_conflict=owner_id,channel_id,block_id`, {
         method: 'POST', headers, body: JSON.stringify(row),
@@ -6816,7 +6816,7 @@
     for (const cid of Object.keys(map)) {
       const arr = map[cid] || [];
       for (const snap of arr) {
-        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id });
+        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id, channel_label: (CHANNELS.find(c => c.id === cid)?.label) || null });
       }
     }
     if (rows.length === 0) return;
@@ -11601,8 +11601,16 @@
     // with the CONNECT badge.
     let connectionsRaw = [];
     try {
-      const cUrl = `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(ownerId)}&select=channel_id,block_id,public_blocks(*)`;
-      const cRes = await fetch(cUrl, { headers });
+      // channel_label travels on the connection row (the connecting channel's
+      // own name — e.g. a "Family" channel made purely of CONNECT'd blocks has
+      // no name in public_blocks). Fall back to the no-label select if the
+      // column hasn't been migrated yet (older DB) so the fetch never breaks.
+      let cUrl = `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(ownerId)}&select=channel_id,block_id,channel_label,public_blocks(*)`;
+      let cRes = await fetch(cUrl, { headers });
+      if (!cRes.ok && cRes.status === 400) {
+        cUrl = `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(ownerId)}&select=channel_id,block_id,public_blocks(*)`;
+        cRes = await fetch(cUrl, { headers });
+      }
       if (cRes.ok) connectionsRaw = await cRes.json();
     } catch (e) { /* silent — table missing or transient */ }
     if (!_userConnectionsCache[ownerId]) _userConnectionsCache[ownerId] = {};
@@ -11613,8 +11621,9 @@
       // so other lookups (block click, comment author resolution, etc.)
       // get accurate data. Don't overwrite if a richer copy already exists.
       if (!_explorePublicCache[pb.id]) _explorePublicCache[pb.id] = pb;
-      // Synthetic row with overridden channel_id and CONNECT marker.
-      rows.push({ ...pb, channel_id: c.channel_id, _isConnected: true });
+      // Synthetic row with overridden channel_id and CONNECT marker. Carry the
+      // connecting channel's label so grouping below can name the card.
+      rows.push({ ...pb, channel_id: c.channel_id, channel_label: c.channel_label || pb.channel_label, _isConnected: true });
       // Per-(owner, channel) connection list cache for openUserChannel.
       const m = _userConnectionsCache[ownerId];
       if (!m[c.channel_id]) m[c.channel_id] = [];
