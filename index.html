@@ -4985,8 +4985,19 @@
       paneCommentIntro: `comments you've left, grouped by the piece they're tied to.<br>to leave a comment, play a piece first, then use the slit at the lower-left.<br>older comments weather, then dissolve into the grain.`,
       paneCommentMeta:  '0 pieces engaged · 0 comments',
       paneUploadMeta:   'add blocks to a channel · stored in this browser',
-      paneUploadIntro: `Ateli.er は完成品を売る店ではなく、何かが生まれる現場です。ここはあなたの制作物を、静かに置いておくための場所。<em>このプロトタイプではアップロードはこのブラウザの中だけに保存</em>されます（招待制バックエンドは未実装）。`,
+      paneUploadIntro: `Ateli.er isn't a shop that sells finished work — it's the room where something is being made. A place to quietly set down what you're working on. <em>In this prototype, uploads are stored only inside this browser</em> (the invite-only backend isn't built yet).`,
       paneUploadFoot: `ateli.er does not host audio or images. all assets remain on your own drive / dropbox / icloud.<br>this app stores only the index — text, urls, and references — in this browser.<br>to publish across devices: invitation-based mail to <em>atelier@kinoshitastudio</em>.`,
+      // sync-to-another-device
+      syncHead:   '— sync to another device',
+      syncNote:   `Generates a URL that copies this browser's channels, blocks and comments to another device (mobile, etc.). Opening that URL on the other device overwrites its current data with this one's.`,
+      syncGen:    '→ generate sync url',
+      syncImport: '↳ paste sync url',
+      syncCopy:   '↳ copy',
+      syncShare:  '↳ share',
+      syncClose:  '— close',
+      syncApply:  '↳ apply (overwrite)',
+      syncCancel: '— cancel',
+      syncImportPlaceholder: 'paste the sync url here…',
       // search
       searchPlaceholder: 'search channels and blocks…',
       searchEmptyHint: '— type to search across channels and blocks.',
@@ -5196,6 +5207,17 @@
       paneUploadMeta:   'チャンネルにブロックを追加 · このブラウザに保存',
       paneUploadIntro: `Ateli.er は完成品を売る店ではなく、何かが生まれる現場です。ここはあなたの制作物を、静かに置いておくための場所。<em>このプロトタイプではアップロードはこのブラウザの中だけに保存</em>されます（招待制バックエンドは未実装）。`,
       paneUploadFoot: `ateli.er は音源も画像もホストしません。すべてのアセットはあなたの drive / dropbox / icloud に置いたまま。<br>このアプリは目録（テキスト・URL・参照）だけをこのブラウザに保存します。<br>端末を超えて公開するには：招待制 mail → <em>atelier@kinoshitastudio</em>`,
+      // sync-to-another-device
+      syncHead:   '— 別端末に同期',
+      syncNote:   `このブラウザのチャンネル・ブロック・コメントを別端末（モバイル等）にコピーするための URL を発行します。別端末でその URL を開くと、現在のデータを上書きして取り込みます。`,
+      syncGen:    '→ 同期 URL を発行',
+      syncImport: '↳ 同期 URL を貼り付け',
+      syncCopy:   '↳ コピー',
+      syncShare:  '↳ 共有',
+      syncClose:  '— 閉じる',
+      syncApply:  '↳ 適用（上書き）',
+      syncCancel: '— キャンセル',
+      syncImportPlaceholder: 'ここに同期 URL を貼り付け…',
       searchPlaceholder: 'チャンネルとブロックを検索…',
       searchEmptyHint: '— 入力するとチャンネルとブロックを検索します。',
       searchNoMatches: '— 該当なし。',
@@ -5437,6 +5459,19 @@
     // Pane meta
     const puMeta = document.querySelector('.pane-atelier .pane-head .pane-meta');
     if (puMeta) puMeta.textContent = t('paneUploadMeta');
+    // Sync-to-another-device block (Upload pane)
+    const _setTxt = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
+    _setTxt('syncHeadLabel', 'syncHead');
+    _setTxt('syncNote', 'syncNote');
+    _setTxt('syncGenBtn', 'syncGen');
+    _setTxt('syncImportBtn', 'syncImport');
+    _setTxt('syncCopyBtn', 'syncCopy');
+    _setTxt('syncShareBtn', 'syncShare');
+    _setTxt('syncCloseBtn', 'syncClose');
+    _setTxt('syncImportApplyBtn', 'syncApply');
+    _setTxt('syncImportCancelBtn', 'syncCancel');
+    const _siField = document.getElementById('syncImportField');
+    if (_siField) _siField.placeholder = t('syncImportPlaceholder');
     // Search input placeholder
     const si = document.getElementById('searchInput');
     if (si) si.placeholder = t('searchPlaceholder');
