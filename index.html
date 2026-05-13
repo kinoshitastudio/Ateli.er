@@ -6188,35 +6188,43 @@
     // file) — and re-fixes legacy dl.dropboxusercontent.com/scl/fi/ URLs. Idempotent.
     const rawUrl = track.audioUrl || track.sourceAudioUrl;
     const externalUrl = (typeof convertAudioUrl === 'function') ? convertAudioUrl(rawUrl) : rawUrl;
-    audioEl = new Audio();
-    audioEl.src = externalUrl;
+    // Keep a local handle to *this* element. All listeners below reference `el`
+    // (not the module-level `audioEl`) and bail if `audioEl` has since been
+    // swapped out by a newer playTrack() call. Without this, stopping the old
+    // element (`.src = ''` in stopAudioEl) fires its `error` listener *after*
+    // `audioEl` already points at the new track — and the stale closure would
+    // then reload the *new* element with the *old* URL, replaying the old song.
+    const el = new Audio();
+    audioEl = el;
+    el.src = externalUrl;
     let _audioRetried = false;
-    audioEl.play().catch(err => console.warn('audio play failed:', err));
-    audioEl.addEventListener('loadedmetadata', () => {
-      if (audioEl && audioEl.duration && isFinite(audioEl.duration)) {
-        track.sec = Math.round(audioEl.duration);
+    el.play().catch(err => console.warn('audio play failed:', err));
+    el.addEventListener('loadedmetadata', () => {
+      if (audioEl === el && el.duration && isFinite(el.duration)) {
+        track.sec = Math.round(el.duration);
       }
     });
     // Audio fetch fails (Drive CORP, transient 403, network blip) used to
     // leave the player hanging — no toast, no retry. Mirror the image
     // retry strategy: one cache-buster reload, then surface a clear
     // notice to the user instead of silent failure.
-    audioEl.addEventListener('error', () => {
+    el.addEventListener('error', () => {
+      if (audioEl !== el) return;  // superseded by a newer playTrack() — ignore
       if (!_audioRetried && externalUrl) {
         _audioRetried = true;
         const sep = externalUrl.includes('?') ? '&' : '?';
         try {
-          audioEl.src = externalUrl + sep + '_r=' + Date.now();
-          audioEl.play().catch(() => {});
+          el.src = externalUrl + sep + '_r=' + Date.now();
+          el.play().catch(() => {});
         } catch (e) {}
         return;
       }
       try { showToast('音声を読み込めませんでした — URL を確認してください'); } catch (e) {}
       stopTrack();
     });
-    audioEl.addEventListener('ended', stopTrack);
-    audioEl.addEventListener('play',  _setPlayPauseLabel);
-    audioEl.addEventListener('pause', _setPlayPauseLabel);
+    el.addEventListener('ended', () => { if (audioEl === el) stopTrack(); });
+    el.addEventListener('play',  () => { if (audioEl === el) _setPlayPauseLabel(); });
+    el.addEventListener('pause', () => { if (audioEl === el) _setPlayPauseLabel(); });
     startTime = actx ? actx.currentTime : (Date.now() / 1000);
     isPlaying = true;
     $('#player').classList.add('is-playing');
