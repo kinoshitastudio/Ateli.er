@@ -11738,11 +11738,12 @@
         });
       }
       const cells = [items[0] || null, items[1] || null, items[2] || null, items[3] || null];
-      // CONNECT badge on the channel card — surfaces "this channel
-      // contains curated CONNECT'd blocks from other users" before the
-      // visitor drills in. Triggered by any item.row carrying _isConnected
-      // (set during the synthetic-row build above).
-      const _hasConnect = c.items.some(r => r && r._isConnected);
+      // CONNECT badge on the channel card — only when the channel is a *pure*
+      // curation (every item is a CONNECT'd block from another user). A channel
+      // with even one of the owner's own posts is "their channel" and gets no
+      // card badge; the borrowed items inside still carry per-block CONNECT
+      // badges when the visitor drills in.
+      const _hasConnect = c.items.length > 0 && c.items.every(r => r && r._isConnected);
       const _connectBadgeHtml = _hasConnect
         ? `<span class="bc-connect-badge" title="${escapeHtml(t('connectBadgeTitle'))}">${escapeHtml(t('connectBadgeLabel'))}</span>`
         : '';
