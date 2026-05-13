@@ -11640,7 +11640,13 @@
     rows.forEach(r => {
       const cid = r.channel_id || '_unkn';
       if (!byChannel.has(cid)) {
-        byChannel.set(cid, { channelId: cid, channelLabel: r.channel_label || '(untitled channel)', channelLang: 'mixed', items: [] });
+        // A channel that holds only CONNECT'd blocks (no own posts) has no
+        // channel_label snapshot in public_blocks — server-side it's nameless.
+        // For the owner viewing their own portfolio we can recover the real
+        // name from the local CHANNELS list (id namespace is per-user, so this
+        // is only safe for the self view, gated by _isSelfPortfolio).
+        const _localLbl = _isSelfPortfolio ? (CHANNELS.find(c => c.id === cid)?.label || '') : '';
+        byChannel.set(cid, { channelId: cid, channelLabel: _localLbl || r.channel_label || '(untitled channel)', channelLang: 'mixed', items: [] });
       }
       byChannel.get(cid).items.push(r);
     });
