@@ -6150,7 +6150,11 @@
     if (currentVoice) currentVoice.stop();
     stopAudioEl();
     currentTrack = track;
-    const externalUrl = track.audioUrl || track.sourceAudioUrl;
+    // Re-convert at playback time too: covers blocks whose stored URL is still a
+    // raw share link (e.g. a Dropbox ?dl=0 that serves an HTML preview, not the
+    // file) — and re-fixes legacy dl.dropboxusercontent.com/scl/fi/ URLs. Idempotent.
+    const rawUrl = track.audioUrl || track.sourceAudioUrl;
+    const externalUrl = (typeof convertAudioUrl === 'function') ? convertAudioUrl(rawUrl) : rawUrl;
     audioEl = new Audio();
     audioEl.src = externalUrl;
     let _audioRetried = false;
@@ -8746,10 +8750,15 @@
     if (m) return `https://drive.google.com/uc?export=download&id=${m[1]}`;
     m = url.match(/[?&]id=([^&]+)/);
     if (m && url.includes('drive.google.com')) return `https://drive.google.com/uc?export=download&id=${m[1]}`;
-    // Dropbox: ?dl=0 → ?raw=1, host swap
+    // Dropbox: serve raw inline via www.dropbox.com/...?raw=1 — Dropbox 302s to the
+    // real file. Works for old /s/ links AND the new /scl/fi/ links, and for any
+    // dl= / raw= value or none at all. Do NOT swap to dl.dropboxusercontent.com —
+    // that host is unreliable for the new /scl/fi/ format.
     if (url.includes('dropbox.com')) {
-      return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-                .replace(/([?&])dl=0/, '$1raw=1');
+      let u = url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+      if (/[?&](dl|raw)=/.test(u)) u = u.replace(/([?&])(?:dl|raw)=[^&#]*/, '$1raw=1');
+      else u += (u.includes('?') ? '&' : '?') + 'raw=1';
+      return u;
     }
     // iCloud share — left as-is (resolution is server-side, may not stream directly)
     return url;
@@ -8770,8 +8779,10 @@
     m = url.match(/[?&]id=([^&]+)/);
     if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
     if (url.includes('dropbox.com')) {
-      return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com')
-                .replace(/([?&])dl=0/, '$1raw=1');
+      let u = url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+      if (/[?&](dl|raw)=/.test(u)) u = u.replace(/([?&])(?:dl|raw)=[^&#]*/, '$1raw=1');
+      else u += (u.includes('?') ? '&' : '?') + 'raw=1';
+      return u;
     }
     return url;
   }
