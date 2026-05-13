@@ -11542,6 +11542,10 @@
             ${bioHtml}
             ${snsHtml}
           </div>
+          <button type="button" id="upShareBtn" class="ch-icon-btn" title="${t('blockShare')}" aria-label="${t('blockShare')}" style="margin-left:auto;flex-shrink:0;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>
+            <span style="font-family:var(--mono);font-size:10.5px;">${t('blockShare')}</span>
+          </button>
         </div>
         <div class="ch-grid" id="upGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;"></div>
         <div id="upRecentSection" style="margin-top:32px;"></div>
@@ -11551,6 +11555,21 @@
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     currentBlockModalId = null;
     currentBlockModalKind = 'portfolio';
+    // Share this resident's page — copies a #u=<ownerId> deep link ("this is me").
+    const _upShareBtn = document.getElementById('upShareBtn');
+    if (_upShareBtn) _upShareBtn.addEventListener('click', async () => {
+      const shareUrl = `${location.origin}${location.pathname}#u=${encodeURIComponent(ownerId)}`;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(shareUrl);
+          showToast('URL をコピーしました');
+        } else if (navigator.share) {
+          await navigator.share({ title: `@${handle || 'resident'} — Ateli.er`, url: shareUrl });
+        } else {
+          window.prompt('copy this URL:', shareUrl);
+        }
+      } catch (e) { /* user cancelled */ }
+    });
     // Fetch all public_blocks for this owner.
     const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&owner_id=eq.${encodeURIComponent(ownerId)}&order=ts.desc&limit=200`;
     const headers = { 'apikey': SUPABASE_PUB_KEY };
@@ -12643,13 +12662,38 @@
     }, 200);
   })();
 
-  // On load, detect a #b=<id> or #ch=<id> deep link and open the relevant view.
+  // On load, detect a #b=<id> / #ch=<id> / #u=<ownerId> deep link and open the relevant view.
   (function detectDeepLinkOnLoad() {
     const mBlock   = location.hash.match(/^#b=(.+)$/);
     const mChannel = location.hash.match(/^#ch=(.+)$/);
-    if (!mBlock && !mChannel) return;
+    const mUser    = location.hash.match(/^#u=(.+)$/);
+    if (!mBlock && !mChannel && !mUser) return;
     setTimeout(() => {
       history.replaceState(null, '', location.pathname);
+      if (mUser) {
+        const uid = decodeURIComponent(mUser[1]);
+        // Fetch this resident's profile row, then open their portfolio overlay.
+        try {
+          fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${encodeURIComponent(uid)}`, { headers: { apikey: SUPABASE_PUB_KEY } })
+            .then(r => r.ok ? r.json() : [])
+            .then(rows => {
+              const p = rows && rows[0];
+              if (!p) { try { showToast('その住民が見つかりませんでした'); } catch (e) {} return; }
+              if (typeof _exploreProfilesCache !== 'undefined') _exploreProfilesCache[p.id] = p;
+              openModal('explore');
+              openUserPortfolio({
+                id: p.id,
+                handle: p.handle,
+                avatarUrl: p.avatar_url ? convertImageUrl(p.avatar_url) : '',
+                joinedLabel: p.created_at ? ageString(new Date(p.created_at).getTime()) : '',
+                bio: p.bio || '',
+                snsUrl: p.sns_url || '',
+              });
+            })
+            .catch(() => {});
+        } catch (e) {}
+        return;
+      }
       if (mBlock) {
         const bid = decodeURIComponent(mBlock[1]);
         // Audio is in TRACKS (seed + injected). Other kinds live in loadBlocks().
