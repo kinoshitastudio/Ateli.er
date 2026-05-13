@@ -6783,7 +6783,7 @@
     const headers = _supabaseHeaders();
     if (!headers) return;
     headers['Prefer'] = 'resolution=merge-duplicates,return=minimal';
-    const row = { owner_id: currentUser.id, channel_id: cid, block_id: blockId, channel_label: (CHANNELS.find(c => c.id === cid)?.label) || null };
+    const row = { owner_id: currentUser.id, channel_id: cid, block_id: blockId, channel_label: _resolveChannelLabel(cid) };
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/channel_connections?on_conflict=owner_id,channel_id,block_id`, {
         method: 'POST', headers, body: JSON.stringify(row),
@@ -6816,7 +6816,7 @@
     for (const cid of Object.keys(map)) {
       const arr = map[cid] || [];
       for (const snap of arr) {
-        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id, channel_label: (CHANNELS.find(c => c.id === cid)?.label) || null });
+        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id, channel_label: _resolveChannelLabel(cid) });
       }
     }
     if (rows.length === 0) return;
@@ -9052,6 +9052,17 @@
     arr.forEach(c => {
       if (!CHANNELS.some(x => x.id === c.id)) CHANNELS.push(c);
     });
+  }
+  // Resolve a channel's display label. Prefers in-memory CHANNELS, but falls
+  // back to the persisted user-channels list — CHANNELS may not yet include
+  // user-created channels when this runs early in init (e.g. from
+  // syncChannelConnectionsToProfile, which fires before applyUserChannels()).
+  function _resolveChannelLabel(cid) {
+    if (!cid) return null;
+    const m = CHANNELS.find(c => c.id === cid);
+    if (m && m.label) return m.label;
+    const u = loadUserChannels().find(c => c.id === cid);
+    return (u && u.label) || null;
   }
 
   // Probe duration of an external audio URL (best effort; some hosts block CORS)
@@ -11654,7 +11665,7 @@
         // For the owner viewing their own portfolio we can recover the real
         // name from the local CHANNELS list (id namespace is per-user, so this
         // is only safe for the self view, gated by _isSelfPortfolio).
-        const _localLbl = _isSelfPortfolio ? (CHANNELS.find(c => c.id === cid)?.label || '') : '';
+        const _localLbl = _isSelfPortfolio ? (_resolveChannelLabel(cid) || '') : '';
         byChannel.set(cid, { channelId: cid, channelLabel: _localLbl || r.channel_label || '(untitled channel)', channelLang: 'mixed', items: [] });
       }
       byChannel.get(cid).items.push(r);
