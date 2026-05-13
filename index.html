@@ -3313,6 +3313,9 @@
     .brand-sub { display: none; }
     .triggers { gap: 10px 12px; font-size: 9.5px; }
     .triggers .trig { font-size: 9.5px; letter-spacing: 0.08em; }
+    /* Explore lives in the modal tab row on mobile (the topbar nav is already
+       crowded); the topbar shortcut is desktop-only. */
+    .triggers .trig-desktop-only { display: none; }
     .stage { padding: 180px 0 80px; }
     .phrase-item { font-size: 10px; gap: 8px; }
     .phrase-item .pi-art, .phrase-item .pi-cue { font-size: 8.5px; }
@@ -4277,6 +4280,7 @@
     <nav class="triggers">
       <button class="trig" data-tab="pieces">— my channel</button>
       <button class="trig" data-tab="feed">— feed<span class="num" id="trigFeedCount">(0)</span></button>
+      <button class="trig trig-desktop-only" data-tab="explore">— explore</button>
       <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span><span class="trig-incoming-badge" id="trigTracesIncoming" hidden>●</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
     </nav>
@@ -4934,6 +4938,7 @@
       // topbar triggers
       trigMyChannel: '— my channel',
       trigFeed:      '— feed',
+      trigExplore:   '— explore',
       trigComment:   '— comment',
       trigUpload:    '— upload',
       trigSearch:    'search Atelier',
@@ -5148,6 +5153,7 @@
       brandSub: '— atelier × er.  場所を慈しむ者。',
       trigMyChannel: '— my channel',
       trigFeed:      '— フィード',
+      trigExplore:   '— 探訪',
       trigComment:   '— コメント',
       trigUpload:    '— アップロード',
       trigSearch:    'Atelier を検索',
@@ -5380,6 +5386,7 @@
       const tab = b.dataset.tab;
       if (tab === 'pieces') b.firstChild.textContent = t('trigMyChannel');
       else if (tab === 'feed') b.firstChild.textContent = t('trigFeed');
+      else if (tab === 'explore') b.firstChild.textContent = t('trigExplore');
       else if (tab === 'traces') b.firstChild.textContent = t('trigComment');
       else if (tab === 'atelier') b.textContent = t('trigUpload');
     });
