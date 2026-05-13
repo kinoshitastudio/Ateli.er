@@ -154,7 +154,7 @@
   .triggers .trig:hover { opacity: 0.55; }
   .triggers .trig.alt { color: var(--gray); }
   .triggers .trig.alt:hover { color: var(--ink); opacity: 1; }
-  .triggers .trig .num { color: var(--gray); margin-left: 6px; }
+  .triggers .trig .num { display: none; }
 
   /* Hide the drifting marquees completely when any modal is open — the
      reading surface stays clean and nothing leaks through the blur. */
@@ -525,6 +525,11 @@
   }
   .modal-tabs .tab:hover { color: var(--ink); }
   .modal-tabs .tab.is-active { color: var(--ink); border-bottom-color: var(--ink); }
+  /* The little count numbers next to tab/menu labels are hidden by request —
+     they added visual noise and weren't load-bearing. The incoming-comment
+     blue dot stays (that's a real notification). The JS that updates these
+     spans is harmless; they're just never shown. */
+  .tn { display: none !important; }
   .modal-tabs .tab .tn {
     font-family: var(--mono);
     font-size: 10px;
