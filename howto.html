@@ -375,7 +375,7 @@ footer.foot a:hover { color: var(--ink); text-decoration: underline; }
 
 <!-- ──────── TOC ──────── -->
 <nav class="toc" aria-label="contents">
-  <div class="toc-head">— 5 tabs · 1 core feature</div>
+  <div class="toc-head">— 5 tabs · file sharing · 1 core feature</div>
   <div class="toc-grid">
     <a href="#my-channel" class="toc-tile">
       <div class="toc-tile-num">01</div>
@@ -396,6 +396,10 @@ footer.foot a:hover { color: var(--ink); text-decoration: underline; }
     <a href="#upload" class="toc-tile">
       <div class="toc-tile-num">05</div>
       <div class="toc-tile-name"><em>upload</em></div>
+    </a>
+    <a href="#sharing" class="toc-tile">
+      <div class="toc-tile-num">✦</div>
+      <div class="toc-tile-name"><em>share files</em></div>
     </a>
   </div>
 </nav>
@@ -649,6 +653,94 @@ footer.foot a:hover { color: var(--ink); text-decoration: underline; }
       <span class="callout-tag">link</span>
       <span class="lang-ja"><b>audio url / image url</b> は <b>外部のリンク</b>。Google Drive / Dropbox の直リンクを貼ってください。</span>
       <span class="lang-en"><b>audio url / image url</b> are <b>external links</b>. Use direct links from Google Drive / Dropbox.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ──────── SHARING ASSETS (admin recommendation) ──────── -->
+<section class="section" id="sharing">
+  <div class="section-num">— <em>✦</em> / SHARING ASSETS</div>
+  <h2 class="section-title">
+    <span class="lang-ja">ファイルの <em>共有のしかた</em> — 管理者のおすすめ</span>
+    <span class="lang-en"><em>Sharing your files</em> — the admin's recommendation</span>
+  </h2>
+  <div class="section-desc">
+    <p class="lang-ja">
+      Atelier は音源も画像もホストしません。あなたの <strong>Dropbox / Google Drive</strong> に置いたファイルの <strong>共有リンク</strong>を貼るだけです。
+      おすすめは <strong>音源 = Dropbox</strong>、<strong>画像 = Google Drive または Dropbox</strong>。
+    </p>
+    <p class="lang-en">
+      Atelier doesn't host audio or images. You paste a <strong>share link</strong> to a file kept in your own <strong>Dropbox / Google Drive</strong>.
+      Recommended: <strong>audio → Dropbox</strong>, <strong>images → Google Drive or Dropbox</strong>.
+    </p>
+  </div>
+
+  <div class="section-desc" style="margin-top: 24px;">
+    <p class="lang-ja"><strong>① 音源 (audio block) → Dropbox を使う</strong></p>
+    <p class="lang-en"><strong>① Audio (audio block) → use Dropbox</strong></p>
+    <div class="notice">
+      <span class="lang-ja"><b>手順:</b><br>
+        1. 音源ファイル (mp3 / wav どちらでも OK) を Dropbox にアップロード<br>
+        2. そのファイルの「<b>共有</b>」→「<b>リンクをコピー</b>」(共有先は <b>「リンクを知っている全員」</b> にしておく — Dropbox はだいたい最初からこれ)<br>
+        3. Atelier の Upload → <code>AUDIO LINK</code> タブ → <b>audio url</b> 欄にそのリンクをそのまま貼る<br>
+        → Atelier が自動で「直接ストリームできる形」(<code>?raw=1</code>) に変換します。末尾が <code>?dl=0</code> のままでも OK。<br><br>
+        <b>⚠ 音源だけは Google Drive を使わないでください。</b> Drive はセキュリティポリシー (CORP) で音声の再生がブロックされ、再生できません。音源は必ず <b>Dropbox</b>(または直接の mp3 / wav の URL)で。</span>
+      <span class="lang-en"><b>Steps:</b><br>
+        1. Upload the audio file (mp3 or wav — both fine) to Dropbox<br>
+        2. "<b>Share</b>" that file → "<b>Copy link</b>" (set sharing to <b>"Anyone with the link"</b> — Dropbox usually defaults to this)<br>
+        3. In Atelier: Upload → <code>AUDIO LINK</code> tab → paste the link into <b>audio url</b><br>
+        → Atelier auto-converts it to a directly-streamable form (<code>?raw=1</code>). A trailing <code>?dl=0</code> is fine too.<br><br>
+        <b>⚠ Do NOT use Google Drive for audio.</b> Drive blocks audio playback (CORP policy) — it won't play. Always use <b>Dropbox</b> (or a direct mp3 / wav URL) for audio.</span>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/11-share-dropbox.png" alt="Dropbox: copy share link for audio">
+    <figcaption class="shot-caption">
+      <span><b>Dropbox</b> / 音源の共有リンクをコピー</span>
+      <span>share → copy link → paste into AUDIO LINK</span>
+    </figcaption>
+  </figure>
+
+  <div class="section-desc" style="margin-top: 24px;">
+    <p class="lang-ja"><strong>② 画像 (image block) → Google Drive を使う</strong>(Taka はこの方法を使っています)</p>
+    <p class="lang-en"><strong>② Images (image block) → use Google Drive</strong> (this is how Taka does it)</p>
+    <div class="notice">
+      <span class="lang-ja"><b>手順:</b><br>
+        1. 画像を Google Drive にアップロード<br>
+        2. その画像を右クリック →「<b>共有</b>」→ 一般的なアクセスを <b>「リンクを知っている全員」</b> に変更 →「<b>リンクをコピー</b>」<br>
+        3. Atelier の Upload → <code>IMAGE LINK</code> タブ → <b>image url</b> 欄にそのリンクを貼る<br>
+        → Atelier が <code>drive.google.com/file/d/ID/view</code> を <code>lh3.googleusercontent.com/d/ID=w2000</code> に自動変換します。Dropbox の画像リンクでも OK。<br><br>
+        <b>⚠ 共有を「リンクを知っている全員」にしないと画像が表示されません。</b> Drive のデフォルトは「制限付き」(自分だけ) なので、必ず変更してください。</span>
+      <span class="lang-en"><b>Steps:</b><br>
+        1. Upload the image to Google Drive<br>
+        2. Right-click the image → "<b>Share</b>" → set General access to <b>"Anyone with the link"</b> → "<b>Copy link</b>"<br>
+        3. In Atelier: Upload → <code>IMAGE LINK</code> tab → paste the link into <b>image url</b><br>
+        → Atelier auto-converts <code>drive.google.com/file/d/ID/view</code> to <code>lh3.googleusercontent.com/d/ID=w2000</code>. Dropbox image links work too.<br><br>
+        <b>⚠ The image won't show unless sharing is "Anyone with the link".</b> Drive defaults to "Restricted" (only you) — be sure to change it.</span>
+    </div>
+  </div>
+  <figure class="shot">
+    <img src="img/howto/12-share-drive.png" alt="Google Drive: share an image, anyone with the link">
+    <figcaption class="shot-caption">
+      <span><b>Google Drive</b> / 画像を「リンクを知っている全員」で共有</span>
+      <span>share → anyone with the link → copy link → paste into IMAGE LINK</span>
+    </figcaption>
+  </figure>
+  <div class="shot-callouts">
+    <div class="callout">
+      <span class="callout-tag">audio</span>
+      <span class="lang-ja"><b>音源</b> = Dropbox。Drive は不可 (CORP で再生ブロック)。</span>
+      <span class="lang-en"><b>audio</b> = Dropbox. Not Drive (CORP blocks playback).</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">image</span>
+      <span class="lang-ja"><b>画像</b> = Google Drive か Dropbox。Drive は「リンクを知っている全員」に。</span>
+      <span class="lang-en"><b>image</b> = Google Drive or Dropbox. On Drive, set "Anyone with the link".</span>
+    </div>
+    <div class="callout">
+      <span class="callout-tag">link</span>
+      <span class="lang-ja">貼るのは <b>共有リンクをそのまま</b>。Atelier が直リンクに変換します。</span>
+      <span class="lang-en">Paste the <b>share link as-is</b>. Atelier converts it to a direct link.</span>
     </div>
   </div>
 </section>

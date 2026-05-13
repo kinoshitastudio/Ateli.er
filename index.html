@@ -850,6 +850,39 @@
     background: var(--paper-2);
     border-color: var(--line);
   }
+  .cc-overlay-opt.cc-overlay-new {
+    border-style: dashed;
+    border-color: var(--line);
+    color: var(--ink-2, var(--ink));
+    margin-top: 2px;
+  }
+  .cc-overlay-opt.cc-overlay-new:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .cc-overlay-newrow {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .cc-overlay-newrow input {
+    flex: 1;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 9px 10px;
+    font-family: var(--sans-jp);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .cc-overlay-newrow button {
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 0 14px;
+    cursor: pointer;
+    font-size: 14px;
+  }
   /* Phase D-1 polish: incoming-traces section in the Comment pane */
   .incoming-section { margin-bottom: 48px; }
   .fp-incoming-list {
@@ -8287,7 +8320,6 @@
     }
     if (!src) { showToast('block データが見つかりません'); return; }
     const channels = _userActiveChannels();
-    if (channels.length === 0) { showToast('まずチャンネルを作ってください'); return; }
     const overlay = document.createElement('div');
     overlay.className = 'cc-overlay';
     overlay.innerHTML = `
@@ -8299,16 +8331,16 @@
         </div>
         <div class="cc-overlay-list">
           ${ channels.map(c => `<button type="button" class="cc-overlay-opt" data-cid="${escapeHtml(c.id)}">${escapeHtml(c.label)}</button>`).join('') }
+          <button type="button" class="cc-overlay-opt cc-overlay-new" data-act="cc-new">+ new channel</button>
+          <div class="cc-overlay-newrow" data-act="cc-newrow" hidden>
+            <input type="text" maxlength="40" placeholder="new channel — label?" autocomplete="off">
+            <button type="button" data-act="cc-new-ok">✓</button>
+          </div>
         </div>
       </div>
     `;
     document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => {
-      const cancel = e.target.closest('[data-act="cc-cancel"]');
-      if (cancel) { overlay.remove(); return; }
-      const opt = e.target.closest('.cc-overlay-opt[data-cid]');
-      if (!opt) return;
-      const cid = opt.dataset.cid;
+    const _connectTo = (cid) => {
       const targetChannel = CHANNELS.find(c => c.id === cid);
       const snapshot = {
         id: src.id,
@@ -8329,6 +8361,33 @@
       } else {
         showToast(`${t('alreadyConnected')} ${targetChannel?.label || cid}`);
       }
+    };
+    const newRow = overlay.querySelector('[data-act="cc-newrow"]');
+    const newInput = newRow.querySelector('input');
+    const submitNew = () => {
+      const label = (newInput.value || '').trim();
+      if (!label) { newInput.focus(); return; }
+      const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: '' });
+      if (!newId) { showToast('チャンネルを作成できませんでした'); return; }
+      _connectTo(newId);
+    };
+    overlay.addEventListener('click', (e) => {
+      const cancel = e.target.closest('[data-act="cc-cancel"]');
+      if (cancel) { overlay.remove(); return; }
+      if (e.target.closest('[data-act="cc-new"]')) {
+        e.target.closest('[data-act="cc-new"]').hidden = true;
+        newRow.hidden = false;
+        newInput.focus();
+        return;
+      }
+      if (e.target.closest('[data-act="cc-new-ok"]')) { submitNew(); return; }
+      const opt = e.target.closest('.cc-overlay-opt[data-cid]');
+      if (!opt) return;
+      _connectTo(opt.dataset.cid);
+    });
+    newInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); submitNew(); }
+      else if (e.key === 'Escape') { e.preventDefault(); overlay.remove(); }
     });
   }
   function promptDisconnectExternal(blockId) {
