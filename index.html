@@ -4497,9 +4497,16 @@
 
       <!-- ATELIER -->
       <div class="modal-pane pane-atelier" data-pane="atelier">
-        <div class="pane-head">
-          <h3>Your <em>Upload</em></h3>
-          <span class="pane-meta">add blocks to a channel · stored in this browser</span>
+        <div class="pane-head" style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px;">
+          <div style="min-width:0;">
+            <h3>Your <em>Upload</em></h3>
+            <span class="pane-meta">add blocks to a channel · stored in this browser</span>
+          </div>
+          <span id="langTogglePane" style="display:inline-flex; align-items:center; gap:6px; flex-shrink:0; font-family:var(--mono); font-size:9.5px; letter-spacing:0.16em; text-transform:uppercase; margin-top:4px;">
+            <button data-lang="en" class="lang-opt" style="background:none; border:none; cursor:pointer; padding:2px 0; font:inherit; color:var(--ink); border-bottom:1px solid var(--ink);">EN</button>
+            <span style="color:var(--gray-2);">·</span>
+            <button data-lang="ja" class="lang-opt" style="background:none; border:none; cursor:pointer; padding:2px 0; font:inherit; color:var(--gray); border-bottom:1px solid transparent;">JP</button>
+          </span>
         </div>
         <p>
           Ateli.er は完成品を売る店ではなく、何かが生まれる現場です。
@@ -5357,7 +5364,7 @@
       openChannelDetail(currentChannelDetailId);
     }
     // Toggle visual state
-    document.querySelectorAll('#langToggle .lang-opt').forEach(b => {
+    document.querySelectorAll('.lang-opt').forEach(b => {
       const active = b.dataset.lang === lang;
       b.classList.toggle('is-active', active);
       b.style.color = active ? 'var(--ink)' : 'var(--gray)';
@@ -11030,12 +11037,13 @@
     if (name === 'explore') renderExplore();
     if (name === 'traces') {
       renderIncomingTraces();
-      // Phase A-refactor 2 (2026-04-29): opening the Comment tab counts as
-      // "seen" — clear the blue unread dot immediately. Previously the
-      // user had to find each unread row and click into it (and if the
-      // commenter had been deleted, the row didn't navigate anywhere,
-      // leaving the badge stuck on).
+      // Opening the Comment tab counts as "seen" — mark all incoming comments
+      // read here (the only place it happens now; the account-pill dot was
+      // removed since people didn't notice it). Confirm with a toast so it's
+      // clear the unread badge cleared because of this action.
+      const _hadUnread = !!(() => { const b = document.getElementById('tabTracesIncoming') || document.getElementById('trigTracesIncoming'); return b && !b.hidden; })();
       try { atelierTraces?.markAllRead?.(); } catch (e) {}
+      if (_hadUnread) { try { showToast(CURRENT_LANG === 'ja' ? 'コメントを既読にしました' : 'all comments marked as read'); } catch (e) {} }
     }
   }
 
@@ -12303,7 +12311,7 @@
   });
 
   // ──────────────── LANGUAGE TOGGLE WIRING ────────────────
-  document.querySelectorAll('#langToggle .lang-opt').forEach(b => {
+  document.querySelectorAll('.lang-opt').forEach(b => {
     b.addEventListener('click', () => setLanguage(b.dataset.lang));
   });
 
@@ -12575,6 +12583,7 @@
     'atelier_footprints_v2',
     'atelier_lang_v1',
     'atelier_seeded_v2',
+    'atelier_traces_watermark_v1',  // "comments read up to" mark — sync so it survives re-login / other devices
   ];
   // Phase A-refactor 1.5: per-browser marker of the last successfully-synced
   // user_id. Used to detect "different user signed in on this browser" and
@@ -13383,10 +13392,14 @@
       try { localStorage.setItem(WATERMARK_KEY, String(ts || Date.now())); } catch (e) {}
     }
     function _setBadges(visible, count) {
+      // The account-pill dot next to the username was removed — users didn't
+      // notice it (and "click it to mark read" was non-obvious). The Comment
+      // tab / "comment" trigger badges are now the only unread indicator.
       const pill = document.getElementById('userTracesBadge');
+      if (pill) pill.hidden = true;
       const tab = document.getElementById('tabTracesIncoming');
       const trig = document.getElementById('trigTracesIncoming');
-      [pill, tab, trig].forEach(el => {
+      [tab, trig].forEach(el => {
         if (!el) return;
         el.hidden = !visible;
         if (visible) {
@@ -13982,7 +13995,7 @@
   setFpBound();
   updateSlitBound();
   // Ensure correct visual state of the lang toggle on first paint
-  document.querySelectorAll('#langToggle .lang-opt').forEach(b => {
+  document.querySelectorAll('.lang-opt').forEach(b => {
     const active = b.dataset.lang === CURRENT_LANG;
     b.classList.toggle('is-active', active);
     b.style.color = active ? 'var(--ink)' : 'var(--gray)';
