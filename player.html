@@ -802,7 +802,9 @@
   }
 
   // ─── Kickoff: start the cycles ──────────────────────────────────────
-  function kickoff() {
+  // skipFirstAudio=true when the curtain click already kicked off audio
+  // synchronously (to satisfy the user-gesture autoplay policy).
+  function kickoff(skipFirstAudio) {
     if (started) return;
     if (!imgs.length && !audios.length && !texts.length) {
       showNoticeEmpty();
@@ -812,7 +814,7 @@
     applyMode();
 
     if (MODE !== 'audio' && imgs.length) nextImage();
-    if (MODE !== 'visual' && audios.length) nextAudio();
+    if (!skipFirstAudio && MODE !== 'visual' && audios.length) nextAudio();
     // First text after a beat
     setTimeout(showText, 12000);
 
@@ -825,28 +827,79 @@
     showCursorBriefly();
   }
 
+  // Synchronously start the first audio track. Must be called from within a
+  // user-gesture event handler (e.g. the curtain click) or the browser will
+  // silently reject the play() promise.
+  function _startFirstAudioInGesture() {
+    if (MODE === 'visual') return false;
+    if (!audios.length) return false;
+
+    // Find the first non-blacklisted audio
+    let idx = -1;
+    for (let i = 0; i < audios.length; i++) {
+      const u = audios[i] && audios[i].audioUrl;
+      if (u && !_failedAudioUrls.has(u)) { idx = i; break; }
+    }
+    if (idx < 0) return false;
+
+    audioIdx = idx;
+    const t = audios[idx];
+    const url = t.audioUrl;
+    _currentAudioUrl = url;
+
+    try { $audio.pause(); } catch (_e) {}
+    $audio.src = url;
+
+    _audioWatchdog = setTimeout(() => {
+      _audioWatchdog = null;
+      _markAudioFailed(url, 'watchdog timeout (initial)');
+    }, 9000);
+
+    // Crucial: this play() call is synchronous inside the click handler,
+    // so it counts as user-initiated and the autoplay policy is satisfied.
+    const p = $audio.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(err => {
+        console.warn('[Atelier Player] initial play() rejected', err);
+        _markAudioFailed(url, 'initial play rejected');
+      });
+    }
+
+    const title = t.title || 'untitled';
+    const artist = t.artist || t._owner || '';
+    const phrase = t.phrase ? ` — ${t.phrase}` : '';
+    $np.innerHTML = `<span class="np-dot"></span>${escapeHtml(title)} · ${escapeHtml(artist)}${escapeHtml(phrase)}`;
+    $np.classList.add('show');
+    return true;
+  }
+
   // ─── Curtain (entry tap unlocks audio autoplay) ─────────────────────
-  $curtain.addEventListener('click', async () => {
+  // NOTE: This handler is intentionally NOT async, because any `await` would
+  // discard the user-gesture flag the browser uses to authorise audio.play().
+  $curtain.addEventListener('click', () => {
     $curtain.classList.add('gone');
     setTimeout(() => { $curtain.style.display = 'none'; }, 1700);
 
-    // Try to start audio context (silent dummy play to unlock)
-    try {
-      $audio.muted = true;
-      await $audio.play().catch(()=>{});
-      $audio.pause();
-      $audio.muted = false;
-    } catch (e) { /* noop */ }
+    // If the feed has finished loading, start audio NOW (in the user gesture).
+    // Otherwise fall back to async kickoff and accept that the first audio
+    // attempt may be blocked — the user can tap again to retry.
+    const audioStarted = (blocks.length > 0) ? _startFirstAudioInGesture() : false;
 
     if (!blocks.length) {
-      // Still loading — wait for fetch
       const wait = setInterval(() => {
-        if (blocks.length) { clearInterval(wait); kickoff(); }
+        if (blocks.length) {
+          clearInterval(wait);
+          // Feed arrived after the click. Try to start audio anyway — most
+          // browsers honour autoplay for a brief window after a click even
+          // across async boundaries, but treat any failure as expected.
+          const lateStart = _startFirstAudioInGesture();
+          kickoff(lateStart);
+        }
       }, 200);
       setTimeout(() => clearInterval(wait), 15000);
       return;
     }
-    kickoff();
+    kickoff(audioStarted);
   });
 
   // ─── Boot ───────────────────────────────────────────────────────────
@@ -854,6 +907,15 @@
     const ok = await fetchFeed();
     $loading.classList.add('gone');
     if (!ok) { showNoticeError(); return; }
+    // Preload the first audio's metadata so the curtain click can play()
+    // it with zero buffering delay.
+    if (audios.length > 0 && MODE !== 'visual') {
+      try {
+        $audio.preload = 'auto';
+        $audio.src = audios[0].audioUrl;
+        $audio.load();
+      } catch (_e) { /* preload failure is non-fatal */ }
+    }
     // If curtain already lifted (e.g. user clicked very fast), kick off.
     if ($curtain.classList.contains('gone')) kickoff();
   })();
