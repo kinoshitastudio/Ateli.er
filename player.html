@@ -292,6 +292,84 @@
     margin-top: 18px;
   }
 
+  /* Control bar (play/pause, prev/next, progress, time) — auto-hides */
+  #ctrl-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    background: linear-gradient(to top, rgba(10,10,10,0.86) 0%, rgba(10,10,10,0.45) 60%, rgba(10,10,10,0) 100%);
+    padding-top: 28px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    pointer-events: none;
+  }
+  #ctrl-bar.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  #ctrl-progress {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: rgba(232,228,220,0.16);
+    cursor: pointer;
+    transition: height 0.2s ease;
+  }
+  #ctrl-progress:hover { height: 4px; }
+  #ctrl-progress-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: rgba(232,228,220,0.85);
+    width: 0%;
+    pointer-events: none;
+  }
+  #ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 18px 14px;
+  }
+  .ctrl-btn {
+    background: none;
+    border: 0;
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 6px 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols", system-ui, sans-serif;
+  }
+  .ctrl-btn:hover { opacity: 1; }
+  .ctrl-btn:active { transform: scale(0.92); }
+  #ctrl-play { font-size: 22px; min-width: 30px; }
+  #ctrl-info {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--ink-dim);
+    text-transform: lowercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #ctrl-time {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    min-width: 80px;
+    text-align: right;
+  }
+  /* Hide the always-on now-playing strip while the control bar is visible,
+     since the bar already shows artist info. */
+  body.controls-visible #now-playing { opacity: 0; }
+
   /* No audio element styling (just hidden, controlled by JS) */
   audio { display: none; }
 
@@ -302,6 +380,11 @@
     #curtain h1 { font-size: 30px; }
     #curtain .sub { font-size: 10px; margin-bottom: 36px; }
     #curtain .footnote { font-size: 9px; }
+    #ctrl-row { padding: 8px 12px 10px; gap: 10px; }
+    .ctrl-btn { font-size: 16px; padding: 5px 6px; }
+    #ctrl-play { font-size: 20px; }
+    #ctrl-info { font-size: 10px; }
+    #ctrl-time { font-size: 9px; min-width: 64px; }
   }
 </style>
 </head>
@@ -317,6 +400,18 @@
   <div id="loading">— gathering the courtyard —</div>
   <div id="notice"></div>
   <button id="help-toggle" type="button" aria-label="help">?</button>
+  <div id="ctrl-bar">
+    <div id="ctrl-progress" role="slider" aria-label="seek">
+      <div id="ctrl-progress-fill"></div>
+    </div>
+    <div id="ctrl-row">
+      <button class="ctrl-btn" id="ctrl-prev" type="button" aria-label="previous track" title="previous track">⏮</button>
+      <button class="ctrl-btn" id="ctrl-play" type="button" aria-label="play / pause" title="play / pause">⏸</button>
+      <button class="ctrl-btn" id="ctrl-next" type="button" aria-label="next track" title="next track">⏭</button>
+      <div id="ctrl-info">— quiet —</div>
+      <div id="ctrl-time">--:-- / --:--</div>
+    </div>
+  </div>
 </div>
 
 <div id="curtain">
@@ -727,7 +822,105 @@
       document.body.classList.remove('show-cursor');
     }, 2200);
   }
-  document.addEventListener('mousemove', showCursorBriefly);
+  document.addEventListener('mousemove', () => { showCursorBriefly(); showControls(); });
+  document.addEventListener('touchstart', () => { showControls(); }, { passive: true });
+
+  // ─── Control bar (play/pause, prev/next, progress, time) ───────────
+  const $ctrlBar = document.getElementById('ctrl-bar');
+  const $ctrlProgress = document.getElementById('ctrl-progress');
+  const $ctrlFill = document.getElementById('ctrl-progress-fill');
+  const $ctrlPrev = document.getElementById('ctrl-prev');
+  const $ctrlPlay = document.getElementById('ctrl-play');
+  const $ctrlNext = document.getElementById('ctrl-next');
+  const $ctrlInfo = document.getElementById('ctrl-info');
+  const $ctrlTime = document.getElementById('ctrl-time');
+
+  let _ctrlHideTimer = null;
+  function showControls() {
+    if (!$curtain.classList.contains('gone')) return;  // not until user enters
+    $ctrlBar.classList.add('show');
+    document.body.classList.add('controls-visible');
+    if (_ctrlHideTimer) clearTimeout(_ctrlHideTimer);
+    _ctrlHideTimer = setTimeout(hideControls, 3500);
+  }
+  function hideControls() {
+    $ctrlBar.classList.remove('show');
+    document.body.classList.remove('controls-visible');
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  }
+  // Hovering the bar itself keeps it visible (don't snatch it away mid-click)
+  $ctrlBar.addEventListener('mouseenter', () => {
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  });
+  $ctrlBar.addEventListener('mouseleave', showControls);
+
+  // Helper: keep ambient #now-playing and control-bar info in sync.
+  function setNowPlaying(title, artist, phrase) {
+    const t = escapeHtml(title || 'untitled');
+    const a = escapeHtml(artist || '');
+    const p = phrase ? ` — ${escapeHtml(phrase)}` : '';
+    $np.innerHTML = `<span class="np-dot"></span>${t} · ${a}${p}`;
+    $np.classList.add('show');
+    $ctrlInfo.innerHTML = `${t} · ${a}${p}`;
+  }
+
+  // Buttons
+  $ctrlPlay.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (MODE === 'visual') return;
+    if ($audio.paused) $audio.play().catch(()=>{});
+    else $audio.pause();
+    showControls();
+  });
+  $ctrlNext.addEventListener('click', (e) => {
+    e.stopPropagation();
+    nextAudio();
+    showControls();
+  });
+  $ctrlPrev.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!audios.length) return;
+    // Walk audioIdx back by 2 so nextAudio() lands on the previous track.
+    audioIdx = audioIdx - 2;
+    while (audioIdx < -1) audioIdx += audios.length;
+    nextAudio();
+    showControls();
+  });
+
+  // Toggle play icon based on audio state
+  $audio.addEventListener('play', () => { $ctrlPlay.textContent = '⏸'; });
+  $audio.addEventListener('pause', () => { $ctrlPlay.textContent = '▶'; });
+
+  // Progress + time
+  function fmtTime(s) {
+    if (!s || !isFinite(s) || s < 0) return '--:--';
+    const m = Math.floor(s / 60);
+    const ss = Math.floor(s % 60).toString().padStart(2, '0');
+    return m + ':' + ss;
+  }
+  $audio.addEventListener('timeupdate', () => {
+    const cur = $audio.currentTime;
+    const dur = $audio.duration;
+    if (dur && isFinite(dur)) {
+      $ctrlFill.style.width = ((cur / dur) * 100).toFixed(2) + '%';
+      $ctrlTime.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
+    } else {
+      $ctrlFill.style.width = '0%';
+      $ctrlTime.textContent = fmtTime(cur) + ' / --:--';
+    }
+  });
+  $audio.addEventListener('loadedmetadata', () => {
+    $ctrlTime.textContent = '0:00 / ' + fmtTime($audio.duration);
+  });
+
+  // Click-to-seek on the progress bar
+  $ctrlProgress.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!$audio.duration || !isFinite($audio.duration)) return;
+    const rect = $ctrlProgress.getBoundingClientRect();
+    const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    try { $audio.currentTime = pct * $audio.duration; } catch (_e) {}
+  });
 
   // ─── Keyboard ───────────────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
