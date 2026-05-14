@@ -65,63 +65,77 @@
     position: absolute;
     left: 50%; top: 50%;
     transform: translate(-50%, -50%);
-    max-width: min(720px, 80vw);
+    max-width: min(540px, 82vw);
     text-align: center;
     font-family: var(--sans);
-    font-size: clamp(20px, 3vw, 34px);
+    font-size: clamp(15px, 2.1vw, 22px);
     font-weight: 400;
-    line-height: 1.6;
-    color: var(--ink);
-    /* Paper-tinted glow so ink text stays legible even when the
-       fragment lands on top of a dark photo. */
-    text-shadow: 0 0 14px rgba(220, 219, 213, 0.9),
-                 0 0 36px rgba(220, 219, 213, 0.55);
+    line-height: 1.65;
+    color: #ffffff;
+    /* Solid ink-blue mat under the fragment — readable on any photo */
+    background: var(--ink);
+    padding: 20px 28px 22px;
     opacity: 0;
     transition: opacity 2.4s ease;
     pointer-events: none;
     letter-spacing: .02em;
-    padding: 0 24px;
+    box-shadow: 0 6px 24px rgba(22, 0, 162, 0.18);
   }
   #text-overlay.show { opacity: 1; }
   #text-overlay .quote-mark {
     display: block;
     font-size: .55em;
-    color: var(--ink-faint);
+    color: rgba(255, 255, 255, 0.55);
     margin-bottom: .7em;
     letter-spacing: .35em;
+    font-family: var(--mono);
   }
 
-  /* Now playing strip */
-  #now-playing {
+  /* Now-playing — large, top-left, always-on (not auto-hidden with bar).
+     Lives in the otherwise-empty upper area so the title isn't covered by
+     the bottom audio bar. Three lines: title / artist / phrase. */
+  #np-top {
     position: absolute;
-    left: 24px; bottom: 22px;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: .12em;
-    color: var(--ink-dim);
+    left: 24px; top: 24px;
+    max-width: 60vw;
     opacity: 0;
     transition: opacity 1.2s ease;
     pointer-events: none;
-    text-transform: lowercase;
-    max-width: calc(100vw - 48px);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* Paper-tinted glow so ink reads on dark photos */
+    text-shadow: 0 0 10px rgba(220, 219, 213, 0.85),
+                 0 0 24px rgba(220, 219, 213, 0.45);
   }
-  #now-playing.show { opacity: 1; }
-  #now-playing .np-dot {
-    display: inline-block;
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    background: var(--ink-dim);
-    margin-right: 10px;
-    vertical-align: middle;
-    animation: pulse 3s ease-in-out infinite;
+  #np-top.show { opacity: 1; }
+  #np-top .np-title {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: clamp(14px, 1.4vw, 17px);
+    color: var(--ink);
+    line-height: 1.4;
+    letter-spacing: 0.01em;
   }
-  @keyframes pulse {
-    0%,100% { opacity: .25; }
-    50%     { opacity: 1; }
+  #np-top .np-artist {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    margin-top: 3px;
   }
+  #np-top .np-phrase {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-style: italic;
+    color: var(--ink-dim);
+    margin-top: 8px;
+    max-width: 320px;
+    line-height: 1.55;
+  }
+  #np-top .np-phrase:empty { display: none; }
+  #np-top .np-phrase::before { content: "“"; opacity: 0.7; margin-right: 2px; }
+  #np-top .np-phrase::after  { content: "”"; opacity: 0.7; margin-left: 2px; }
+  #np-top .np-phrase:empty::before,
+  #np-top .np-phrase:empty::after { content: none; }
 
   /* Channel + mode hint (top-right, ultra-faint) */
   #meta {
@@ -385,7 +399,7 @@
   #ctrl-row {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     padding: 11px 18px 13px;
   }
   .ctrl-btn {
