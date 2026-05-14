@@ -156,7 +156,9 @@
     z-index: 100;
     cursor: pointer;
     transition: opacity 1.6s ease;
-    padding: 24px;
+    /* Extra bottom padding so the footnote clears Chrome's "Customize"
+       shelf when this loads inside the new-tab override iframe. */
+    padding: 24px 24px 80px;
   }
   #curtain.gone { opacity: 0; pointer-events: none; }
 
@@ -178,28 +180,28 @@
 
   #curtain h1 {
     font-family: var(--sans);
-    font-weight: 400;
-    font-size: clamp(28px, 4.5vw, 44px);
+    font-weight: 500;
+    font-size: clamp(24px, 3.8vw, 36px);
     color: var(--c-ink);
     letter-spacing: .04em;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
   }
   #curtain .sub {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     letter-spacing: .3em;
     color: var(--c-gray);
     text-transform: uppercase;
-    margin-bottom: 48px;
+    margin-bottom: 32px;
   }
   #curtain .enter {
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: .25em;
     color: var(--c-gray);
     text-transform: lowercase;
     border: 1px solid var(--c-line);
-    padding: 14px 28px;
+    padding: 12px 24px;
     transition: all .4s ease;
     background: transparent;
   }
@@ -215,14 +217,14 @@
   }
   #curtain:hover .enter .arrow { transform: translateX(6px); }
   #curtain .footnote {
-    margin-top: 44px;
+    margin-top: 28px;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 9px;
     letter-spacing: .2em;
     color: var(--c-gray);
     text-transform: lowercase;
     text-align: center;
-    line-height: 1.8;
+    line-height: 1.7;
     max-width: 360px;
     padding: 0 24px;
   }
