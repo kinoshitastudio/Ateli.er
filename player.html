@@ -163,8 +163,8 @@
   /* Illustration slot — currently the Atelier flower (img/flower.png).
      Replace the inner <img> src to swap artwork. */
   #curtain-art {
-    width: clamp(140px, 24vw, 240px);
-    margin-bottom: 28px;
+    width: clamp(70px, 12vw, 120px);
+    margin-bottom: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -495,7 +495,7 @@
   <div class="footnote">
     a passive listening room. unreleased songs,<br>
     images, half-thoughts — drifting on their own.<br><br>
-    tap anywhere · press space to pause · f for fullscreen
+    space to pause · f for fullscreen
   </div>
 </div>
 
@@ -504,8 +504,6 @@
     <h2>— shortcuts</h2>
     <div class="h-row"><span class="h-key"><kbd>space</kbd></span><span>pause / resume</span></div>
     <div class="h-row"><span class="h-key"><kbd>n</kbd></span><span>next track</span></div>
-    <div class="h-row"><span class="h-key"><kbd>→</kbd></span><span>next image</span></div>
-    <div class="h-row"><span class="h-key"><kbd>t</kbd></span><span>show a fragment</span></div>
     <div class="h-row"><span class="h-key"><kbd>f</kbd></span><span>fullscreen</span></div>
     <div class="h-row"><span class="h-key"><kbd>m</kbd></span><span>cycle mode (all / audio / visual)</span></div>
     <div class="h-row"><span class="h-key"><kbd>r</kbd></span><span>reload feed</span></div>
@@ -987,13 +985,47 @@
     $ctrlTime.textContent = '0:00 / ' + fmtTime($audio.duration);
   });
 
-  // Click-to-seek on the progress bar
-  $ctrlProgress.addEventListener('click', (e) => {
-    e.stopPropagation();
+  // Click & drag to seek/scrub on the progress bar (mouse + touch)
+  function _seekAtClientX(clientX) {
     if (!$audio.duration || !isFinite($audio.duration)) return;
     const rect = $ctrlProgress.getBoundingClientRect();
-    const pct = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     try { $audio.currentTime = pct * $audio.duration; } catch (_e) {}
+  }
+  let _scrubbing = false;
+  // Mouse
+  $ctrlProgress.addEventListener('mousedown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    _scrubbing = true;
+    _seekAtClientX(e.clientX);
+    showControls();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!_scrubbing) return;
+    _seekAtClientX(e.clientX);
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  });
+  document.addEventListener('mouseup', () => {
+    if (!_scrubbing) return;
+    _scrubbing = false;
+    showControls();  // restart auto-hide timer
+  });
+  // Touch
+  $ctrlProgress.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    _scrubbing = true;
+    if (e.touches[0]) _seekAtClientX(e.touches[0].clientX);
+    showControls();
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!_scrubbing) return;
+    if (e.touches[0]) _seekAtClientX(e.touches[0].clientX);
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!_scrubbing) return;
+    _scrubbing = false;
+    showControls();
   });
 
   // ─── Keyboard ───────────────────────────────────────────────────────
@@ -1013,12 +1045,9 @@
       case 'n': case 'N':
         nextAudio();
         break;
-      case 'ArrowRight':
-        nextImage();
-        break;
-      case 't': case 'T':
-        showText();
-        break;
+      // Note: image/text cycles run on their own timers — no manual next/show
+      // keys, by design. (Audio still gets prev/next/space because audio is
+      // the one thing the listener actively listens to.)
       case 'f': case 'F':
         if (document.fullscreenElement) document.exitFullscreen();
         else (document.documentElement.requestFullscreen || (() => {})).call(document.documentElement);
