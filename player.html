@@ -126,48 +126,78 @@
     pointer-events: none;
   }
 
-  /* Entry curtain (required for audio autoplay unlock) */
+  /* Entry curtain — uses Atelier's paper + ink key colors (overrides the
+     player's monochrome palette while the curtain is visible).
+     Required for audio autoplay unlock (tap satisfies user-gesture policy). */
   #curtain {
+    /* Local Atelier palette overrides — scoped to the curtain only */
+    --c-paper:    #DCDBD5;
+    --c-ink:      #1600A2;
+    --c-gray:     rgba(22, 0, 162, 0.62);
+    --c-line:     rgba(22, 0, 162, 0.32);
+    --c-line-soft:rgba(22, 0, 162, 0.16);
+
     position: fixed; inset: 0;
-    background: var(--bg);
+    background: var(--c-paper);
+    color: var(--c-ink);
     display: flex;
     flex-direction: column;
     align-items: center; justify-content: center;
     z-index: 100;
     cursor: pointer;
     transition: opacity 1.6s ease;
+    padding: 24px;
   }
   #curtain.gone { opacity: 0; pointer-events: none; }
+
+  /* Illustration slot — replace #curtain-art's contents with the final
+     artwork later. Keep the container; size is responsive. */
+  #curtain-art {
+    width: clamp(140px, 22vw, 220px);
+    height: clamp(110px, 18vw, 170px);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--c-ink);
+  }
+  #curtain-art svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
   #curtain h1 {
     font-family: var(--serif);
     font-weight: 400;
     font-size: clamp(28px, 4.5vw, 44px);
-    color: var(--ink);
+    color: var(--c-ink);
     letter-spacing: .04em;
-    margin-bottom: 18px;
+    margin-bottom: 14px;
   }
   #curtain .sub {
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: .3em;
-    color: var(--ink-dim);
+    color: var(--c-gray);
     text-transform: uppercase;
-    margin-bottom: 56px;
+    margin-bottom: 48px;
   }
   #curtain .enter {
     font-family: var(--mono);
     font-size: 12px;
     letter-spacing: .25em;
-    color: var(--ink-dim);
+    color: var(--c-gray);
     text-transform: lowercase;
-    border: 1px solid var(--ink-faint);
+    border: 1px solid var(--c-line);
     padding: 14px 28px;
     transition: all .4s ease;
+    background: transparent;
   }
   #curtain:hover .enter,
   #curtain:active .enter {
-    color: var(--ink);
-    border-color: var(--ink-dim);
+    color: var(--c-ink);
+    border-color: var(--c-ink);
   }
   #curtain .enter .arrow {
     display: inline-block;
@@ -176,11 +206,11 @@
   }
   #curtain:hover .enter .arrow { transform: translateX(6px); }
   #curtain .footnote {
-    margin-top: 48px;
+    margin-top: 44px;
     font-family: var(--mono);
     font-size: 10px;
     letter-spacing: .2em;
-    color: var(--ink-faint);
+    color: var(--c-gray);
     text-transform: lowercase;
     text-align: center;
     line-height: 1.8;
@@ -292,12 +322,17 @@
     margin-top: 18px;
   }
 
-  /* Control bar (play/pause, prev/next, progress, time) — auto-hides */
+  /* Control bar (play/pause, prev/next, progress, time) — auto-hides.
+     Uses Atelier's ink-blue as a brand accent on top of the dark stage. */
   #ctrl-bar {
+    /* Atelier ink-blue, lightened slightly for legibility on a black ground */
+    --c-accent:        #4A3CD9;
+    --c-accent-soft:   rgba(74, 60, 217, 0.30);
+
     position: fixed;
     left: 0; right: 0; bottom: 0;
     z-index: 40;
-    background: linear-gradient(to top, rgba(10,10,10,0.86) 0%, rgba(10,10,10,0.45) 60%, rgba(10,10,10,0) 100%);
+    background: linear-gradient(to top, rgba(10,10,10,0.88) 0%, rgba(10,10,10,0.50) 60%, rgba(10,10,10,0) 100%);
     padding-top: 28px;
     opacity: 0;
     transform: translateY(8px);
@@ -317,18 +352,34 @@
     cursor: pointer;
     transition: height 0.2s ease;
   }
-  #ctrl-progress:hover { height: 4px; }
+  #ctrl-progress:hover { height: 5px; }
   #ctrl-progress-fill {
     position: absolute; left: 0; top: 0; bottom: 0;
-    background: rgba(232,228,220,0.85);
+    background: var(--c-accent);
+    box-shadow: 0 0 6px var(--c-accent-soft);
     width: 0%;
     pointer-events: none;
+    transition: background 0.3s ease;
   }
+  /* Tiny pulse-dot at the leading edge of the progress fill */
+  #ctrl-progress-fill::after {
+    content: "";
+    position: absolute;
+    right: -3px; top: 50%;
+    width: 6px; height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    box-shadow: 0 0 8px var(--c-accent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #ctrl-progress:hover #ctrl-progress-fill::after { opacity: 1; }
   #ctrl-row {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 10px 18px 14px;
+    padding: 12px 18px 16px;
   }
   .ctrl-btn {
     background: none;
@@ -337,14 +388,23 @@
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
-    padding: 6px 8px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+    padding: 6px 10px;
+    border-radius: 4px;
+    opacity: 0.72;
+    transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
     font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols", system-ui, sans-serif;
   }
-  .ctrl-btn:hover { opacity: 1; }
+  .ctrl-btn:hover {
+    opacity: 1;
+    color: var(--c-accent);
+    background: rgba(74, 60, 217, 0.08);
+  }
   .ctrl-btn:active { transform: scale(0.92); }
-  #ctrl-play { font-size: 22px; min-width: 30px; }
+  #ctrl-play {
+    font-size: 22px;
+    min-width: 34px;
+    text-align: center;
+  }
   #ctrl-info {
     flex: 1;
     min-width: 0;
@@ -356,6 +416,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    padding: 0 4px;
   }
   #ctrl-time {
     font-family: var(--mono);
@@ -363,8 +424,9 @@
     letter-spacing: 0.1em;
     color: var(--ink-faint);
     flex-shrink: 0;
-    min-width: 80px;
+    min-width: 88px;
     text-align: right;
+    font-variant-numeric: tabular-nums;
   }
   /* Hide the always-on now-playing strip while the control bar is visible,
      since the bar already shows artist info. */
@@ -415,6 +477,21 @@
 </div>
 
 <div id="curtain">
+  <!-- Illustration slot — replace the inner <svg> with the final artwork later.
+       Keep the #curtain-art wrapper so the layout/sizing stays consistent. -->
+  <div id="curtain-art" aria-hidden="true">
+    <svg viewBox="0 0 240 180" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+         xmlns="http://www.w3.org/2000/svg">
+      <!-- placeholder moon over a quiet courtyard line -->
+      <circle cx="120" cy="78" r="36" />
+      <path d="M 92 78 Q 120 102 148 78" stroke-width="1.4" opacity="0.55" />
+      <circle cx="178" cy="48" r="1.4" fill="currentColor" stroke="none" opacity="0.7" />
+      <circle cx="62"  cy="56" r="1.0" fill="currentColor" stroke="none" opacity="0.5" />
+      <circle cx="168" cy="118" r="1.2" fill="currentColor" stroke="none" opacity="0.6" />
+      <line x1="38" y1="146" x2="202" y2="146" stroke-width="1" opacity="0.35" />
+    </svg>
+  </div>
   <h1>中庭 — the courtyard</h1>
   <div class="sub">Ateli.er · player</div>
   <div class="enter">enter <span class="arrow">→</span></div>
