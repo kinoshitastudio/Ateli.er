@@ -326,20 +326,22 @@
   }
 
   /* Control bar (play/pause, prev/next, progress, time) — auto-hides.
-     Uses Atelier's ink-blue as a brand accent on top of the dark stage. */
+     Matches the Atelier audio bar in atelistudio.com: solid ink-blue
+     ground (#1600A2) with white type. */
   #ctrl-bar {
-    /* Atelier ink-blue, lightened slightly for legibility on a black ground */
-    --c-accent:        #4A3CD9;
-    --c-accent-soft:   rgba(74, 60, 217, 0.30);
+    --c-bar:           #1600A2;    /* Atelier ink */
+    --c-bar-ink:       #ffffff;
+    --c-bar-ink-dim:   rgba(255, 255, 255, 0.72);
+    --c-bar-ink-faint: rgba(255, 255, 255, 0.45);
+    --c-bar-line:      rgba(255, 255, 255, 0.22);
 
     position: fixed;
     left: 0; right: 0; bottom: 0;
     z-index: 40;
-    background: linear-gradient(to top, rgba(10,10,10,0.88) 0%, rgba(10,10,10,0.50) 60%, rgba(10,10,10,0) 100%);
-    padding-top: 28px;
+    background: var(--c-bar);
     opacity: 0;
     transform: translateY(8px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
+    transition: opacity 0.6s ease, transform 0.6s ease;
     pointer-events: none;
   }
   #ctrl-bar.show {
@@ -351,20 +353,18 @@
     position: relative;
     width: 100%;
     height: 2px;
-    background: rgba(232,228,220,0.16);
+    background: var(--c-bar-line);
     cursor: pointer;
     transition: height 0.2s ease;
   }
-  #ctrl-progress:hover { height: 5px; }
+  #ctrl-progress:hover { height: 4px; }
   #ctrl-progress-fill {
     position: absolute; left: 0; top: 0; bottom: 0;
-    background: var(--c-accent);
-    box-shadow: 0 0 6px var(--c-accent-soft);
+    background: var(--c-bar-ink);
     width: 0%;
     pointer-events: none;
-    transition: background 0.3s ease;
   }
-  /* Tiny pulse-dot at the leading edge of the progress fill */
+  /* Tiny dot at the leading edge — only on hover, keeps the bar minimal */
   #ctrl-progress-fill::after {
     content: "";
     position: absolute;
@@ -372,35 +372,33 @@
     width: 6px; height: 6px;
     margin-top: -3px;
     border-radius: 50%;
-    background: var(--c-accent);
-    box-shadow: 0 0 8px var(--c-accent);
+    background: var(--c-bar-ink);
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.25s ease;
   }
   #ctrl-progress:hover #ctrl-progress-fill::after { opacity: 1; }
   #ctrl-row {
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 12px 18px 16px;
+    padding: 11px 18px 13px;
   }
   .ctrl-btn {
     background: none;
     border: 0;
-    color: var(--ink);
+    color: var(--c-bar-ink);
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
     padding: 6px 10px;
-    border-radius: 4px;
-    opacity: 0.72;
-    transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+    border-radius: 3px;
+    opacity: 0.85;
+    transition: opacity 0.2s ease, background 0.2s ease;
     font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols", system-ui, sans-serif;
   }
   .ctrl-btn:hover {
     opacity: 1;
-    color: var(--c-accent);
-    background: rgba(74, 60, 217, 0.08);
+    background: rgba(255, 255, 255, 0.10);
   }
   .ctrl-btn:active { transform: scale(0.92); }
   #ctrl-play {
@@ -413,8 +411,8 @@
     min-width: 0;
     font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 0.12em;
-    color: var(--ink-dim);
+    letter-spacing: 0.14em;
+    color: var(--c-bar-ink);
     text-transform: lowercase;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -425,7 +423,7 @@
     font-family: var(--mono);
     font-size: 10px;
     letter-spacing: 0.1em;
-    color: var(--ink-faint);
+    color: var(--c-bar-ink-dim);
     flex-shrink: 0;
     min-width: 88px;
     text-align: right;
