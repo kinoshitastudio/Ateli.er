@@ -65,29 +65,29 @@
     position: absolute;
     left: 50%; top: 50%;
     transform: translate(-50%, -50%);
-    max-width: min(540px, 82vw);
+    max-width: min(380px, 78vw);
     text-align: center;
     font-family: var(--sans);
-    font-size: clamp(15px, 2.1vw, 22px);
+    font-size: clamp(11px, 1.5vw, 15px);
     font-weight: 400;
-    line-height: 1.65;
+    line-height: 1.6;
     color: #ffffff;
-    /* Solid ink-blue mat under the fragment — readable on any photo */
+    /* Solid ink-blue mat — kept slim so the blue doesn't dominate.
+       Padding sits close to the text on every side. */
     background: var(--ink);
-    padding: 20px 28px 22px;
+    padding: 10px 16px 12px;
     opacity: 0;
     transition: opacity 2.4s ease;
     pointer-events: none;
     letter-spacing: .02em;
-    box-shadow: 0 6px 24px rgba(22, 0, 162, 0.18);
   }
   #text-overlay.show { opacity: 1; }
   #text-overlay .quote-mark {
     display: block;
-    font-size: .55em;
+    font-size: .6em;
     color: rgba(255, 255, 255, 0.55);
-    margin-bottom: .7em;
-    letter-spacing: .35em;
+    margin-bottom: .5em;
+    letter-spacing: .3em;
     font-family: var(--mono);
   }
 
