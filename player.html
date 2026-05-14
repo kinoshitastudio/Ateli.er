@@ -8,6 +8,9 @@
 <meta name="description" content="A passive listening room. The Atelier courtyard, drifting — unreleased songs, images, half-thoughts.">
 <link rel="icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0a0a;
@@ -15,12 +18,13 @@
     --ink: #e8e4dc;
     --ink-dim: rgba(232,228,220,.55);
     --ink-faint: rgba(232,228,220,.28);
-    --serif: "Iowan Old Style","Apple Garamond","Baskerville","Georgia","Times New Roman",serif;
-    --mono: "SF Mono","Menlo","Consolas",monospace;
+    /* Atelier (about.html) font stack — sans for body/JP, mono for IDs */
+    --sans:  'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    --mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); }
-  body { font-family: var(--serif); cursor: none; }
+  body { font-family: var(--sans); cursor: none; }
   body.show-cursor { cursor: default; }
 
   /* Stage */
@@ -61,7 +65,7 @@
     transform: translate(-50%, -50%);
     max-width: min(720px, 80vw);
     text-align: center;
-    font-family: var(--serif);
+    font-family: var(--sans);
     font-size: clamp(20px, 3vw, 34px);
     line-height: 1.6;
     color: var(--ink);
@@ -150,25 +154,24 @@
   }
   #curtain.gone { opacity: 0; pointer-events: none; }
 
-  /* Illustration slot — replace #curtain-art's contents with the final
-     artwork later. Keep the container; size is responsive. */
+  /* Illustration slot — currently the Atelier flower (img/flower.png).
+     Replace the inner <img> src to swap artwork. */
   #curtain-art {
-    width: clamp(140px, 22vw, 220px);
-    height: clamp(110px, 18vw, 170px);
+    width: clamp(140px, 24vw, 240px);
     margin-bottom: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--c-ink);
   }
+  #curtain-art img,
   #curtain-art svg {
     width: 100%;
-    height: 100%;
+    height: auto;
     display: block;
   }
 
   #curtain h1 {
-    font-family: var(--serif);
+    font-family: var(--sans);
     font-weight: 400;
     font-size: clamp(28px, 4.5vw, 44px);
     color: var(--c-ink);
@@ -227,7 +230,7 @@
     border: 1px solid var(--ink-faint);
     background: transparent;
     color: var(--ink-faint);
-    font-family: var(--serif);
+    font-family: var(--sans);
     font-size: 14px;
     cursor: pointer;
     z-index: 50;
@@ -256,7 +259,7 @@
     letter-spacing: .08em;
   }
   #help .help-inner h2 {
-    font-family: var(--serif);
+    font-family: var(--sans);
     font-weight: 400;
     color: var(--ink);
     font-size: 22px;
@@ -305,7 +308,7 @@
     transform: translate(-50%, -50%);
     max-width: 420px;
     text-align: center;
-    font-family: var(--serif);
+    font-family: var(--sans);
     font-size: 18px;
     color: var(--ink-dim);
     line-height: 1.7;
@@ -477,20 +480,10 @@
 </div>
 
 <div id="curtain">
-  <!-- Illustration slot — replace the inner <svg> with the final artwork later.
-       Keep the #curtain-art wrapper so the layout/sizing stays consistent. -->
+  <!-- Atelier flower (same illustration as about.html). Swap for a new
+       artwork by replacing this <img>'s src; keep the wrapper for sizing. -->
   <div id="curtain-art" aria-hidden="true">
-    <svg viewBox="0 0 240 180" fill="none" stroke="currentColor"
-         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-         xmlns="http://www.w3.org/2000/svg">
-      <!-- placeholder moon over a quiet courtyard line -->
-      <circle cx="120" cy="78" r="36" />
-      <path d="M 92 78 Q 120 102 148 78" stroke-width="1.4" opacity="0.55" />
-      <circle cx="178" cy="48" r="1.4" fill="currentColor" stroke="none" opacity="0.7" />
-      <circle cx="62"  cy="56" r="1.0" fill="currentColor" stroke="none" opacity="0.5" />
-      <circle cx="168" cy="118" r="1.2" fill="currentColor" stroke="none" opacity="0.6" />
-      <line x1="38" y1="146" x2="202" y2="146" stroke-width="1" opacity="0.35" />
-    </svg>
+    <img src="img/flower.png" alt="" loading="eager" decoding="async">
   </div>
   <h1>中庭 — the courtyard</h1>
   <div class="sub">Ateli.er · player</div>
