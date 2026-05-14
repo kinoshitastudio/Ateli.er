@@ -425,19 +425,6 @@
     min-width: 34px;
     text-align: center;
   }
-  #ctrl-info {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: var(--c-bar-ink);
-    text-transform: lowercase;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 0 4px;
-  }
   #ctrl-time {
     font-family: var(--mono);
     font-size: 10px;
@@ -447,10 +434,8 @@
     min-width: 88px;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    margin-left: auto;   /* pushes time to the far right of the bar */
   }
-  /* Hide the always-on now-playing strip while the control bar is visible,
-     since the bar already shows artist info. */
-  body.controls-visible #now-playing { opacity: 0; }
 
   /* No audio element styling (just hidden, controlled by JS) */
   audio { display: none; }
@@ -477,7 +462,11 @@
   <div class="layer-img" id="img-b"></div>
   <div id="vignette"></div>
   <div id="text-overlay"></div>
-  <div id="now-playing"></div>
+  <div id="np-top">
+    <div class="np-title"></div>
+    <div class="np-artist"></div>
+    <div class="np-phrase"></div>
+  </div>
   <div id="meta"></div>
   <div id="loading">— gathering the courtyard —</div>
   <div id="notice"></div>
@@ -490,7 +479,7 @@
       <button class="ctrl-btn" id="ctrl-prev" type="button" aria-label="previous track" title="previous track">⏮</button>
       <button class="ctrl-btn" id="ctrl-play" type="button" aria-label="play / pause" title="play / pause">⏸</button>
       <button class="ctrl-btn" id="ctrl-next" type="button" aria-label="next track" title="next track">⏭</button>
-      <div id="ctrl-info">— quiet —</div>
+      <button class="ctrl-btn" id="ctrl-mute" type="button" aria-label="mute / unmute" title="mute / unmute">🔊</button>
       <div id="ctrl-time">--:-- / --:--</div>
     </div>
   </div>
@@ -559,7 +548,6 @@
   const $imgA = document.getElementById('img-a');
   const $imgB = document.getElementById('img-b');
   const $text = document.getElementById('text-overlay');
-  const $np = document.getElementById('now-playing');
   const $meta = document.getElementById('meta');
   const $audio = document.getElementById('audio');
   const $loading = document.getElementById('loading');
@@ -742,7 +730,7 @@
     _clearAudioWatchdog();
     if (_audioConsecutiveFails >= MAX_CONSECUTIVE_AUDIO_FAILS) {
       // Bail out — show a quiet notice rather than thrashing the feed
-      $np.classList.remove('show');
+      $npTop.classList.remove('show');
       $loading.textContent = '— audio unavailable in this courtyard —';
       $loading.classList.remove('gone');
       setTimeout(() => $loading.classList.add('gone'), 6000);
@@ -757,17 +745,17 @@
     _clearAudioWatchdog();
     if (MODE === 'visual') {
       $audio.pause();
-      $np.classList.remove('show');
+      $npTop.classList.remove('show');
       return;
     }
     if (!audios.length) {
-      $np.classList.remove('show');
+      $npTop.classList.remove('show');
       return;
     }
     const attempts = _attempts || 0;
     // If we've cycled past the entire pool, all blacklisted — give up.
     if (attempts >= audios.length) {
-      $np.classList.remove('show');
+      $npTop.classList.remove('show');
       $loading.textContent = '— audio unavailable in this courtyard —';
       $loading.classList.remove('gone');
       setTimeout(() => $loading.classList.add('gone'), 6000);
@@ -802,11 +790,7 @@
       }
     });
 
-    const title = t.title || 'untitled';
-    const artist = t.artist || t._owner || '';
-    const phrase = t.phrase ? ` — ${t.phrase}` : '';
-    $np.innerHTML = `<span class="np-dot"></span>${escapeHtml(title)} · ${escapeHtml(artist)}${escapeHtml(phrase)}`;
-    $np.classList.add('show');
+    setNowPlaying(t.title, t.artist || t._owner, t.phrase);
   }
 
   // Successful playback resets the consecutive-fail counter, clears the
@@ -884,7 +868,7 @@
     }
     if (MODE === 'visual') {
       $audio.pause();
-      $np.classList.remove('show');
+      $npTop.classList.remove('show');
     }
     updateMeta();
   }
@@ -915,8 +899,13 @@
   const $ctrlPrev = document.getElementById('ctrl-prev');
   const $ctrlPlay = document.getElementById('ctrl-play');
   const $ctrlNext = document.getElementById('ctrl-next');
-  const $ctrlInfo = document.getElementById('ctrl-info');
+  const $ctrlMute = document.getElementById('ctrl-mute');
   const $ctrlTime = document.getElementById('ctrl-time');
+  // Top-left now-playing strip (always-on, not auto-hidden with bar)
+  const $npTop = document.getElementById('np-top');
+  const $npTitle = $npTop.querySelector('.np-title');
+  const $npArtist = $npTop.querySelector('.np-artist');
+  const $npPhrase = $npTop.querySelector('.np-phrase');
 
   let _ctrlHideTimer = null;
   function showControls() {
@@ -937,14 +926,13 @@
   });
   $ctrlBar.addEventListener('mouseleave', showControls);
 
-  // Helper: keep ambient #now-playing and control-bar info in sync.
+  // Update the top-left now-playing strip. Three separate lines so they
+  // each hold their own typography (title / artist / phrase).
   function setNowPlaying(title, artist, phrase) {
-    const t = escapeHtml(title || 'untitled');
-    const a = escapeHtml(artist || '');
-    const p = phrase ? ` — ${escapeHtml(phrase)}` : '';
-    $np.innerHTML = `<span class="np-dot"></span>${t} · ${a}${p}`;
-    $np.classList.add('show');
-    $ctrlInfo.innerHTML = `${t} · ${a}${p}`;
+    $npTitle.textContent = title || 'untitled';
+    $npArtist.textContent = artist || '';
+    $npPhrase.textContent = phrase || '';
+    $npTop.classList.add('show');
   }
 
   // Buttons
@@ -968,6 +956,18 @@
     while (audioIdx < -1) audioIdx += audios.length;
     nextAudio();
     showControls();
+  });
+
+  // Mute: silences audio but lets image/text cycles keep drifting (different
+  // from pause, which freezes everything to preserve the chance pairing).
+  $ctrlMute.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $audio.muted = !$audio.muted;
+    $ctrlMute.textContent = $audio.muted ? '🔇' : '🔊';
+    showControls();
+  });
+  $audio.addEventListener('volumechange', () => {
+    $ctrlMute.textContent = $audio.muted ? '🔇' : '🔊';
   });
 
   // Toggle play icon based on audio state, AND freeze the image/text
@@ -1196,11 +1196,7 @@
       });
     }
 
-    const title = t.title || 'untitled';
-    const artist = t.artist || t._owner || '';
-    const phrase = t.phrase ? ` — ${t.phrase}` : '';
-    $np.innerHTML = `<span class="np-dot"></span>${escapeHtml(title)} · ${escapeHtml(artist)}${escapeHtml(phrase)}`;
-    $np.classList.add('show');
+    setNowPlaying(t.title, t.artist || t._owner, t.phrase);
     return true;
   }
 
