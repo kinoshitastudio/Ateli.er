@@ -13,12 +13,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
-    --bg-soft: #131313;
-    --ink: #e8e4dc;
-    --ink-dim: rgba(232,228,220,.55);
-    --ink-faint: rgba(232,228,220,.28);
-    /* Atelier (about.html) font stack — sans for body/JP, mono for IDs */
+    /* Atelier paper + ink — matches atelistudio.com */
+    --bg:        #DCDBD5;
+    --bg-soft:   #C8C7C1;
+    --ink:       #1600A2;
+    --ink-dim:   rgba(22, 0, 162, 0.62);
+    --ink-faint: rgba(22, 0, 162, 0.32);
+    --ink-soft:  rgba(22, 0, 162, 0.16);
     --sans:  'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
     --mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   }
@@ -34,10 +35,10 @@
     overflow: hidden;
   }
 
-  /* Image layers (crossfade) */
+  /* Image layers (crossfade) — letterbox color = paper, matches stage */
   .layer-img {
     position: absolute; inset: 0;
-    background-color: #000;
+    background-color: var(--bg);
     background-position: center center;
     background-repeat: no-repeat;
     background-size: contain;
@@ -48,10 +49,11 @@
   .layer-img.show { opacity: 1; }
   body.audio-only .layer-img { display: none; }
 
-  /* Vignette for image readability */
+  /* Vignette: soft paper-tinted ring at the edges (so the image sits in
+     the courtyard rather than floating on a hard square). */
   #vignette {
     position: absolute; inset: 0;
-    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.45) 90%);
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(220, 219, 213, 0.55) 95%);
     pointer-events: none;
     opacity: 0;
     transition: opacity 2s ease;
@@ -67,9 +69,13 @@
     text-align: center;
     font-family: var(--sans);
     font-size: clamp(20px, 3vw, 34px);
+    font-weight: 400;
     line-height: 1.6;
     color: var(--ink);
-    text-shadow: 0 2px 16px rgba(0,0,0,.85), 0 0 40px rgba(0,0,0,.55);
+    /* Paper-tinted glow so ink text stays legible even when the
+       fragment lands on top of a dark photo. */
+    text-shadow: 0 0 14px rgba(220, 219, 213, 0.9),
+                 0 0 36px rgba(220, 219, 213, 0.55);
     opacity: 0;
     transition: opacity 2.4s ease;
     pointer-events: none;
@@ -242,7 +248,7 @@
 
   #help {
     position: fixed; inset: 0;
-    background: rgba(10,10,10,.96);
+    background: rgba(220, 219, 213, 0.96);
     z-index: 60;
     display: none;
     align-items: center; justify-content: center;
@@ -1044,13 +1050,15 @@
   });
 
   // ─── Touch / click ──────────────────────────────────────────────────
+  // Philosophy: nobody in the courtyard can change what flows. Tapping the
+  // image deliberately does NOT skip — randomness + audio/image/text drift
+  // independently, and the miracles only happen when nothing is forced.
   document.addEventListener('click', (e) => {
     if (e.target === $helpToggle) { $help.classList.add('open'); return; }
     if (e.target.closest && e.target.closest('#help')) { $help.classList.remove('open'); return; }
     if (e.target.closest && e.target.closest('#curtain')) return;
     if (e.target.closest && e.target.closest('#notice') && $notice.onclick) return;
-    // Tap on stage = next image (if visual on)
-    if (MODE !== 'audio' && imgs.length) nextImage();
+    // (no fallthrough: stage taps do not advance the cycle)
   });
 
   // ─── Refresh feed periodically ──────────────────────────────────────
