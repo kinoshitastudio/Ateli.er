@@ -918,13 +918,44 @@ footer.foot {
       <span class="lang-ja">Ateli.er Player —<br>Chrome 拡張で、中庭を持ち歩く。</span>
       <span class="lang-en">Ateli.er Player —<br>a Chrome extension that carries the courtyard with you.</span>
     </h2>
-    <!-- preview mock (placeholder until CWS approval + real screenshot) -->
-    <div class="illustration" style="max-width: 540px; margin: 28px auto 0;">
-      <div class="illustration-box" style="aspect-ratio: 16 / 9; padding: 24px; position: relative; flex-direction: column; gap: 14px;">
-        <img src="img/people2.png" alt="" loading="lazy" decoding="async" style="max-width: 100px; height: auto; opacity: 0.78;">
-        <span style="font-family: var(--mono); font-size: 11px; letter-spacing: .28em; color: var(--ink); font-weight: 500;">— COMING SOON —</span>
-        <span style="font-family: var(--mono); font-size: 9px; letter-spacing: .2em; color: var(--gray); margin-top: -4px;"><span class="lang-ja">Chrome Web Store 審査中</span><span class="lang-en">awaiting Chrome Web Store review</span></span>
+    <!-- preview mock — visual mini-player representation
+         (replace inner with a real screenshot when one exists) -->
+    <div style="max-width: 560px; margin: 32px auto 0;">
+      <div style="position: relative; aspect-ratio: 16/10; background: var(--paper); border-radius: 14px; box-shadow: 0 6px 28px rgba(22,0,162,0.10); overflow: hidden; border: 1px solid var(--line-soft); display: flex; flex-direction: column;">
+        <!-- top-left title (np-top mock) -->
+        <div style="position: absolute; left: 16px; top: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: var(--ink); text-transform: uppercase; line-height: 1.5;">
+          樹海<br><span style="color: var(--gray);">99LETTERS</span>
+        </div>
+        <!-- top-right meta -->
+        <div style="position: absolute; right: 16px; top: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: var(--gray); text-transform: uppercase; line-height: 1.5; text-align: right;">
+          MODE · ALL<br>7♪ 17◦ 2…
+        </div>
+        <!-- center: image area + fragment mat -->
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;">
+          <div style="background: var(--ink); color: #fff; padding: 12px 18px; font-family: var(--sans); font-size: 13px; line-height: 1.6; max-width: 280px; text-align: center;">
+            <div style="font-family: var(--mono); font-size: 8px; letter-spacing: .3em; color: rgba(255,255,255,0.55); margin-bottom: 6px;">— A FRAGMENT —</div>
+            <span class="lang-ja">静かなものほど、長く残る。</span><span class="lang-en">The quiet ones linger longest.</span>
+          </div>
+        </div>
+        <!-- bottom audio bar mock -->
+        <div style="background: var(--ink); color: #fff; padding: 8px 16px 10px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; display: flex; align-items: center; gap: 10px;">
+          <div style="height: 2px; background: rgba(255,255,255,0.18); position: absolute; left: 0; right: 0; bottom: 30px;">
+            <div style="height: 100%; width: 32%; background: #fff;"></div>
+          </div>
+          <span style="font-size: 14px;">⏮</span>
+          <span style="font-size: 16px;">⏸</span>
+          <span style="font-size: 14px;">⏭</span>
+          <span style="font-size: 12px;">🔊</span>
+          <span style="margin-left: auto; font-size: 9px; color: rgba(255,255,255,0.72);">0:42 / 3:14</span>
+        </div>
+        <!-- COMING SOON badge -->
+        <div style="position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em; padding: 5px 14px; border-radius: 999px;">
+          COMING SOON
+        </div>
       </div>
+      <p style="text-align: center; margin-top: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; color: var(--gray); text-transform: lowercase;">
+        <span class="lang-ja">— Chrome Web Store 審査中</span><span class="lang-en">— awaiting Chrome Web Store review</span>
+      </p>
     </div>
     <div class="block-body">
       <p class="lang-ja">投稿された未発表曲・写真・断片が、誰の操作も挟まず漂います。新しいタブを開くたびに中庭がはじまる。ツールバーから小窓でも開けるので、仕事中もデスクの脇で生き続ける。</p>
