@@ -956,9 +956,31 @@
     showControls();
   });
 
-  // Toggle play icon based on audio state
-  $audio.addEventListener('play', () => { $ctrlPlay.textContent = '⏸'; });
-  $audio.addEventListener('pause', () => { $ctrlPlay.textContent = '▶'; });
+  // Toggle play icon based on audio state, AND freeze the image/text
+  // cycles in lockstep with audio. The miracle is the random alignment,
+  // so the listener pausing for a moment shouldn't lose a track / image
+  // pairing while they're away.
+  $audio.addEventListener('play', () => {
+    $ctrlPlay.textContent = '⏸';
+    if (started && MODE !== 'visual') _resumeCycles();
+  });
+  $audio.addEventListener('pause', () => {
+    $ctrlPlay.textContent = '▶';
+    if (started && MODE !== 'visual') _pauseCycles();
+  });
+
+  function _pauseCycles() {
+    if (imgTimer) { clearInterval(imgTimer); imgTimer = null; }
+    if (textTimer) { clearInterval(textTimer); textTimer = null; }
+  }
+  function _resumeCycles() {
+    if (!imgTimer && MODE !== 'audio' && imgs.length) {
+      imgTimer = setInterval(nextImage, IMG_INTERVAL);
+    }
+    if (!textTimer && texts.length) {
+      textTimer = setInterval(showText, TEXT_INTERVAL);
+    }
+  }
 
   // Progress + time
   function fmtTime(s) {
