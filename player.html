@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>Ateli.er — 中庭 / player</title>
+<meta name="description" content="A passive listening room. The Atelier courtyard, drifting — unreleased songs, images, half-thoughts.">
+<link rel="icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-soft: #131313;
+    --ink: #e8e4dc;
+    --ink-dim: rgba(232,228,220,.55);
+    --ink-faint: rgba(232,228,220,.28);
+    --serif: "Iowan Old Style","Apple Garamond","Baskerville","Georgia","Times New Roman",serif;
+    --mono: "SF Mono","Menlo","Consolas",monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); }
+  body { font-family: var(--serif); cursor: none; }
+  body.show-cursor { cursor: default; }
+
+  /* Stage */
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Image layers (crossfade) */
+  .layer-img {
+    position: absolute; inset: 0;
+    background-color: #000;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0;
+    transition: opacity 4s ease-in-out;
+    will-change: opacity;
+  }
+  .layer-img.show { opacity: 1; }
+  body.audio-only .layer-img { display: none; }
+
+  /* Vignette for image readability */
+  #vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.45) 90%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 2s ease;
+  }
+  body.has-image #vignette { opacity: 1; }
+
+  /* Text overlay (lyric / prose drift) */
+  #text-overlay {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: min(720px, 80vw);
+    text-align: center;
+    font-family: var(--serif);
+    font-size: clamp(20px, 3vw, 34px);
+    line-height: 1.6;
+    color: var(--ink);
+    text-shadow: 0 2px 16px rgba(0,0,0,.85), 0 0 40px rgba(0,0,0,.55);
+    opacity: 0;
+    transition: opacity 2.4s ease;
+    pointer-events: none;
+    letter-spacing: .02em;
+    padding: 0 24px;
+  }
+  #text-overlay.show { opacity: 1; }
+  #text-overlay .quote-mark {
+    display: block;
+    font-size: .55em;
+    color: var(--ink-faint);
+    margin-bottom: .7em;
+    letter-spacing: .35em;
+  }
+
+  /* Now playing strip */
+  #now-playing {
+    position: absolute;
+    left: 24px; bottom: 22px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    color: var(--ink-dim);
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    pointer-events: none;
+    text-transform: lowercase;
+    max-width: calc(100vw - 48px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #now-playing.show { opacity: 1; }
+  #now-playing .np-dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--ink-dim);
+    margin-right: 10px;
+    vertical-align: middle;
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: .25; }
+    50%     { opacity: 1; }
+  }
+
+  /* Channel + mode hint (top-right, ultra-faint) */
+  #meta {
+    position: absolute;
+    right: 24px; top: 22px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .25em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    text-align: right;
+    pointer-events: none;
+  }
+
+  /* Entry curtain (required for audio autoplay unlock) */
+  #curtain {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    cursor: pointer;
+    transition: opacity 1.6s ease;
+  }
+  #curtain.gone { opacity: 0; pointer-events: none; }
+  #curtain h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(28px, 4.5vw, 44px);
+    color: var(--ink);
+    letter-spacing: .04em;
+    margin-bottom: 18px;
+  }
+  #curtain .sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    margin-bottom: 56px;
+  }
+  #curtain .enter {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: .25em;
+    color: var(--ink-dim);
+    text-transform: lowercase;
+    border: 1px solid var(--ink-faint);
+    padding: 14px 28px;
+    transition: all .4s ease;
+  }
+  #curtain:hover .enter,
+  #curtain:active .enter {
+    color: var(--ink);
+    border-color: var(--ink-dim);
+  }
+  #curtain .enter .arrow {
+    display: inline-block;
+    margin-left: 12px;
+    transition: transform .4s ease;
+  }
+  #curtain:hover .enter .arrow { transform: translateX(6px); }
+  #curtain .footnote {
+    margin-top: 48px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .2em;
+    color: var(--ink-faint);
+    text-transform: lowercase;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 360px;
+    padding: 0 24px;
+  }
+
+  /* Help (?) overlay */
+  #help-toggle {
+    position: absolute;
+    right: 18px; bottom: 18px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-faint);
+    background: transparent;
+    color: var(--ink-faint);
+    font-family: var(--serif);
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity .8s ease, color .3s ease, border-color .3s ease;
+  }
+  body.show-cursor #help-toggle { opacity: 1; }
+  #help-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
+
+  #help {
+    position: fixed; inset: 0;
+    background: rgba(10,10,10,.96);
+    z-index: 60;
+    display: none;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  #help.open { display: flex; }
+  #help .help-inner {
+    max-width: 480px;
+    padding: 32px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2.2;
+    color: var(--ink-dim);
+    letter-spacing: .08em;
+  }
+  #help .help-inner h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    color: var(--ink);
+    font-size: 22px;
+    margin-bottom: 24px;
+    letter-spacing: .04em;
+  }
+  #help .help-inner kbd {
+    display: inline-block;
+    min-width: 20px;
+    padding: 2px 8px;
+    margin-right: 12px;
+    border: 1px solid var(--ink-faint);
+    border-radius: 3px;
+    color: var(--ink);
+    text-align: center;
+    font-size: 11px;
+  }
+  #help .help-inner .h-row { display: flex; align-items: baseline; }
+  #help .help-inner .h-row .h-key { width: 90px; flex-shrink: 0; }
+  #help .help-inner .close-hint {
+    margin-top: 28px;
+    color: var(--ink-faint);
+    font-size: 10px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    text-align: right;
+  }
+
+  /* Loading state */
+  #loading {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  #loading.gone { display: none; }
+
+  /* Empty / error */
+  #notice {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 420px;
+    text-align: center;
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--ink-dim);
+    line-height: 1.7;
+    padding: 0 24px;
+    display: none;
+  }
+  #notice.show { display: block; }
+  #notice .small {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: lowercase;
+    color: var(--ink-faint);
+    margin-top: 18px;
+  }
+
+  /* No audio element styling (just hidden, controlled by JS) */
+  audio { display: none; }
+
+  @media (max-width: 480px) {
+    #now-playing { left: 16px; bottom: 16px; font-size: 10px; }
+    #meta { right: 16px; top: 16px; font-size: 9px; }
+    #help-toggle { right: 12px; bottom: 12px; }
+    #curtain h1 { font-size: 30px; }
+    #curtain .sub { font-size: 10px; margin-bottom: 36px; }
+    #curtain .footnote { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="layer-img" id="img-a"></div>
+  <div class="layer-img" id="img-b"></div>
+  <div id="vignette"></div>
+  <div id="text-overlay"></div>
+  <div id="now-playing"></div>
+  <div id="meta"></div>
+  <div id="loading">— gathering the courtyard —</div>
+  <div id="notice"></div>
+  <button id="help-toggle" type="button" aria-label="help">?</button>
+</div>
+
+<div id="curtain">
+  <h1>中庭 — the courtyard</h1>
+  <div class="sub">Ateli.er · player</div>
+  <div class="enter">enter <span class="arrow">→</span></div>
+  <div class="footnote">
+    a passive listening room. unreleased songs,<br>
+    images, half-thoughts — drifting on their own.<br><br>
+    tap anywhere · press space to pause · f for fullscreen
+  </div>
+</div>
+
+<div id="help">
+  <div class="help-inner">
+    <h2>— shortcuts</h2>
+    <div class="h-row"><span class="h-key"><kbd>space</kbd></span><span>pause / resume</span></div>
+    <div class="h-row"><span class="h-key"><kbd>n</kbd></span><span>next track</span></div>
+    <div class="h-row"><span class="h-key"><kbd>→</kbd></span><span>next image</span></div>
+    <div class="h-row"><span class="h-key"><kbd>t</kbd></span><span>show a fragment</span></div>
+    <div class="h-row"><span class="h-key"><kbd>f</kbd></span><span>fullscreen</span></div>
+    <div class="h-row"><span class="h-key"><kbd>m</kbd></span><span>cycle mode (all / audio / visual)</span></div>
+    <div class="h-row"><span class="h-key"><kbd>r</kbd></span><span>reload feed</span></div>
+    <div class="close-hint">click anywhere to close</div>
+  </div>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+(function(){
+  'use strict';
+
+  // ─── Config ─────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
+  const SUPABASE_PUB_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
+
+  const params = new URLSearchParams(location.search);
+  let MODE = (params.get('mode') || 'all').toLowerCase();   // all | audio | visual
+  if (!['all','audio','visual'].includes(MODE)) MODE = 'all';
+  const CHANNEL = params.get('channel') || params.get('ch') || null;
+  const LIMIT = clamp(parseInt(params.get('limit') || '200', 10), 10, 500);
+  const IMG_INTERVAL = clamp(parseInt(params.get('img') || '18', 10), 4, 120) * 1000;
+  const TEXT_INTERVAL = clamp(parseInt(params.get('text') || '38', 10), 8, 240) * 1000;
+  const REFRESH_INTERVAL = clamp(parseInt(params.get('refresh') || '30', 10), 5, 240) * 60 * 1000;
+
+  function clamp(n, lo, hi) {
+    if (Number.isNaN(n)) return lo;
+    return Math.max(lo, Math.min(hi, n));
+  }
+
+  // ─── State ──────────────────────────────────────────────────────────
+  let blocks = [];
+  let imgs = [], audios = [], texts = [];
+  let imgIdx = -1, audioIdx = -1;
+  let activeImg = 'a';   // which layer currently visible
+  let imgTimer = null, textTimer = null, refreshTimer = null, cursorTimer = null;
+  let started = false;
+
+  // ─── DOM ────────────────────────────────────────────────────────────
+  const $curtain = document.getElementById('curtain');
+  const $imgA = document.getElementById('img-a');
+  const $imgB = document.getElementById('img-b');
+  const $text = document.getElementById('text-overlay');
+  const $np = document.getElementById('now-playing');
+  const $meta = document.getElementById('meta');
+  const $audio = document.getElementById('audio');
+  const $loading = document.getElementById('loading');
+  const $notice = document.getElementById('notice');
+  const $help = document.getElementById('help');
+  const $helpToggle = document.getElementById('help-toggle');
+
+  // ─── Utils ──────────────────────────────────────────────────────────
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function isPlayableAudioUrl(u) {
+    if (!u || typeof u !== 'string') return false;
+    if (!/^https?:\/\//i.test(u) && !u.startsWith('data:audio/')) return false;
+    // Block known unplayable domains (Drive blocks audio CORS)
+    if (/drive\.google\.com/i.test(u)) return false;
+    return true;
+  }
+
+  function isPlayableImageUrl(u) {
+    if (!u || typeof u !== 'string') return false;
+    return /^https?:\/\//i.test(u) || u.startsWith('data:image/');
+  }
+
+  // ─── Fetch ──────────────────────────────────────────────────────────
+  async function fetchFeed() {
+    let url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&order=ts.desc&limit=${LIMIT}`;
+    if (CHANNEL) url += `&channel_id=eq.${encodeURIComponent(CHANNEL)}`;
+    try {
+      const res = await fetch(url, {
+        headers: { 'apikey': SUPABASE_PUB_KEY, 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      blocks = rows.map(r => {
+        const p = (r.payload && typeof r.payload === 'object') ? r.payload : {};
+        return Object.assign({}, p, {
+          _id: r.id,
+          _kind: r.kind,
+          _owner: r.owner_handle || '',
+          _channelId: r.channel_id || '',
+          _channelLabel: r.channel_label || '',
+          _ts: r.ts || 0,
+        });
+      });
+      organize();
+      return true;
+    } catch (e) {
+      console.warn('[Atelier Player] fetch failed', e);
+      return false;
+    }
+  }
+
+  function organize() {
+    imgs = blocks.filter(b => (b._kind === 'image' || b.kind === 'image') && isPlayableImageUrl(b.imageUrl));
+    audios = blocks.filter(b => (b._kind === 'audio' || b.kind === 'audio') && isPlayableAudioUrl(b.audioUrl));
+    texts = blocks.filter(b => (b._kind === 'text' || b.kind === 'text') && b.text && b.text.trim().length > 0);
+
+    // Audio blocks may also carry an imageUrl (cover art) — include those too
+    blocks.forEach(b => {
+      if ((b._kind === 'audio' || b.kind === 'audio') && isPlayableImageUrl(b.imageUrl)) {
+        imgs.push(b);
+      }
+    });
+
+    shuffle(imgs); shuffle(audios); shuffle(texts);
+
+    updateMeta();
+  }
+
+  function updateMeta() {
+    const parts = [];
+    if (CHANNEL) parts.push('ch · ' + CHANNEL);
+    parts.push('mode · ' + MODE);
+    parts.push(`${audios.length}♪ ${imgs.length}◦ ${texts.length}…`);
+    $meta.innerHTML = parts.map(escapeHtml).join('<br>');
+  }
+
+  // ─── Image cycle ────────────────────────────────────────────────────
+  // Per-session blacklist of image URLs that 404'd / failed CORS / never loaded.
+  // Cleared only by a feed refresh (so transient hiccups don't permanently exclude).
+  const _failedImageUrls = new Set();
+
+  function nextImage(_attempts) {
+    if (MODE === 'audio') return;
+    if (!imgs.length) return;
+    const attempts = _attempts || 0;
+    // If we've cycled the entire pool without finding a playable image, give up.
+    if (attempts >= imgs.length) {
+      console.warn('[Atelier Player] no playable images in this feed');
+      return;
+    }
+    imgIdx = (imgIdx + 1) % imgs.length;
+    const b = imgs[imgIdx];
+    const url = b.imageUrl;
+    if (!url || _failedImageUrls.has(url)) {
+      // Skip immediately to the next without waiting for a probe
+      return nextImage(attempts + 1);
+    }
+
+    const showLayer = activeImg === 'a' ? $imgB : $imgA;
+    const hideLayer = activeImg === 'a' ? $imgA : $imgB;
+
+    // Preload then swap. Watchdog: if neither load nor error fires in 8s,
+    // treat it as failed and move on (some hosts hang indefinitely).
+    const probe = new Image();
+    let settled = false;
+    const watchdog = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      _failedImageUrls.add(url);
+      console.warn('[Atelier Player] image stall, blacklisted', url);
+      nextImage(attempts + 1);
+    }, 8000);
+
+    probe.onload = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      showLayer.style.backgroundImage = `url("${url.replace(/"/g, '%22')}")`;
+      showLayer.classList.add('show');
+      hideLayer.classList.remove('show');
+      activeImg = activeImg === 'a' ? 'b' : 'a';
+      document.body.classList.add('has-image');
+    };
+    probe.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      _failedImageUrls.add(url);
+      console.warn('[Atelier Player] image failed, blacklisted', url);
+      // Try the next image, but bound recursion via the attempts counter
+      nextImage(attempts + 1);
+    };
+    probe.src = url;
+  }
+
+  // ─── Audio queue ────────────────────────────────────────────────────
+  // Per-session blacklist of audio URLs that errored / never started playing.
+  // Cleared only by a feed refresh.
+  const _failedAudioUrls = new Set();
+  const MAX_CONSECUTIVE_AUDIO_FAILS = 6;
+  let _audioConsecutiveFails = 0;
+  let _audioWatchdog = null;
+  let _deferredNextAudio = null;   // pending setTimeout for advancing after a failure
+  let _currentAudioUrl = null;
+
+  function _clearAudioWatchdog() {
+    if (_audioWatchdog) { clearTimeout(_audioWatchdog); _audioWatchdog = null; }
+  }
+  function _clearDeferredNextAudio() {
+    if (_deferredNextAudio) { clearTimeout(_deferredNextAudio); _deferredNextAudio = null; }
+  }
+  function _scheduleNextAudio(delay) {
+    _clearDeferredNextAudio();
+    _deferredNextAudio = setTimeout(() => {
+      _deferredNextAudio = null;
+      nextAudio();
+    }, delay);
+  }
+
+  function _markAudioFailed(url, why) {
+    if (url) _failedAudioUrls.add(url);
+    console.warn('[Atelier Player] audio failed (' + why + '), blacklisted', url);
+    _audioConsecutiveFails++;
+    _clearAudioWatchdog();
+    if (_audioConsecutiveFails >= MAX_CONSECUTIVE_AUDIO_FAILS) {
+      // Bail out — show a quiet notice rather than thrashing the feed
+      $np.classList.remove('show');
+      $loading.textContent = '— audio unavailable in this courtyard —';
+      $loading.classList.remove('gone');
+      setTimeout(() => $loading.classList.add('gone'), 6000);
+      return;
+    }
+    // Brief gap, then try the next track (replaces any prior pending advance)
+    _scheduleNextAudio(800);
+  }
+
+  function nextAudio(_attempts) {
+    _clearDeferredNextAudio();
+    _clearAudioWatchdog();
+    if (MODE === 'visual') {
+      $audio.pause();
+      $np.classList.remove('show');
+      return;
+    }
+    if (!audios.length) {
+      $np.classList.remove('show');
+      return;
+    }
+    const attempts = _attempts || 0;
+    // If we've cycled past the entire pool, all blacklisted — give up.
+    if (attempts >= audios.length) {
+      $np.classList.remove('show');
+      $loading.textContent = '— audio unavailable in this courtyard —';
+      $loading.classList.remove('gone');
+      setTimeout(() => $loading.classList.add('gone'), 6000);
+      return;
+    }
+    audioIdx = (audioIdx + 1) % audios.length;
+    const t = audios[audioIdx];
+    const url = t.audioUrl;
+
+    if (!url || _failedAudioUrls.has(url)) {
+      // Skip without touching the audio element
+      return nextAudio(attempts + 1);
+    }
+
+    _currentAudioUrl = url;
+    try { $audio.pause(); } catch(_e) {}
+    $audio.src = url;
+
+    // Watchdog: if neither `playing` nor `error` fires within 9s, assume
+    // the source is wedged (CORS / stalled / silent) and skip.
+    _audioWatchdog = setTimeout(() => {
+      _audioWatchdog = null;
+      _markAudioFailed(url, 'watchdog timeout');
+    }, 9000);
+
+    $audio.play().catch(err => {
+      console.warn('[Atelier Player] audio play() rejected', err);
+      // Likely autoplay-blocked OR src error. If the user has already entered
+      // (curtain gone), this is a real failure — blacklist + advance.
+      if ($curtain.classList.contains('gone')) {
+        _markAudioFailed(url, 'play rejected');
+      }
+    });
+
+    const title = t.title || 'untitled';
+    const artist = t.artist || t._owner || '';
+    const phrase = t.phrase ? ` — ${t.phrase}` : '';
+    $np.innerHTML = `<span class="np-dot"></span>${escapeHtml(title)} · ${escapeHtml(artist)}${escapeHtml(phrase)}`;
+    $np.classList.add('show');
+  }
+
+  // Successful playback resets the consecutive-fail counter, clears the
+  // watchdog, AND cancels any pending deferred-advance from a prior failure
+  // (otherwise the deferred call would interrupt the now-playing track).
+  $audio.addEventListener('playing', () => {
+    _clearAudioWatchdog();
+    _clearDeferredNextAudio();
+    _audioConsecutiveFails = 0;
+  });
+  $audio.addEventListener('ended', () => { nextAudio(); });
+  $audio.addEventListener('error', () => {
+    _markAudioFailed(_currentAudioUrl, 'media error');
+  });
+  $audio.addEventListener('stalled', () => {
+    // Network stalled — give it a few seconds, but don't immediately fail
+    // (transient network blips shouldn't blacklist a track).
+    console.warn('[Atelier Player] audio stalled');
+  });
+
+  // ─── Text overlay (lyric drift) ─────────────────────────────────────
+  let lastTextIdx = -1;
+  function showText() {
+    if (!texts.length) return;
+    let idx;
+    if (texts.length === 1) idx = 0;
+    else { do { idx = Math.floor(Math.random() * texts.length); } while (idx === lastTextIdx); }
+    lastTextIdx = idx;
+    const t = texts[idx];
+    const body = (t.text || '').trim();
+    if (!body) return;
+    const owner = t._owner ? `— ${t._owner}` : '';
+    $text.innerHTML =
+      `<span class="quote-mark">— a fragment —</span>` +
+      escapeHtml(body) +
+      (owner ? `<br><br><span class="quote-mark" style="margin:0">${escapeHtml(owner)}</span>` : '');
+    $text.classList.add('show');
+    setTimeout(() => $text.classList.remove('show'), 9500);
+  }
+
+  // ─── Empty-feed notice ──────────────────────────────────────────────
+  function showNoticeEmpty() {
+    $loading.classList.add('gone');
+    $notice.innerHTML =
+      `the courtyard is quiet.<br><br>` +
+      `<span class="small">no public blocks yet —<br>` +
+      `or the network is hesitant.</span>`;
+    $notice.classList.add('show');
+  }
+  function showNoticeError() {
+    $loading.classList.add('gone');
+    $notice.innerHTML =
+      `the courtyard could not be reached.<br><br>` +
+      `<span class="small">tap to retry</span>`;
+    $notice.classList.add('show');
+    $notice.style.cursor = 'pointer';
+    $notice.onclick = async () => {
+      $notice.classList.remove('show');
+      $notice.onclick = null;
+      $loading.classList.remove('gone');
+      const ok = await fetchFeed();
+      if (!ok) { showNoticeError(); return; }
+      $loading.classList.add('gone');
+      kickoff();
+    };
+  }
+
+  // ─── Mode application ──────────────────────────────────────────────
+  function applyMode() {
+    document.body.classList.toggle('audio-only', MODE === 'audio');
+    if (MODE === 'audio') {
+      $imgA.classList.remove('show');
+      $imgB.classList.remove('show');
+      document.body.classList.remove('has-image');
+    }
+    if (MODE === 'visual') {
+      $audio.pause();
+      $np.classList.remove('show');
+    }
+    updateMeta();
+  }
+
+  function cycleMode() {
+    const order = ['all', 'audio', 'visual'];
+    MODE = order[(order.indexOf(MODE) + 1) % order.length];
+    applyMode();
+    if (MODE !== 'visual' && $audio.paused) nextAudio();
+    if (MODE !== 'audio' && !document.body.classList.contains('has-image')) nextImage();
+  }
+
+  // ─── Cursor auto-hide ───────────────────────────────────────────────
+  function showCursorBriefly() {
+    document.body.classList.add('show-cursor');
+    if (cursorTimer) clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => {
+      document.body.classList.remove('show-cursor');
+    }, 2200);
+  }
+  document.addEventListener('mousemove', showCursorBriefly);
+
+  // ─── Keyboard ───────────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    // Ignore in form fields (none expected, but defensive)
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if ($help.classList.contains('open') && e.key !== 'Escape' && e.key !== '?') {
+      $help.classList.remove('open');
+    }
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        if (MODE !== 'visual') {
+          if ($audio.paused) $audio.play().catch(()=>{}); else $audio.pause();
+        }
+        break;
+      case 'n': case 'N':
+        nextAudio();
+        break;
+      case 'ArrowRight':
+        nextImage();
+        break;
+      case 't': case 'T':
+        showText();
+        break;
+      case 'f': case 'F':
+        if (document.fullscreenElement) document.exitFullscreen();
+        else (document.documentElement.requestFullscreen || (() => {})).call(document.documentElement);
+        break;
+      case 'm': case 'M':
+        cycleMode();
+        break;
+      case 'r': case 'R':
+        (async () => {
+          // Manual reload: also clear failed-URL blacklists so the user can
+          // retry tracks/images that were dead earlier in the session.
+          _failedAudioUrls.clear();
+          _failedImageUrls.clear();
+          _audioConsecutiveFails = 0;
+          $loading.textContent = '— gathering the courtyard —';
+          $loading.classList.remove('gone');
+          await fetchFeed();
+          $loading.classList.add('gone');
+        })();
+        break;
+      case '?':
+        $help.classList.toggle('open');
+        break;
+      case 'Escape':
+        if ($help.classList.contains('open')) $help.classList.remove('open');
+        else if (document.fullscreenElement) document.exitFullscreen();
+        break;
+    }
+  });
+
+  // ─── Touch / click ──────────────────────────────────────────────────
+  document.addEventListener('click', (e) => {
+    if (e.target === $helpToggle) { $help.classList.add('open'); return; }
+    if (e.target.closest && e.target.closest('#help')) { $help.classList.remove('open'); return; }
+    if (e.target.closest && e.target.closest('#curtain')) return;
+    if (e.target.closest && e.target.closest('#notice') && $notice.onclick) return;
+    // Tap on stage = next image (if visual on)
+    if (MODE !== 'audio' && imgs.length) nextImage();
+  });
+
+  // ─── Refresh feed periodically ──────────────────────────────────────
+  function startRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(async () => {
+      const ok = await fetchFeed();
+      if (!ok) return;
+    }, REFRESH_INTERVAL);
+  }
+
+  // ─── Kickoff: start the cycles ──────────────────────────────────────
+  function kickoff() {
+    if (started) return;
+    if (!imgs.length && !audios.length && !texts.length) {
+      showNoticeEmpty();
+      return;
+    }
+    started = true;
+    applyMode();
+
+    if (MODE !== 'audio' && imgs.length) nextImage();
+    if (MODE !== 'visual' && audios.length) nextAudio();
+    // First text after a beat
+    setTimeout(showText, 12000);
+
+    if (imgTimer) clearInterval(imgTimer);
+    if (textTimer) clearInterval(textTimer);
+    imgTimer = setInterval(nextImage, IMG_INTERVAL);
+    textTimer = setInterval(showText, TEXT_INTERVAL);
+    startRefresh();
+
+    showCursorBriefly();
+  }
+
+  // ─── Curtain (entry tap unlocks audio autoplay) ─────────────────────
+  $curtain.addEventListener('click', async () => {
+    $curtain.classList.add('gone');
+    setTimeout(() => { $curtain.style.display = 'none'; }, 1700);
+
+    // Try to start audio context (silent dummy play to unlock)
+    try {
+      $audio.muted = true;
+      await $audio.play().catch(()=>{});
+      $audio.pause();
+      $audio.muted = false;
+    } catch (e) { /* noop */ }
+
+    if (!blocks.length) {
+      // Still loading — wait for fetch
+      const wait = setInterval(() => {
+        if (blocks.length) { clearInterval(wait); kickoff(); }
+      }, 200);
+      setTimeout(() => clearInterval(wait), 15000);
+      return;
+    }
+    kickoff();
+  });
+
+  // ─── Boot ───────────────────────────────────────────────────────────
+  (async function boot(){
+    const ok = await fetchFeed();
+    $loading.classList.add('gone');
+    if (!ok) { showNoticeError(); return; }
+    // If curtain already lifted (e.g. user clicked very fast), kick off.
+    if ($curtain.classList.contains('gone')) kickoff();
+  })();
+
+})();
+</script>
+
+</body>
+</html>
