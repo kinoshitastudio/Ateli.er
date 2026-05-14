@@ -91,51 +91,37 @@
     font-family: var(--mono);
   }
 
-  /* Now-playing — large, top-left, always-on (not auto-hidden with bar).
-     Lives in the otherwise-empty upper area so the title isn't covered by
-     the bottom audio bar. Three lines: title / artist / phrase. */
+  /* Now-playing — top-left, as quiet as the top-right #meta strip.
+     Just title + artist in faint mono, no banner. */
   #np-top {
     position: absolute;
-    left: 24px; top: 24px;
+    left: 24px; top: 22px;
     max-width: 60vw;
     opacity: 0;
     transition: opacity 1.2s ease;
     pointer-events: none;
-    /* Paper-tinted glow so ink reads on dark photos */
-    text-shadow: 0 0 10px rgba(220, 219, 213, 0.85),
-                 0 0 24px rgba(220, 219, 213, 0.45);
+    text-align: left;
+    text-shadow: 0 0 8px rgba(220, 219, 213, 0.7);
   }
   #np-top.show { opacity: 1; }
   #np-top .np-title {
-    font-family: var(--sans);
-    font-weight: 500;
-    font-size: clamp(14px, 1.4vw, 17px);
-    color: var(--ink);
-    line-height: 1.4;
-    letter-spacing: 0.01em;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .25em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    line-height: 1.5;
   }
   #np-top .np-artist {
     font-family: var(--mono);
     font-size: 10px;
-    letter-spacing: 0.22em;
-    color: var(--ink-dim);
+    letter-spacing: .25em;
+    color: var(--ink-faint);
     text-transform: uppercase;
-    margin-top: 3px;
+    line-height: 1.5;
+    margin-top: 1px;
   }
-  #np-top .np-phrase {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-style: italic;
-    color: var(--ink-dim);
-    margin-top: 8px;
-    max-width: 320px;
-    line-height: 1.55;
-  }
-  #np-top .np-phrase:empty { display: none; }
-  #np-top .np-phrase::before { content: "“"; opacity: 0.7; margin-right: 2px; }
-  #np-top .np-phrase::after  { content: "”"; opacity: 0.7; margin-left: 2px; }
-  #np-top .np-phrase:empty::before,
-  #np-top .np-phrase:empty::after { content: none; }
+  #np-top .np-artist:empty { display: none; }
 
   /* Channel + mode hint (top-right, ultra-faint) */
   #meta {
@@ -465,7 +451,6 @@
   <div id="np-top">
     <div class="np-title"></div>
     <div class="np-artist"></div>
-    <div class="np-phrase"></div>
   </div>
   <div id="meta"></div>
   <div id="loading">— gathering the courtyard —</div>
@@ -822,11 +807,13 @@
     const t = texts[idx];
     const body = (t.text || '').trim();
     if (!body) return;
-    const owner = t._owner ? `— ${t._owner}` : '';
+    // Just the fragment body — no owner / title baked in. Identifying
+    // info lives in the top-left strip (which is showing the audio
+    // track that's playing); the fragment is meant to drift past
+    // anonymously, like a line of poetry on a wall.
     $text.innerHTML =
       `<span class="quote-mark">— a fragment —</span>` +
-      escapeHtml(body) +
-      (owner ? `<br><br><span class="quote-mark" style="margin:0">${escapeHtml(owner)}</span>` : '');
+      escapeHtml(body);
     $text.classList.add('show');
     setTimeout(() => $text.classList.remove('show'), 9500);
   }
@@ -905,7 +892,6 @@
   const $npTop = document.getElementById('np-top');
   const $npTitle = $npTop.querySelector('.np-title');
   const $npArtist = $npTop.querySelector('.np-artist');
-  const $npPhrase = $npTop.querySelector('.np-phrase');
 
   let _ctrlHideTimer = null;
   function showControls() {
@@ -926,12 +912,13 @@
   });
   $ctrlBar.addEventListener('mouseleave', showControls);
 
-  // Update the top-left now-playing strip. Three separate lines so they
-  // each hold their own typography (title / artist / phrase).
-  function setNowPlaying(title, artist, phrase) {
+  // Update the top-left now-playing strip — just title + artist, kept
+  // as quiet as the top-right meta. (Phrase is intentionally dropped:
+  // the player.html block carries it in payload but the courtyard's
+  // top-left only wants ID, not poetry.)
+  function setNowPlaying(title, artist /* phrase ignored */) {
     $npTitle.textContent = title || 'untitled';
     $npArtist.textContent = artist || '';
-    $npPhrase.textContent = phrase || '';
     $npTop.classList.add('show');
   }
 
