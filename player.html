@@ -165,8 +165,8 @@
   /* Illustration slot — currently the Atelier flower (img/flower.png).
      Replace the inner <img> src to swap artwork. */
   #curtain-art {
-    width: clamp(70px, 12vw, 120px);
-    margin-bottom: 24px;
+    width: clamp(36px, 6vw, 60px);
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -198,18 +198,15 @@
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: .25em;
-    color: var(--c-gray);
+    color: #ffffff;
     text-transform: lowercase;
-    border: 1px solid var(--c-line);
-    padding: 12px 24px;
-    transition: all .4s ease;
-    background: transparent;
+    border: 1px solid var(--c-ink);
+    padding: 12px 28px;
+    transition: opacity .3s ease, transform .3s ease;
+    background: var(--c-ink);
   }
-  #curtain:hover .enter,
-  #curtain:active .enter {
-    color: var(--c-ink);
-    border-color: var(--c-ink);
-  }
+  #curtain:hover .enter { opacity: 0.88; }
+  #curtain:active .enter { transform: scale(0.97); }
   #curtain .enter .arrow {
     display: inline-block;
     margin-left: 12px;
@@ -217,15 +214,15 @@
   }
   #curtain:hover .enter .arrow { transform: translateX(6px); }
   #curtain .footnote {
-    margin-top: 28px;
+    margin-top: 24px;
     font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: .2em;
+    font-size: 8px;
+    letter-spacing: .18em;
     color: var(--c-gray);
     text-transform: lowercase;
     text-align: center;
-    line-height: 1.7;
-    max-width: 360px;
+    line-height: 1.8;
+    max-width: 420px;
     padding: 0 24px;
   }
 
@@ -495,9 +492,7 @@
   <div class="sub">Ateli.er · player</div>
   <div class="enter">enter <span class="arrow">→</span></div>
   <div class="footnote">
-    a passive listening room. unreleased songs,<br>
-    images, half-thoughts — drifting on their own.<br><br>
-    space to pause · f for fullscreen
+    a passive listening room. unreleased songs, images, half-thoughts — drifting on their own. space to pause · f for fullscreen
   </div>
 </div>
 
