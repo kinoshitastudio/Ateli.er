@@ -236,6 +236,30 @@
     max-width: 420px;
     padding: 0 24px;
   }
+  #curtain .join-link {
+    margin-top: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .22em;
+    color: var(--c-ink);
+    text-transform: lowercase;
+    text-align: center;
+    text-decoration: none;
+    border-bottom: 1px solid var(--c-line);
+    padding: 4px 2px;
+    transition: border-color .3s ease, opacity .3s ease;
+    pointer-events: auto;
+  }
+  #curtain .join-link:hover {
+    border-bottom-color: var(--c-ink);
+    opacity: 0.85;
+  }
+  #curtain .join-link .arrow {
+    display: inline-block;
+    margin-left: 8px;
+    transition: transform .3s ease;
+  }
+  #curtain .join-link:hover .arrow { transform: translateX(4px); }
 
   /* Help (?) overlay */
   #help-toggle {
@@ -493,6 +517,9 @@
   <div class="footnote">
     a passive listening room. unreleased songs, images, half-thoughts — drifting on their own. space to pause · f for fullscreen
   </div>
+  <a class="join-link" href="https://atelistudio.com/" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+    実際にアトリエに参加する <span class="arrow">→</span>
+  </a>
 </div>
 
 <div id="help">
