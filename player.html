@@ -731,6 +731,11 @@
   let _audioWatchdog = null;
   let _deferredNextAudio = null;   // pending setTimeout for advancing after a failure
   let _currentAudioUrl = null;
+  // 20-minute hard cap on a single track (see timeupdate handler below).
+  // Declared up here so the `playing` listener can safely reset it without
+  // hitting a temporal-dead-zone reference error.
+  const _MAX_TRACK_SEC = 60 * 20;
+  let _advancedAtCap = false;
 
   function _clearAudioWatchdog() {
     if (_audioWatchdog) { clearTimeout(_audioWatchdog); _audioWatchdog = null; }
@@ -823,6 +828,11 @@
     _clearAudioWatchdog();
     _clearDeferredNextAudio();
     _audioConsecutiveFails = 0;
+    // Belt-and-suspenders: also reset the 20-min cap flag here in case
+    // `loadedmetadata` didn't fire for some reason (cached resource,
+    // browser quirk). Without this, the flag could stay sticky and the
+    // cap would never trigger again on subsequent tracks.
+    _advancedAtCap = false;
   });
   $audio.addEventListener('ended', () => { nextAudio(); });
   $audio.addEventListener('error', () => {
@@ -1028,6 +1038,13 @@
     const ss = Math.floor(s % 60).toString().padStart(2, '0');
     return m + ':' + ss;
   }
+  // 20-minute hard cap on a single track. The courtyard is a *passing*
+  // place — if one track runs 40 minutes the lane locks and ambient
+  // rotation stops. Upload-side already rejects > 20:00, but probe
+  // failures (Drive CORS, etc.) can let outliers through; this is the
+  // playback-side safety net. Advances to the next track rather than
+  // hard-stopping so the courtyard keeps drifting. (State vars declared
+  // earlier in the file so the `playing` listener can also reset them.)
   $audio.addEventListener('timeupdate', () => {
     const cur = $audio.currentTime;
     const dur = $audio.duration;
@@ -1038,9 +1055,16 @@
       $ctrlFill.style.width = '0%';
       $ctrlTime.textContent = fmtTime(cur) + ' / --:--';
     }
+    if (cur >= _MAX_TRACK_SEC && !_advancedAtCap) {
+      _advancedAtCap = true;
+      nextAudio();
+    }
   });
   $audio.addEventListener('loadedmetadata', () => {
     $ctrlTime.textContent = '0:00 / ' + fmtTime($audio.duration);
+    // Reset the cap flag whenever a fresh track loads so the next track
+    // gets its own 20-minute window.
+    _advancedAtCap = false;
   });
 
   // Click & drag to seek/scrub on the progress bar (mouse + touch)

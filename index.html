@@ -2685,6 +2685,42 @@
   .piece-modal-image svg { width: 100%; height: 100%; display: block; }
   .piece-modal-image img { cursor: zoom-in; }
 
+  /* Broken-audio indicator: small warning chip overlaid on thumbnails
+     and inline banner shown above piece-modal-image when the audio
+     source returns an error (e.g. Dropbox file deleted). Marked locally
+     after a failed play attempt, cleared when audio loads successfully
+     or when the URL is edited via the edit form. */
+  .audio-thumb-wrap { position: relative; display: block; width: 100%; height: 100%; }
+  .audio-thumb-wrap > img { display: block; }
+  .audio-broken-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    font-family: var(--mono), 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    color: #c92d2d;
+    background: rgba(252, 246, 240, 0.94);
+    border: 1px solid rgba(201, 45, 45, 0.45);
+    padding: 2px 7px;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .audio-broken-banner {
+    max-width: 480px;
+    margin: 0 auto 24px;
+    padding: 10px 14px;
+    border: 1px solid rgba(201, 45, 45, 0.45);
+    background: rgba(252, 246, 240, 0.94);
+    color: #8a1f1f;
+    font-family: var(--mono), 'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    letter-spacing: 0.04em;
+  }
+  .audio-broken-banner b { color: #c92d2d; font-weight: 700; letter-spacing: 0.14em; }
+
   .piece-modal-num {
     font-family: var(--mono);
     font-size: 10px;
@@ -4593,7 +4629,7 @@
                 <label class="uf-row">
                   <span class="sp-k is-required">audio url</span>
                   <input class="uf-input" type="url" id="bAudioUrl" placeholder="paste Drive / Dropbox / direct mp3 url">
-                  <span class="uf-hint">⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams.</span>
+                  <span class="uf-hint" id="bAudioUrlHint">⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams. · max 20:00 per track.</span>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k is-required" data-i18n="fldPhrase">catchphrase</span>
@@ -5046,7 +5082,7 @@
       fldSource:  'source',
       fldUrl:     'url',
       placeBtn:   '↳ place in channel',
-      audioUrlHint: '⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams.',
+      audioUrlHint: '⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams. · max 20:00 per track.',
       imageHint: 'optional · monochrome image url',
       audioImageHint: 'optional · monochrome, a texture, a smudge',
       phrasePh: '≤ 200 chars · a single catchphrase',
@@ -5264,7 +5300,7 @@
       fldSource:  '出典',
       fldUrl:     'URL',
       placeBtn:   '↳ チャンネルに置く',
-      audioUrlHint: '⚠ Google Drive は音声再生不可（CORP ポリシーでブロックされる）。Dropbox を使ってください — 共有リンクが自動で直リンクに変換されます。',
+      audioUrlHint: '⚠ Google Drive は音声再生不可（CORP ポリシーでブロックされる）。Dropbox を使ってください — 共有リンクが自動で直リンクに変換されます。· 1曲あたり最大 20:00 まで。',
       imageHint: '任意 · モノクロ画像の URL',
       audioImageHint: '任意 · モノクロ、質感、滲み',
       phrasePh: '200 字以内 · キャッチコピー',
@@ -5541,6 +5577,9 @@
     setPh('bPhrase', 'phrasePh');
     setPh('bContext', 'contextPh');
     setPh('bImageUrl', 'audioImageHint');
+    // Static audio URL hint (carries the 20:00 limit + Drive caveat)
+    const bAuh = document.getElementById('bAudioUrlHint');
+    if (bAuh) bAuh.textContent = t('audioUrlHint');
     setPh('bSupport', 'supportPh');
     setPh('iUrl', 'imageUrlPh');
     setPh('iCaption', 'iCaptionPh');
@@ -5693,12 +5732,17 @@
   // forces grayscale — colour photos were appearing washed out in the grid.
   function buildPieceImage(track, w=240, h=160, mono=false) {
     const src = track.imageUrl;
+    const brokenBadge = isAudioBroken(track && track.id)
+      ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
     if (src) {
       // No loading=lazy: marquee is above the fold and lazy-load triggers
       // late paints that look like images flickering in/out of the lane.
       // onload class swap fades the img in so a still-decoding frame
       // doesn't slide in as a gray rectangle.
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
+      const imgHtml = `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
+      return brokenBadge
+        ? `<span class="audio-thumb-wrap">${brokenBadge}${imgHtml}</span>`
+        : imgHtml;
     }
     // Phase A-refactor 2 (2026-04-29): no picsum fallback for audio. The
     // random per-seed image was confusing — visitor saw mountain / lake /
@@ -5706,7 +5750,10 @@
     // track rendered with different images depending on which surface
     // resolved its id first. Now: show a neutral placeholder, identical
     // for every audio without imageUrl.
-    return `<span class="ix-thumb-text" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--paper-2);color:var(--gray);font-family:var(--mono);font-size:11px;letter-spacing:0.12em;">— audio —</span>`;
+    const placeholder = `<span class="ix-thumb-text" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:var(--paper-2);color:var(--gray);font-family:var(--mono);font-size:11px;letter-spacing:0.12em;">— audio —</span>`;
+    return brokenBadge
+      ? `<span class="audio-thumb-wrap">${brokenBadge}${placeholder}</span>`
+      : placeholder;
   }
   function buildBlockImage(block, w=240, h=240) {
     const src = block.imageUrl;
@@ -6274,8 +6321,30 @@
     let _audioRetried = false;
     el.play().catch(err => console.warn('audio play failed:', err));
     el.addEventListener('loadedmetadata', () => {
+      let durationChanged = false;
       if (audioEl === el && el.duration && isFinite(el.duration)) {
-        track.sec = Math.round(el.duration);
+        const accurate = Math.round(el.duration);
+        if (track.sec !== accurate) {
+          track.sec = accurate;
+          durationChanged = true;
+          // Author of this block? Persist the corrected duration to
+          // localStorage and (via editTrack) sync to public_blocks so
+          // viewers see the accurate length too. Skips non-owned tracks
+          // (other users' blocks / seed tracks) — those don't need
+          // local persistence.
+          if (track.ownLocal) {
+            try { editTrack(track.id, { sec: accurate }); } catch (e) {}
+          }
+        }
+      }
+      const wasBroken = isAudioBroken(track.id);
+      if (wasBroken) _unmarkAudioBroken(track.id);
+      // Refresh visible surfaces when the duration label or broken flag
+      // changed, so the UI updates without a page reload.
+      if (durationChanged || wasBroken) {
+        try { renderMarquees(); } catch (e) {}
+        try { renderYourBlocks(); } catch (e) {}
+        try { renderFeed && renderFeed(); } catch (e) {}
       }
     });
     // Audio fetch fails (Drive CORP, transient 403, network blip) used to
@@ -6293,6 +6362,14 @@
         } catch (e) {}
         return;
       }
+      // Persist the broken state so the warning chip / banner is visible
+      // on every surface (thumbs, piece modal, your-blocks) without
+      // requiring the user to press play again.
+      _markAudioBroken(track.id);
+      try { renderMarquees(); } catch (e) {}
+      try { renderYourBlocks(); } catch (e) {}
+      try { renderFeed && renderFeed(); } catch (e) {}
+      try { if (currentBlockModalId === track.id && typeof refreshCurrentBlockModal === 'function') refreshCurrentBlockModal(); } catch (e) {}
       try { showToast('音声を読み込めませんでした — URL を確認してください'); } catch (e) {}
       stopTrack();
     });
@@ -6522,6 +6599,11 @@
   function editTrack(id, patch) {
     const t = TRACKS.find(x => x.id === id);
     if (!t) return;
+    // URL changed → assume the user is replacing a dead source; clear the
+    // broken flag so the UI gives the new URL a fresh chance.
+    if ('audioUrl' in patch && patch.audioUrl !== t.audioUrl) {
+      _unmarkAudioBroken(id);
+    }
     if (t.ownLocal) {
       // User-uploaded audio block — edit in BLOCKS storage, then re-inject
       const blocks = loadBlocks();
@@ -6539,6 +6621,9 @@
         if ('imageUrl' in patch) blocks[i].imageUrl = patch.imageUrl;
         if ('support' in patch)  blocks[i].support = patch.support;
         if ('isPublic' in patch) blocks[i].isPublic = patch.isPublic;
+        if ('sec' in patch && typeof patch.sec === 'number' && isFinite(patch.sec)) {
+          blocks[i].sec = patch.sec;
+        }
         blocks[i].editedAt = Date.now();
         saveBlocks(blocks);
         injectBlocksIntoTracks();
@@ -9139,18 +9224,21 @@
     return (u && u.label) || null;
   }
 
-  // Probe duration of an external audio URL (best effort; some hosts block CORS)
+  // Probe duration of an external audio URL (best effort).
+  // No crossOrigin: metadata reading does NOT need CORS, and setting it
+  // causes preflight to fail on hosts like Dropbox that don't send CORS
+  // headers, which silently fell back to the 120-second placeholder
+  // (every uploaded track displayed as "2:00" regardless of real length).
   function probeAudioDuration(url) {
     return new Promise((resolve) => {
       if (!url) return resolve(120);
       const a = new Audio();
       a.preload = 'metadata';
-      a.crossOrigin = 'anonymous';
       let done = false;
       const finish = (sec) => { if (!done) { done = true; resolve(sec); } };
       a.addEventListener('loadedmetadata', () => finish(isFinite(a.duration) ? Math.round(a.duration) : 120));
       a.addEventListener('error', () => finish(120));
-      setTimeout(() => finish(120), 6000);
+      setTimeout(() => finish(120), 8000);
       a.src = url;
     });
   }
@@ -9217,6 +9305,18 @@
         status.textContent = '— probing audio duration…';
         const direct = convertAudioUrl(audioUrl);
         const sec = await probeAudioDuration(direct);
+        // 20-minute (1200s) hard cap per track. A single long file would
+        // dominate the courtyard ambient lane, so we reject anything over
+        // 20:00 at upload time. Probe-failed (defaulted to 120) still
+        // passes — duration is corrected later on first play, and a
+        // post-upload soft warning could be added there if needed.
+        const MAX_AUDIO_SEC = 60 * 20;
+        if (sec > MAX_AUDIO_SEC) {
+          status.textContent = `— ${fmtDur(sec)} exceeds the 20:00 limit per track. trim the file or split it.`;
+          status.className = 'uf-status err';
+          submit.disabled = false;
+          return;
+        }
         block = {
           id: genBlockId('audio'),
           kind: 'audio', channelId,
@@ -9809,6 +9909,32 @@
       .sort((a, b) => a.localeCompare(b));
   }
 
+  // ──────────────── BROKEN AUDIO TRACKING ────────────────
+  // Persists which audio block ids have failed playback locally so the UI
+  // can surface a "⚠ source error" badge across all surfaces (thumbs,
+  // piece modal banner, your-blocks list). Cleared when a track loads
+  // successfully again or when the audioUrl is changed via the edit form.
+  const BROKEN_AUDIO_KEY = 'atelier_broken_audio_v1';
+  let _brokenAudioSet = (() => {
+    try { return new Set(JSON.parse(localStorage.getItem(BROKEN_AUDIO_KEY) || '[]')); }
+    catch (e) { return new Set(); }
+  })();
+  function _saveBrokenAudio() {
+    try { localStorage.setItem(BROKEN_AUDIO_KEY, JSON.stringify([..._brokenAudioSet])); }
+    catch (e) {}
+  }
+  function _markAudioBroken(id) {
+    if (!id || _brokenAudioSet.has(id)) return;
+    _brokenAudioSet.add(id);
+    _saveBrokenAudio();
+  }
+  function _unmarkAudioBroken(id) {
+    if (!id || !_brokenAudioSet.has(id)) return;
+    _brokenAudioSet.delete(id);
+    _saveBrokenAudio();
+  }
+  function isAudioBroken(id) { return !!(id && _brokenAudioSet.has(id)); }
+
   // Toggle a suggested tag on the nearest .uf-row textarea.
   // Shared by Edit-form (#pieceModalInner) and Upload-form (#blockForm).
   function _handleTagSuggestClick(sugBtn) {
@@ -10263,6 +10389,10 @@
             : `<span class="dur" style="color: var(--gray-2);">${t('noAudioSource')}</span>` }
       </div>
       ${_blockMetaHtml(track)}
+      ${ isAudioBroken(track.id) ? `
+        <div class="audio-broken-banner">
+          <b>⚠ source error</b> — 音源リンクが読み込めません。Dropbox / Drive の共有設定が変わったか、ファイルが削除された可能性があります。投稿者は edit からリンクを更新してください。
+        </div>` : '' }
       <div class="piece-modal-image">${buildPieceImage(track, 720, 540, /*mono=*/false)}</div>
 
       <section class="piece-phrases">
