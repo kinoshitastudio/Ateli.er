@@ -4597,11 +4597,15 @@
                 </label>
                 <label class="uf-row">
                   <span class="sp-k is-required" data-i18n="fldPhrase">catchphrase</span>
-                  <input class="uf-input" type="text" id="bPhrase" data-i18n-placeholder="phrasePh" placeholder="≤ 40 chars · a single catchphrase" maxlength="40">
+                  <input class="uf-input" type="text" id="bPhrase" data-i18n-placeholder="phrasePh" placeholder="≤ 200 chars · a single catchphrase" maxlength="200">
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
                   <textarea class="uf-input" id="bContext" data-i18n-placeholder="contextPh" rows="2" placeholder="comma-separated tags" maxlength="200"></textarea>
+                  <div class="tag-suggest" data-upload-suggest="bContext" hidden>
+                    <span class="tag-suggest-label">— click to add · click again to remove</span>
+                    <div class="tag-suggest-list"></div>
+                  </div>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">image url</span>
@@ -4634,6 +4638,10 @@
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
                   <textarea class="uf-input" id="iContext" data-i18n-placeholder="contextPh" rows="2" placeholder="comma-separated tags" maxlength="200"></textarea>
+                  <div class="tag-suggest" data-upload-suggest="iContext" hidden>
+                    <span class="tag-suggest-label">— click to add · click again to remove</span>
+                    <div class="tag-suggest-list"></div>
+                  </div>
                 </label>
               </div>
 
@@ -4661,6 +4669,10 @@
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
                   <textarea class="uf-input" id="tContext" data-i18n-placeholder="contextPh" rows="2" placeholder="comma-separated tags" maxlength="200"></textarea>
+                  <div class="tag-suggest" data-upload-suggest="tContext" hidden>
+                    <span class="tag-suggest-label">— click to add · click again to remove</span>
+                    <div class="tag-suggest-list"></div>
+                  </div>
                 </label>
               </div>
 
@@ -4685,6 +4697,10 @@
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
                   <textarea class="uf-input" id="uContext" data-i18n-placeholder="contextPh" rows="2" placeholder="comma-separated tags" maxlength="200"></textarea>
+                  <div class="tag-suggest" data-upload-suggest="uContext" hidden>
+                    <span class="tag-suggest-label">— click to add · click again to remove</span>
+                    <div class="tag-suggest-list"></div>
+                  </div>
                 </label>
               </div>
             </div>
@@ -5033,7 +5049,7 @@
       audioUrlHint: '⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams.',
       imageHint: 'optional · monochrome image url',
       audioImageHint: 'optional · monochrome, a texture, a smudge',
-      phrasePh: '≤ 40 chars · a single catchphrase',
+      phrasePh: '≤ 200 chars · a single catchphrase',
       contextPh: 'comma-separated tags (e.g. ambient, lo-fi, winter)',
       processPh: 'describe the production process — recording setup, mood, choices…',
       tagSuggestLabel: '— click to add · click again to remove',
@@ -5251,7 +5267,7 @@
       audioUrlHint: '⚠ Google Drive は音声再生不可（CORP ポリシーでブロックされる）。Dropbox を使ってください — 共有リンクが自動で直リンクに変換されます。',
       imageHint: '任意 · モノクロ画像の URL',
       audioImageHint: '任意 · モノクロ、質感、滲み',
-      phrasePh: '40 字以内 · キャッチコピー',
+      phrasePh: '200 字以内 · キャッチコピー',
       contextPh: 'カンマ区切りでタグ（例: ambient, lo-fi, winter）',
       processPh: '制作のプロセスを書く — 録音環境・空気・判断の経緯など',
       tagSuggestLabel: '— クリックで追加 · もう一度クリックで外す',
@@ -5552,6 +5568,10 @@
       if (now) now.innerHTML = `<span class="silent">${t('silent')}</span>`;
     }
     // Pane traces meta — use renderFP refresh below
+    // Re-render upload-form tag-suggest chips so the click-hint label
+    // follows the active language (chips themselves are language-neutral
+    // but the helper text is t('tagSuggestLabel')).
+    if (typeof refreshUploadTagSuggest === 'function') refreshUploadTagSuggest();
   }
 
   // ──────────────── CUSTOM CONFIRM (DOM-based, always shows) ────────────────
@@ -8010,7 +8030,7 @@
           <div class="uf-grid">
             <label class="uf-row"><span class="sp-k">${t('fldTitle')}</span><input class="uf-input" id="ef-title" value="${escapeHtml(obj.title || '')}"></label>
             <label class="uf-row"><span class="sp-k">${t('fldArtist')}</span><input class="uf-input" id="ef-artist" value="${escapeHtml(obj.artist || '')}"></label>
-            <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><input class="uf-input" id="ef-phrase" maxlength="80" value="${escapeHtml(phrase0)}"></label>
+            <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><input class="uf-input" id="ef-phrase" maxlength="200" value="${escapeHtml(phrase0)}"></label>
             <label class="uf-row"><span class="sp-k">${t('fldContext')}</span>
               <textarea class="uf-input" id="ef-context" rows="2" placeholder="${escapeHtml(t('contextPh'))}">${escapeHtml(obj.context || '')}</textarea>
               ${ getAllTags().length > 0 ? `
@@ -9152,6 +9172,27 @@
 
   const blockForm = document.getElementById('blockForm');
   if (blockForm) {
+    // Tag-suggest chip click inside Upload form (Edit form is bound on
+    // #pieceModalInner). Mirrors the Edit-form delegation logic.
+    blockForm.addEventListener('click', (e) => {
+      const sugBtn = e.target.closest('.tag-chip-small[data-suggest-tag]');
+      if (!sugBtn) return;
+      e.preventDefault();
+      _handleTagSuggestClick(sugBtn);
+    });
+    // Sync .is-active state as the user types/edits the tags textarea so
+    // chips reflect the live value (covers manual editing + paste).
+    blockForm.addEventListener('input', (e) => {
+      const ta = e.target;
+      if (!(ta instanceof HTMLTextAreaElement)) return;
+      if (!['bContext','iContext','tContext','uContext'].includes(ta.id)) return;
+      const box = document.querySelector(`.tag-suggest[data-upload-suggest="${ta.id}"]`);
+      if (!box) return;
+      const current = parseTags(ta.value || '').map(x => x.toLowerCase());
+      box.querySelectorAll('.tag-chip-small[data-suggest-tag]').forEach(btn => {
+        btn.classList.toggle('is-active', current.includes(btn.dataset.suggestTag.toLowerCase()));
+      });
+    });
     blockForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const status = document.getElementById('bStatus');
@@ -9278,6 +9319,7 @@
       renderYourBlocks();
       blockForm.reset();
       populateChannelSelect();
+      refreshUploadTagSuggest();
       status.textContent = block.isPublic
         ? '— placed. ✓ in ' + channelLabel + ' (public)'
         : '— placed as draft. ✓ in ' + channelLabel + ' (channel is draft)';
@@ -9288,6 +9330,10 @@
 
   // ──────────────── YOUR BLOCKS list ────────────────
   function renderYourBlocks() {
+    // Keep the upload-form tag-suggest chips in sync with the latest tag
+    // set. renderYourBlocks() is called after every block create/edit/delete,
+    // so this catches new tags introduced via the Edit form too.
+    if (typeof refreshUploadTagSuggest === 'function') refreshUploadTagSuggest();
     const ul = document.getElementById('yourBlocksList');
     if (!ul) return;
     const arr = loadBlocks();
@@ -9761,6 +9807,50 @@
       .filter(e => e.items.length > 0)        // drop tags with no live matches
       .map(e => e.display)
       .sort((a, b) => a.localeCompare(b));
+  }
+
+  // Toggle a suggested tag on the nearest .uf-row textarea.
+  // Shared by Edit-form (#pieceModalInner) and Upload-form (#blockForm).
+  function _handleTagSuggestClick(sugBtn) {
+    const ta = sugBtn.closest('.uf-row')?.querySelector('textarea');
+    if (!ta) return;
+    const cur = (ta.value || '').trim();
+    const existing = parseTags(cur).map(x => x.toLowerCase());
+    const tag = sugBtn.dataset.suggestTag;
+    if (existing.includes(tag.toLowerCase())) {
+      const filtered = parseTags(cur).filter(x => x.toLowerCase() !== tag.toLowerCase());
+      ta.value = filtered.join(', ');
+      sugBtn.classList.remove('is-active');
+    } else {
+      ta.value = cur ? `${cur}, ${tag}` : tag;
+      sugBtn.classList.add('is-active');
+    }
+    ta.focus();
+    // Tell others (e.g. autosave) the value changed.
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Populate the Upload-form tag-suggest chip lists from getAllTags().
+  // Hides each suggest box if there are no tags yet. Marks chips already
+  // present in the textarea with .is-active (toggle visual). Idempotent —
+  // safe to call repeatedly (on form open, after submit, on language switch).
+  function refreshUploadTagSuggest() {
+    const allTags = getAllTags();
+    document.querySelectorAll('.tag-suggest[data-upload-suggest]').forEach(box => {
+      const targetId = box.dataset.uploadSuggest;
+      const ta = document.getElementById(targetId);
+      if (!ta) return;
+      const labelEl = box.querySelector('.tag-suggest-label');
+      const listEl  = box.querySelector('.tag-suggest-list');
+      if (labelEl) labelEl.textContent = t('tagSuggestLabel');
+      if (allTags.length === 0) { box.hidden = true; return; }
+      box.hidden = false;
+      const current = parseTags(ta.value || '').map(x => x.toLowerCase());
+      listEl.innerHTML = allTags.map(tag => {
+        const active = current.includes(tag.toLowerCase()) ? ' is-active' : '';
+        return `<button type="button" class="tag-chip-small${active}" data-suggest-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`;
+      }).join('');
+    });
   }
   function getBlocksWithTag(tag) {
     const k = (tag || '').toLowerCase().trim();
@@ -12376,25 +12466,12 @@
           openTagModal(tagBtn.dataset.tag);
           return;
         }
-        // Edit-form tag suggestion → append to the tags textarea
+        // Tag suggestion chip → append/remove on the nearest textarea
+        // (works for both Edit-form #ef-context and Upload-form bContext/iContext/tContext/uContext)
         const sugBtn = e.target.closest('.tag-chip-small[data-suggest-tag]');
         if (sugBtn) {
           e.preventDefault();
-          const ta = document.getElementById('ef-context');
-          if (!ta) return;
-          const cur = (ta.value || '').trim();
-          const existing = parseTags(cur).map(x => x.toLowerCase());
-          const tag = sugBtn.dataset.suggestTag;
-          if (existing.includes(tag.toLowerCase())) {
-            // Toggle off — remove from textarea
-            const filtered = parseTags(cur).filter(x => x.toLowerCase() !== tag.toLowerCase());
-            ta.value = filtered.join(', ');
-            sugBtn.classList.remove('is-active');
-          } else {
-            ta.value = cur ? `${cur}, ${tag}` : tag;
-            sugBtn.classList.add('is-active');
-          }
-          ta.focus();
+          _handleTagSuggestClick(sugBtn);
           return;
         }
         if (e.target.closest('#pieceClose')) {
