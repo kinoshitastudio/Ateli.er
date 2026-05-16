@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>Ateli.er — 中庭 / player</title>
+<meta name="description" content="A passive listening room. The Atelier courtyard, drifting — unreleased songs, images, half-thoughts.">
+<link rel="icon" type="image/png" sizes="32x32" href="player-favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="player-favicon-16x16.png">
+<link rel="apple-touch-icon" href="player-apple-touch-icon.png">
+<!-- Open Graph / Twitter (player.html) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ateli.er Player — 中庭 / the courtyard">
+<meta property="og:description" content="A passive listening room. Unreleased songs, images, half-thoughts from the Ateli.er courtyard, drifting on their own.">
+<meta property="og:image" content="https://atelistudio.com/player-og-image.png">
+<meta property="og:url" content="https://atelistudio.com/player.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ateli.er Player — 中庭 / the courtyard">
+<meta name="twitter:description" content="A passive listening room. Unreleased songs, images, half-thoughts.">
+<meta name="twitter:image" content="https://atelistudio.com/player-og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Atelier paper + ink — matches atelistudio.com */
+    --bg:        #DCDBD5;
+    --bg-soft:   #C8C7C1;
+    --ink:       #1600A2;
+    --ink-dim:   rgba(22, 0, 162, 0.62);
+    --ink-faint: rgba(22, 0, 162, 0.32);
+    --ink-soft:  rgba(22, 0, 162, 0.16);
+    --vignette-edge: rgba(220, 219, 213, 0.55);
+    --text-halo:     rgba(220, 219, 213, 0.7);
+    --help-bg:       rgba(220, 219, 213, 0.96);
+    --sans:  'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    --mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  /* ── Auto dark mode via OS preference (prefers-color-scheme) ──
+     Inspired by Google Maps' ambient-aware UI: on iOS / macOS / Android,
+     when the user has Automatic appearance enabled (which can itself be
+     ambient-light-driven on supported devices), the courtyard inverts
+     to a "midnight" palette. Warm dark (not pure black) keeps the
+     paper+ink heritage — sumi ink on indigo night. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #14131A;
+      --bg-soft:   #1E1D26;
+      --ink:       #E5E1D6;
+      --ink-dim:   rgba(229, 225, 214, 0.62);
+      --ink-faint: rgba(229, 225, 214, 0.32);
+      --ink-soft:  rgba(229, 225, 214, 0.16);
+      --vignette-edge: rgba(10, 9, 14, 0.55);
+      --text-halo:     rgba(20, 19, 26, 0.7);
+      --help-bg:       rgba(20, 19, 26, 0.96);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); }
+  body { font-family: var(--sans); cursor: none; }
+  body.show-cursor { cursor: default; }
+
+  /* Stage */
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Image layers (crossfade) — letterbox color = paper, matches stage */
+  .layer-img {
+    position: absolute; inset: 0;
+    background-color: var(--bg);
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0;
+    transition: opacity 4s ease-in-out;
+    will-change: opacity;
+  }
+  .layer-img.show { opacity: 1; }
+  body.audio-only .layer-img { display: none; }
+
+  /* Vignette: soft paper-tinted ring at the edges (so the image sits in
+     the courtyard rather than floating on a hard square). */
+  #vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, var(--vignette-edge) 95%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 2s ease;
+  }
+  body.has-image #vignette { opacity: 1; }
+
+  /* Text overlay (lyric / prose drift) */
+  #text-overlay {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: min(380px, 78vw);
+    text-align: center;
+    font-family: var(--sans);
+    font-size: clamp(11px, 1.5vw, 15px);
+    font-weight: 400;
+    line-height: 1.6;
+    color: #ffffff;
+    /* Solid ink-blue mat — kept slim so the blue doesn't dominate.
+       Padding sits close to the text on every side. */
+    background: var(--ink);
+    padding: 10px 16px 12px;
+    opacity: 0;
+    transition: opacity 2.4s ease;
+    pointer-events: none;
+    letter-spacing: .02em;
+  }
+  #text-overlay.show { opacity: 1; }
+  #text-overlay .quote-mark {
+    display: block;
+    font-size: .6em;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: .5em;
+    letter-spacing: .3em;
+    font-family: var(--mono);
+  }
+
+  /* Now-playing — top-left, as quiet as the top-right #meta strip.
+     Just title + artist in faint mono, no banner. */
+  #np-top {
+    position: absolute;
+    left: 24px; top: 22px;
+    max-width: 60vw;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    pointer-events: none;
+    text-align: left;
+    text-shadow: 0 0 8px var(--text-halo);
+  }
+  #np-top.show { opacity: 1; }
+  #np-top .np-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .25em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    line-height: 1.5;
+  }
+  #np-top .np-artist {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .25em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    line-height: 1.5;
+    margin-top: 1px;
+  }
+  #np-top .np-artist:empty { display: none; }
+
+  /* Channel + mode hint (top-right, ultra-faint) */
+  #meta {
+    position: absolute;
+    right: 24px; top: 22px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .25em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    text-align: right;
+    pointer-events: none;
+  }
+
+  /* Entry curtain — uses Atelier's paper + ink key colors (overrides the
+     player's monochrome palette while the curtain is visible).
+     Required for audio autoplay unlock (tap satisfies user-gesture policy). */
+  #curtain {
+    /* Local Atelier palette overrides — scoped to the curtain only */
+    --c-paper:    #DCDBD5;
+    --c-ink:      #1600A2;
+    --c-gray:     rgba(22, 0, 162, 0.62);
+    --c-line:     rgba(22, 0, 162, 0.32);
+    --c-line-soft:rgba(22, 0, 162, 0.16);
+    /* (dark-mode overrides for these are at the bottom of this rule
+       block — placed at top of the file would lose to the light values
+       below due to source-order tie-breaking when specificity matches.
+       Real override lives at the very end of the <style> block.) */
+
+    position: fixed; inset: 0;
+    background: var(--c-paper);
+    color: var(--c-ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    cursor: pointer;
+    transition: opacity 1.6s ease;
+    /* Extra bottom padding so the footnote clears Chrome's "Customize"
+       shelf when this loads inside the new-tab override iframe. */
+    padding: 24px 24px 80px;
+  }
+  #curtain.gone { opacity: 0; pointer-events: none; }
+
+  /* Illustration slot — currently the Atelier flower (img/flower.png).
+     Replace the inner <img> src to swap artwork. */
+  #curtain-art {
+    width: clamp(88px, 13vw, 138px);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #curtain-art img,
+  #curtain-art svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  #curtain h1 {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: clamp(24px, 3.8vw, 36px);
+    color: var(--c-ink);
+    letter-spacing: .04em;
+    margin-bottom: 8px;
+  }
+  #curtain .sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .3em;
+    color: var(--c-gray);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  #curtain .enter {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .25em;
+    color: #ffffff;
+    text-transform: lowercase;
+    border: 1px solid var(--c-ink);
+    padding: 12px 28px;
+    transition: opacity .3s ease, transform .3s ease;
+    background: var(--c-ink);
+  }
+  #curtain:hover .enter { opacity: 0.88; }
+  #curtain:active .enter { transform: scale(0.97); }
+  #curtain .enter .arrow {
+    display: inline-block;
+    margin-left: 12px;
+    transition: transform .4s ease;
+  }
+  #curtain:hover .enter .arrow { transform: translateX(6px); }
+  #curtain .footnote {
+    margin-top: 24px;
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: .18em;
+    color: var(--c-gray);
+    text-transform: lowercase;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 420px;
+    padding: 0 24px;
+  }
+  #curtain .join-link {
+    margin-top: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .22em;
+    color: var(--c-ink);
+    text-transform: lowercase;
+    text-align: center;
+    text-decoration: none;
+    border-bottom: 1px solid var(--c-line);
+    padding: 4px 2px;
+    transition: border-color .3s ease, opacity .3s ease;
+    pointer-events: auto;
+  }
+  #curtain .join-link:hover {
+    border-bottom-color: var(--c-ink);
+    opacity: 0.85;
+  }
+  #curtain .join-link .arrow {
+    display: inline-block;
+    margin-left: 8px;
+    transition: transform .3s ease;
+  }
+  #curtain .join-link:hover .arrow { transform: translateX(4px); }
+
+  /* Help (?) overlay */
+  #help-toggle {
+    position: absolute;
+    right: 18px; bottom: 18px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-faint);
+    background: transparent;
+    color: var(--ink-faint);
+    font-family: var(--sans);
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity .8s ease, color .3s ease, border-color .3s ease;
+  }
+  body.show-cursor #help-toggle { opacity: 1; }
+  #help-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
+
+  #help {
+    position: fixed; inset: 0;
+    background: var(--help-bg);
+    z-index: 60;
+    display: none;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  #help.open { display: flex; }
+  #help .help-inner {
+    max-width: 480px;
+    padding: 32px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2.2;
+    color: var(--ink-dim);
+    letter-spacing: .08em;
+  }
+  #help .help-inner h2 {
+    font-family: var(--sans);
+    font-weight: 400;
+    color: var(--ink);
+    font-size: 22px;
+    margin-bottom: 24px;
+    letter-spacing: .04em;
+  }
+  #help .help-inner kbd {
+    display: inline-block;
+    min-width: 20px;
+    padding: 2px 8px;
+    margin-right: 12px;
+    border: 1px solid var(--ink-faint);
+    border-radius: 3px;
+    color: var(--ink);
+    text-align: center;
+    font-size: 11px;
+  }
+  #help .help-inner .h-row { display: flex; align-items: baseline; }
+  #help .help-inner .h-row .h-key { width: 90px; flex-shrink: 0; }
+  #help .help-inner .close-hint {
+    margin-top: 28px;
+    color: var(--ink-faint);
+    font-size: 10px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    text-align: right;
+  }
+
+  /* Loading state */
+  #loading {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .3em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+  #loading.gone { display: none; }
+
+  /* Empty / error */
+  #notice {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 420px;
+    text-align: center;
+    font-family: var(--sans);
+    font-size: 18px;
+    color: var(--ink-dim);
+    line-height: 1.7;
+    padding: 0 24px;
+    display: none;
+  }
+  #notice.show { display: block; }
+  #notice .small {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: lowercase;
+    color: var(--ink-faint);
+    margin-top: 18px;
+  }
+
+  /* Control bar (play/pause, prev/next, progress, time) — auto-hides.
+     Matches the Atelier audio bar in atelistudio.com: solid ink-blue
+     ground (#1600A2) with white type. */
+  #ctrl-bar {
+    --c-bar:           #1600A2;    /* Atelier ink */
+    --c-bar-ink:       #ffffff;
+    --c-bar-ink-dim:   rgba(255, 255, 255, 0.72);
+    --c-bar-ink-faint: rgba(255, 255, 255, 0.45);
+    --c-bar-line:      rgba(255, 255, 255, 0.22);
+
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    background: var(--c-bar);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    pointer-events: none;
+  }
+  #ctrl-bar.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  #ctrl-progress {
+    position: relative;
+    width: 100%;
+    height: 2px;
+    background: var(--c-bar-line);
+    cursor: pointer;
+    transition: height 0.2s ease;
+  }
+  #ctrl-progress:hover { height: 4px; }
+  #ctrl-progress-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--c-bar-ink);
+    width: 0%;
+    pointer-events: none;
+  }
+  /* Tiny dot at the leading edge — only on hover, keeps the bar minimal */
+  #ctrl-progress-fill::after {
+    content: "";
+    position: absolute;
+    right: -3px; top: 50%;
+    width: 6px; height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background: var(--c-bar-ink);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  #ctrl-progress:hover #ctrl-progress-fill::after { opacity: 1; }
+  #ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 18px 13px;
+  }
+  .ctrl-btn {
+    background: none;
+    border: 0;
+    color: var(--c-bar-ink);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 3px;
+    opacity: 0.85;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols", system-ui, sans-serif;
+  }
+  .ctrl-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.10);
+  }
+  .ctrl-btn:active { transform: scale(0.92); }
+  #ctrl-play {
+    font-size: 22px;
+    min-width: 34px;
+    text-align: center;
+  }
+  #ctrl-time {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--c-bar-ink-dim);
+    flex-shrink: 0;
+    min-width: 88px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;   /* pushes time to the far right of the bar */
+  }
+
+  /* No audio element styling (just hidden, controlled by JS) */
+  audio { display: none; }
+
+  @media (max-width: 480px) {
+    #now-playing { left: 16px; bottom: 16px; font-size: 10px; }
+    #meta { right: 16px; top: 16px; font-size: 9px; }
+    #help-toggle { right: 12px; bottom: 12px; }
+    #curtain h1 { font-size: 30px; }
+    #curtain .sub { font-size: 10px; margin-bottom: 36px; }
+    #curtain .footnote { font-size: 9px; }
+    #ctrl-row { padding: 8px 12px 10px; gap: 10px; }
+    .ctrl-btn { font-size: 16px; padding: 5px 6px; }
+    #ctrl-play { font-size: 20px; }
+    #ctrl-info { font-size: 10px; }
+    #ctrl-time { font-size: 9px; min-width: 64px; }
+  }
+
+  /* Curtain dark-mode override — placed last so it wins on source order
+     when prefers-color-scheme is dark (the light values above have the
+     same specificity). */
+  @media (prefers-color-scheme: dark) {
+    #curtain {
+      --c-paper:    #14131A;
+      --c-ink:      #E5E1D6;
+      --c-gray:     rgba(229, 225, 214, 0.62);
+      --c-line:     rgba(229, 225, 214, 0.32);
+      --c-line-soft:rgba(229, 225, 214, 0.16);
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="layer-img" id="img-a"></div>
+  <div class="layer-img" id="img-b"></div>
+  <div id="vignette"></div>
+  <div id="text-overlay"></div>
+  <div id="np-top">
+    <div class="np-title"></div>
+    <div class="np-artist"></div>
+  </div>
+  <div id="meta"></div>
+  <div id="loading">— gathering the courtyard —</div>
+  <div id="notice"></div>
+  <button id="help-toggle" type="button" aria-label="help">?</button>
+  <div id="ctrl-bar">
+    <div id="ctrl-progress" role="slider" aria-label="seek">
+      <div id="ctrl-progress-fill"></div>
+    </div>
+    <div id="ctrl-row">
+      <button class="ctrl-btn" id="ctrl-prev" type="button" aria-label="previous track" title="previous track">⏮</button>
+      <button class="ctrl-btn" id="ctrl-play" type="button" aria-label="play / pause" title="play / pause">⏸</button>
+      <button class="ctrl-btn" id="ctrl-next" type="button" aria-label="next track" title="next track">⏭</button>
+      <button class="ctrl-btn" id="ctrl-mute" type="button" aria-label="mute / unmute" title="mute / unmute">🔊</button>
+      <div id="ctrl-time">--:-- / --:--</div>
+    </div>
+  </div>
+</div>
+
+<div id="curtain">
+  <!-- Player logo (scribbled play-button on ink). Swap for a new artwork
+       by replacing this <img>'s src; keep the wrapper for sizing. -->
+  <div id="curtain-art" aria-hidden="true">
+    <img src="img/player-logo.png" alt="" loading="eager" decoding="async">
+  </div>
+  <h1>中庭で交差する未発表曲</h1>
+  <div class="sub">Ateli.er · player</div>
+  <div class="enter">enter <span class="arrow">→</span></div>
+  <div class="footnote">
+    a passive listening room. unreleased songs, images, half-thoughts — drifting on their own. space to pause · f for fullscreen
+  </div>
+  <a class="join-link" href="https://atelistudio.com/" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+    実際にアトリエに参加する <span class="arrow">→</span>
+  </a>
+</div>
+
+<div id="help">
+  <div class="help-inner">
+    <h2>— shortcuts</h2>
+    <div class="h-row"><span class="h-key"><kbd>space</kbd></span><span>pause / resume</span></div>
+    <div class="h-row"><span class="h-key"><kbd>n</kbd></span><span>next track</span></div>
+    <div class="h-row"><span class="h-key"><kbd>f</kbd></span><span>fullscreen</span></div>
+    <div class="h-row"><span class="h-key"><kbd>m</kbd></span><span>cycle mode (all / audio / visual)</span></div>
+    <div class="h-row"><span class="h-key"><kbd>r</kbd></span><span>reload feed</span></div>
+    <div class="close-hint">click anywhere to close</div>
+  </div>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+(function(){
+  'use strict';
+
+  // ─── Config ─────────────────────────────────────────────────────────
+  const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
+  const SUPABASE_PUB_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
+
+  const params = new URLSearchParams(location.search);
+  let MODE = (params.get('mode') || 'all').toLowerCase();   // all | audio | visual
+  if (!['all','audio','visual'].includes(MODE)) MODE = 'all';
+  const CHANNEL = params.get('channel') || params.get('ch') || null;
+  const LIMIT = clamp(parseInt(params.get('limit') || '200', 10), 10, 500);
+  const IMG_INTERVAL = clamp(parseInt(params.get('img') || '18', 10), 4, 120) * 1000;
+  const TEXT_INTERVAL = clamp(parseInt(params.get('text') || '38', 10), 8, 240) * 1000;
+  const REFRESH_INTERVAL = clamp(parseInt(params.get('refresh') || '30', 10), 5, 240) * 60 * 1000;
+
+  function clamp(n, lo, hi) {
+    if (Number.isNaN(n)) return lo;
+    return Math.max(lo, Math.min(hi, n));
+  }
+
+  // ─── State ──────────────────────────────────────────────────────────
+  let blocks = [];
+  let imgs = [], audios = [], texts = [];
+  let imgIdx = -1, audioIdx = -1;
+  let activeImg = 'a';   // which layer currently visible
+  let imgTimer = null, textTimer = null, refreshTimer = null, cursorTimer = null;
+  let started = false;
+
+  // ─── DOM ────────────────────────────────────────────────────────────
+  const $curtain = document.getElementById('curtain');
+  const $imgA = document.getElementById('img-a');
+  const $imgB = document.getElementById('img-b');
+  const $text = document.getElementById('text-overlay');
+  const $meta = document.getElementById('meta');
+  const $audio = document.getElementById('audio');
+  const $loading = document.getElementById('loading');
+  const $notice = document.getElementById('notice');
+  const $help = document.getElementById('help');
+  const $helpToggle = document.getElementById('help-toggle');
+
+  // ─── Utils ──────────────────────────────────────────────────────────
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function isPlayableAudioUrl(u) {
+    if (!u || typeof u !== 'string') return false;
+    if (!/^https?:\/\//i.test(u) && !u.startsWith('data:audio/')) return false;
+    // Block known unplayable domains (Drive blocks audio CORS)
+    if (/drive\.google\.com/i.test(u)) return false;
+    return true;
+  }
+
+  function isPlayableImageUrl(u) {
+    if (!u || typeof u !== 'string') return false;
+    return /^https?:\/\//i.test(u) || u.startsWith('data:image/');
+  }
+
+  // ─── Fetch ──────────────────────────────────────────────────────────
+  async function fetchFeed() {
+    let url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&order=ts.desc&limit=${LIMIT}`;
+    if (CHANNEL) url += `&channel_id=eq.${encodeURIComponent(CHANNEL)}`;
+    try {
+      const res = await fetch(url, {
+        headers: { 'apikey': SUPABASE_PUB_KEY, 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rows = await res.json();
+      blocks = rows.map(r => {
+        const p = (r.payload && typeof r.payload === 'object') ? r.payload : {};
+        return Object.assign({}, p, {
+          _id: r.id,
+          _kind: r.kind,
+          _owner: r.owner_handle || '',
+          _channelId: r.channel_id || '',
+          _channelLabel: r.channel_label || '',
+          _ts: r.ts || 0,
+        });
+      });
+      organize();
+      return true;
+    } catch (e) {
+      console.warn('[Atelier Player] fetch failed', e);
+      return false;
+    }
+  }
+
+  function organize() {
+    imgs = blocks.filter(b => (b._kind === 'image' || b.kind === 'image') && isPlayableImageUrl(b.imageUrl));
+    audios = blocks.filter(b => (b._kind === 'audio' || b.kind === 'audio') && isPlayableAudioUrl(b.audioUrl));
+    texts = blocks.filter(b => (b._kind === 'text' || b.kind === 'text') && b.text && b.text.trim().length > 0);
+
+    // Audio blocks may also carry an imageUrl (cover art) — include those too
+    blocks.forEach(b => {
+      if ((b._kind === 'audio' || b.kind === 'audio') && isPlayableImageUrl(b.imageUrl)) {
+        imgs.push(b);
+      }
+    });
+
+    shuffle(imgs); shuffle(audios); shuffle(texts);
+
+    updateMeta();
+  }
+
+  function updateMeta() {
+    const parts = [];
+    if (CHANNEL) parts.push('ch · ' + CHANNEL);
+    parts.push('mode · ' + MODE);
+    parts.push(`${audios.length}♪ ${imgs.length}◦ ${texts.length}…`);
+    $meta.innerHTML = parts.map(escapeHtml).join('<br>');
+  }
+
+  // ─── Image cycle ────────────────────────────────────────────────────
+  // Per-session blacklist of image URLs that 404'd / failed CORS / never loaded.
+  // Cleared only by a feed refresh (so transient hiccups don't permanently exclude).
+  const _failedImageUrls = new Set();
+
+  function nextImage(_attempts) {
+    if (MODE === 'audio') return;
+    if (!imgs.length) return;
+    const attempts = _attempts || 0;
+    // If we've cycled the entire pool without finding a playable image, give up.
+    if (attempts >= imgs.length) {
+      console.warn('[Atelier Player] no playable images in this feed');
+      return;
+    }
+    imgIdx = (imgIdx + 1) % imgs.length;
+    const b = imgs[imgIdx];
+    const url = b.imageUrl;
+    if (!url || _failedImageUrls.has(url)) {
+      // Skip immediately to the next without waiting for a probe
+      return nextImage(attempts + 1);
+    }
+
+    const showLayer = activeImg === 'a' ? $imgB : $imgA;
+    const hideLayer = activeImg === 'a' ? $imgA : $imgB;
+
+    // Preload then swap. Watchdog: if neither load nor error fires in 8s,
+    // treat it as failed and move on (some hosts hang indefinitely).
+    const probe = new Image();
+    let settled = false;
+    const watchdog = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      _failedImageUrls.add(url);
+      console.warn('[Atelier Player] image stall, blacklisted', url);
+      nextImage(attempts + 1);
+    }, 8000);
+
+    probe.onload = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      showLayer.style.backgroundImage = `url("${url.replace(/"/g, '%22')}")`;
+      showLayer.classList.add('show');
+      hideLayer.classList.remove('show');
+      activeImg = activeImg === 'a' ? 'b' : 'a';
+      document.body.classList.add('has-image');
+    };
+    probe.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
+      _failedImageUrls.add(url);
+      console.warn('[Atelier Player] image failed, blacklisted', url);
+      // Try the next image, but bound recursion via the attempts counter
+      nextImage(attempts + 1);
+    };
+    probe.src = url;
+  }
+
+  // ─── Audio queue ────────────────────────────────────────────────────
+  // Per-session blacklist of audio URLs that errored / never started playing.
+  // Cleared only by a feed refresh.
+  const _failedAudioUrls = new Set();
+  const MAX_CONSECUTIVE_AUDIO_FAILS = 6;
+  let _audioConsecutiveFails = 0;
+  let _audioWatchdog = null;
+  let _deferredNextAudio = null;   // pending setTimeout for advancing after a failure
+  let _currentAudioUrl = null;
+  // 20-minute hard cap on a single track (see timeupdate handler below).
+  // Declared up here so the `playing` listener can safely reset it without
+  // hitting a temporal-dead-zone reference error.
+  const _MAX_TRACK_SEC = 60 * 20;
+  let _advancedAtCap = false;
+
+  function _clearAudioWatchdog() {
+    if (_audioWatchdog) { clearTimeout(_audioWatchdog); _audioWatchdog = null; }
+  }
+  function _clearDeferredNextAudio() {
+    if (_deferredNextAudio) { clearTimeout(_deferredNextAudio); _deferredNextAudio = null; }
+  }
+  function _scheduleNextAudio(delay) {
+    _clearDeferredNextAudio();
+    _deferredNextAudio = setTimeout(() => {
+      _deferredNextAudio = null;
+      nextAudio();
+    }, delay);
+  }
+
+  function _markAudioFailed(url, why) {
+    if (url) _failedAudioUrls.add(url);
+    console.warn('[Atelier Player] audio failed (' + why + '), blacklisted', url);
+    _audioConsecutiveFails++;
+    _clearAudioWatchdog();
+    if (_audioConsecutiveFails >= MAX_CONSECUTIVE_AUDIO_FAILS) {
+      // Bail out — show a quiet notice rather than thrashing the feed
+      $npTop.classList.remove('show');
+      $loading.textContent = '— audio unavailable in this courtyard —';
+      $loading.classList.remove('gone');
+      setTimeout(() => $loading.classList.add('gone'), 6000);
+      return;
+    }
+    // Brief gap, then try the next track (replaces any prior pending advance)
+    _scheduleNextAudio(800);
+  }
+
+  function nextAudio(_attempts) {
+    _clearDeferredNextAudio();
+    _clearAudioWatchdog();
+    if (MODE === 'visual') {
+      $audio.pause();
+      $npTop.classList.remove('show');
+      return;
+    }
+    if (!audios.length) {
+      $npTop.classList.remove('show');
+      return;
+    }
+    const attempts = _attempts || 0;
+    // If we've cycled past the entire pool, all blacklisted — give up.
+    if (attempts >= audios.length) {
+      $npTop.classList.remove('show');
+      $loading.textContent = '— audio unavailable in this courtyard —';
+      $loading.classList.remove('gone');
+      setTimeout(() => $loading.classList.add('gone'), 6000);
+      return;
+    }
+    audioIdx = (audioIdx + 1) % audios.length;
+    const t = audios[audioIdx];
+    const url = t.audioUrl;
+
+    if (!url || _failedAudioUrls.has(url)) {
+      // Skip without touching the audio element
+      return nextAudio(attempts + 1);
+    }
+
+    _currentAudioUrl = url;
+    try { $audio.pause(); } catch(_e) {}
+    $audio.src = url;
+
+    // Watchdog: if neither `playing` nor `error` fires within 9s, assume
+    // the source is wedged (CORS / stalled / silent) and skip.
+    _audioWatchdog = setTimeout(() => {
+      _audioWatchdog = null;
+      _markAudioFailed(url, 'watchdog timeout');
+    }, 9000);
+
+    $audio.play().catch(err => {
+      console.warn('[Atelier Player] audio play() rejected', err);
+      // Likely autoplay-blocked OR src error. If the user has already entered
+      // (curtain gone), this is a real failure — blacklist + advance.
+      if ($curtain.classList.contains('gone')) {
+        _markAudioFailed(url, 'play rejected');
+      }
+    });
+
+    setNowPlaying(t.title, t.artist || t._owner, t.phrase);
+  }
+
+  // Successful playback resets the consecutive-fail counter, clears the
+  // watchdog, AND cancels any pending deferred-advance from a prior failure
+  // (otherwise the deferred call would interrupt the now-playing track).
+  $audio.addEventListener('playing', () => {
+    _clearAudioWatchdog();
+    _clearDeferredNextAudio();
+    _audioConsecutiveFails = 0;
+    // Belt-and-suspenders: also reset the 20-min cap flag here in case
+    // `loadedmetadata` didn't fire for some reason (cached resource,
+    // browser quirk). Without this, the flag could stay sticky and the
+    // cap would never trigger again on subsequent tracks.
+    _advancedAtCap = false;
+  });
+  $audio.addEventListener('ended', () => { nextAudio(); });
+  $audio.addEventListener('error', () => {
+    _markAudioFailed(_currentAudioUrl, 'media error');
+  });
+  $audio.addEventListener('stalled', () => {
+    // Network stalled — give it a few seconds, but don't immediately fail
+    // (transient network blips shouldn't blacklist a track).
+    console.warn('[Atelier Player] audio stalled');
+  });
+
+  // ─── Text overlay (lyric drift) ─────────────────────────────────────
+  let lastTextIdx = -1;
+  function showText() {
+    if (!texts.length) return;
+    let idx;
+    if (texts.length === 1) idx = 0;
+    else { do { idx = Math.floor(Math.random() * texts.length); } while (idx === lastTextIdx); }
+    lastTextIdx = idx;
+    const t = texts[idx];
+    const body = (t.text || '').trim();
+    if (!body) return;
+    // Just the fragment body — no owner / title baked in. Identifying
+    // info lives in the top-left strip (which is showing the audio
+    // track that's playing); the fragment is meant to drift past
+    // anonymously, like a line of poetry on a wall.
+    $text.innerHTML =
+      `<span class="quote-mark">— a fragment —</span>` +
+      escapeHtml(body);
+    $text.classList.add('show');
+    setTimeout(() => $text.classList.remove('show'), 9500);
+  }
+
+  // ─── Empty-feed notice ──────────────────────────────────────────────
+  function showNoticeEmpty() {
+    $loading.classList.add('gone');
+    $notice.innerHTML =
+      `the courtyard is quiet.<br><br>` +
+      `<span class="small">no public blocks yet —<br>` +
+      `or the network is hesitant.</span>`;
+    $notice.classList.add('show');
+  }
+  function showNoticeError() {
+    $loading.classList.add('gone');
+    $notice.innerHTML =
+      `the courtyard could not be reached.<br><br>` +
+      `<span class="small">tap to retry</span>`;
+    $notice.classList.add('show');
+    $notice.style.cursor = 'pointer';
+    $notice.onclick = async () => {
+      $notice.classList.remove('show');
+      $notice.onclick = null;
+      $loading.classList.remove('gone');
+      const ok = await fetchFeed();
+      if (!ok) { showNoticeError(); return; }
+      $loading.classList.add('gone');
+      kickoff();
+    };
+  }
+
+  // ─── Mode application ──────────────────────────────────────────────
+  function applyMode() {
+    document.body.classList.toggle('audio-only', MODE === 'audio');
+    if (MODE === 'audio') {
+      $imgA.classList.remove('show');
+      $imgB.classList.remove('show');
+      document.body.classList.remove('has-image');
+    }
+    if (MODE === 'visual') {
+      $audio.pause();
+      $npTop.classList.remove('show');
+    }
+    updateMeta();
+  }
+
+  function cycleMode() {
+    const order = ['all', 'audio', 'visual'];
+    MODE = order[(order.indexOf(MODE) + 1) % order.length];
+    applyMode();
+    if (MODE !== 'visual' && $audio.paused) nextAudio();
+    if (MODE !== 'audio' && !document.body.classList.contains('has-image')) nextImage();
+  }
+
+  // ─── Cursor auto-hide ───────────────────────────────────────────────
+  function showCursorBriefly() {
+    document.body.classList.add('show-cursor');
+    if (cursorTimer) clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => {
+      document.body.classList.remove('show-cursor');
+    }, 2200);
+  }
+  document.addEventListener('mousemove', () => { showCursorBriefly(); showControls(); });
+  document.addEventListener('touchstart', () => { showControls(); }, { passive: true });
+
+  // ─── Control bar (play/pause, prev/next, progress, time) ───────────
+  const $ctrlBar = document.getElementById('ctrl-bar');
+  const $ctrlProgress = document.getElementById('ctrl-progress');
+  const $ctrlFill = document.getElementById('ctrl-progress-fill');
+  const $ctrlPrev = document.getElementById('ctrl-prev');
+  const $ctrlPlay = document.getElementById('ctrl-play');
+  const $ctrlNext = document.getElementById('ctrl-next');
+  const $ctrlMute = document.getElementById('ctrl-mute');
+  const $ctrlTime = document.getElementById('ctrl-time');
+  // Top-left now-playing strip (always-on, not auto-hidden with bar)
+  const $npTop = document.getElementById('np-top');
+  const $npTitle = $npTop.querySelector('.np-title');
+  const $npArtist = $npTop.querySelector('.np-artist');
+
+  let _ctrlHideTimer = null;
+  function showControls() {
+    if (!$curtain.classList.contains('gone')) return;  // not until user enters
+    $ctrlBar.classList.add('show');
+    document.body.classList.add('controls-visible');
+    if (_ctrlHideTimer) clearTimeout(_ctrlHideTimer);
+    _ctrlHideTimer = setTimeout(hideControls, 3500);
+  }
+  function hideControls() {
+    $ctrlBar.classList.remove('show');
+    document.body.classList.remove('controls-visible');
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  }
+  // Hovering the bar itself keeps it visible (don't snatch it away mid-click)
+  $ctrlBar.addEventListener('mouseenter', () => {
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  });
+  $ctrlBar.addEventListener('mouseleave', showControls);
+
+  // Update the top-left now-playing strip — just title + artist, kept
+  // as quiet as the top-right meta. (Phrase is intentionally dropped:
+  // the player.html block carries it in payload but the courtyard's
+  // top-left only wants ID, not poetry.)
+  function setNowPlaying(title, artist /* phrase ignored */) {
+    $npTitle.textContent = title || 'untitled';
+    $npArtist.textContent = artist || '';
+    $npTop.classList.add('show');
+  }
+
+  // Buttons
+  $ctrlPlay.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (MODE === 'visual') return;
+    if ($audio.paused) $audio.play().catch(()=>{});
+    else $audio.pause();
+    showControls();
+  });
+  $ctrlNext.addEventListener('click', (e) => {
+    e.stopPropagation();
+    nextAudio();
+    showControls();
+  });
+  $ctrlPrev.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!audios.length) return;
+    // Walk audioIdx back by 2 so nextAudio() lands on the previous track.
+    audioIdx = audioIdx - 2;
+    while (audioIdx < -1) audioIdx += audios.length;
+    nextAudio();
+    showControls();
+  });
+
+  // Mute: silences audio but lets image/text cycles keep drifting (different
+  // from pause, which freezes everything to preserve the chance pairing).
+  $ctrlMute.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $audio.muted = !$audio.muted;
+    $ctrlMute.textContent = $audio.muted ? '🔇' : '🔊';
+    showControls();
+  });
+  $audio.addEventListener('volumechange', () => {
+    $ctrlMute.textContent = $audio.muted ? '🔇' : '🔊';
+  });
+
+  // Toggle play icon based on audio state, AND freeze the image/text
+  // cycles in lockstep with audio. The miracle is the random alignment,
+  // so the listener pausing for a moment shouldn't lose a track / image
+  // pairing while they're away.
+  $audio.addEventListener('play', () => {
+    $ctrlPlay.textContent = '⏸';
+    if (started && MODE !== 'visual') _resumeCycles();
+  });
+  $audio.addEventListener('pause', () => {
+    $ctrlPlay.textContent = '▶';
+    if (started && MODE !== 'visual') _pauseCycles();
+  });
+
+  function _pauseCycles() {
+    if (imgTimer) { clearInterval(imgTimer); imgTimer = null; }
+    if (textTimer) { clearInterval(textTimer); textTimer = null; }
+  }
+  function _resumeCycles() {
+    if (!imgTimer && MODE !== 'audio' && imgs.length) {
+      imgTimer = setInterval(nextImage, IMG_INTERVAL);
+    }
+    if (!textTimer && texts.length) {
+      textTimer = setInterval(showText, TEXT_INTERVAL);
+    }
+  }
+
+  // Progress + time
+  function fmtTime(s) {
+    if (!s || !isFinite(s) || s < 0) return '--:--';
+    const m = Math.floor(s / 60);
+    const ss = Math.floor(s % 60).toString().padStart(2, '0');
+    return m + ':' + ss;
+  }
+  // 20-minute hard cap on a single track. The courtyard is a *passing*
+  // place — if one track runs 40 minutes the lane locks and ambient
+  // rotation stops. Upload-side already rejects > 20:00, but probe
+  // failures (Drive CORS, etc.) can let outliers through; this is the
+  // playback-side safety net. Advances to the next track rather than
+  // hard-stopping so the courtyard keeps drifting. (State vars declared
+  // earlier in the file so the `playing` listener can also reset them.)
+  $audio.addEventListener('timeupdate', () => {
+    const cur = $audio.currentTime;
+    const dur = $audio.duration;
+    if (dur && isFinite(dur)) {
+      $ctrlFill.style.width = ((cur / dur) * 100).toFixed(2) + '%';
+      $ctrlTime.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
+    } else {
+      $ctrlFill.style.width = '0%';
+      $ctrlTime.textContent = fmtTime(cur) + ' / --:--';
+    }
+    if (cur >= _MAX_TRACK_SEC && !_advancedAtCap) {
+      _advancedAtCap = true;
+      nextAudio();
+    }
+  });
+  $audio.addEventListener('loadedmetadata', () => {
+    $ctrlTime.textContent = '0:00 / ' + fmtTime($audio.duration);
+    // Reset the cap flag whenever a fresh track loads so the next track
+    // gets its own 20-minute window.
+    _advancedAtCap = false;
+  });
+
+  // Click & drag to seek/scrub on the progress bar (mouse + touch)
+  function _seekAtClientX(clientX) {
+    if (!$audio.duration || !isFinite($audio.duration)) return;
+    const rect = $ctrlProgress.getBoundingClientRect();
+    const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    try { $audio.currentTime = pct * $audio.duration; } catch (_e) {}
+  }
+  let _scrubbing = false;
+  // Mouse
+  $ctrlProgress.addEventListener('mousedown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    _scrubbing = true;
+    _seekAtClientX(e.clientX);
+    showControls();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!_scrubbing) return;
+    _seekAtClientX(e.clientX);
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  });
+  document.addEventListener('mouseup', () => {
+    if (!_scrubbing) return;
+    _scrubbing = false;
+    showControls();  // restart auto-hide timer
+  });
+  // Touch
+  $ctrlProgress.addEventListener('touchstart', (e) => {
+    e.stopPropagation();
+    _scrubbing = true;
+    if (e.touches[0]) _seekAtClientX(e.touches[0].clientX);
+    showControls();
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!_scrubbing) return;
+    if (e.touches[0]) _seekAtClientX(e.touches[0].clientX);
+    if (_ctrlHideTimer) { clearTimeout(_ctrlHideTimer); _ctrlHideTimer = null; }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!_scrubbing) return;
+    _scrubbing = false;
+    showControls();
+  });
+
+  // ─── Keyboard ───────────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    // Ignore in form fields (none expected, but defensive)
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if ($help.classList.contains('open') && e.key !== 'Escape' && e.key !== '?') {
+      $help.classList.remove('open');
+    }
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        if (MODE !== 'visual') {
+          if ($audio.paused) $audio.play().catch(()=>{}); else $audio.pause();
+        }
+        break;
+      case 'n': case 'N':
+        nextAudio();
+        break;
+      // Note: image/text cycles run on their own timers — no manual next/show
+      // keys, by design. (Audio still gets prev/next/space because audio is
+      // the one thing the listener actively listens to.)
+      case 'f': case 'F':
+        if (document.fullscreenElement) document.exitFullscreen();
+        else (document.documentElement.requestFullscreen || (() => {})).call(document.documentElement);
+        break;
+      case 'm': case 'M':
+        cycleMode();
+        break;
+      case 'r': case 'R':
+        (async () => {
+          // Manual reload: also clear failed-URL blacklists so the user can
+          // retry tracks/images that were dead earlier in the session.
+          _failedAudioUrls.clear();
+          _failedImageUrls.clear();
+          _audioConsecutiveFails = 0;
+          $loading.textContent = '— gathering the courtyard —';
+          $loading.classList.remove('gone');
+          await fetchFeed();
+          $loading.classList.add('gone');
+        })();
+        break;
+      case '?':
+        $help.classList.toggle('open');
+        break;
+      case 'Escape':
+        if ($help.classList.contains('open')) $help.classList.remove('open');
+        else if (document.fullscreenElement) document.exitFullscreen();
+        break;
+    }
+  });
+
+  // ─── Touch / click ──────────────────────────────────────────────────
+  // Philosophy: nobody in the courtyard can change what flows. Tapping the
+  // image deliberately does NOT skip — randomness + audio/image/text drift
+  // independently, and the miracles only happen when nothing is forced.
+  document.addEventListener('click', (e) => {
+    if (e.target === $helpToggle) { $help.classList.add('open'); return; }
+    if (e.target.closest && e.target.closest('#help')) { $help.classList.remove('open'); return; }
+    if (e.target.closest && e.target.closest('#curtain')) return;
+    if (e.target.closest && e.target.closest('#notice') && $notice.onclick) return;
+    // (no fallthrough: stage taps do not advance the cycle)
+  });
+
+  // ─── Refresh feed periodically ──────────────────────────────────────
+  function startRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(async () => {
+      const ok = await fetchFeed();
+      if (!ok) return;
+    }, REFRESH_INTERVAL);
+  }
+
+  // ─── Kickoff: start the cycles ──────────────────────────────────────
+  // skipFirstAudio=true when the curtain click already kicked off audio
+  // synchronously (to satisfy the user-gesture autoplay policy).
+  function kickoff(skipFirstAudio) {
+    if (started) return;
+    if (!imgs.length && !audios.length && !texts.length) {
+      showNoticeEmpty();
+      return;
+    }
+    started = true;
+    applyMode();
+
+    if (MODE !== 'audio' && imgs.length) nextImage();
+    if (!skipFirstAudio && MODE !== 'visual' && audios.length) nextAudio();
+    // First text after a beat
+    setTimeout(showText, 12000);
+
+    if (imgTimer) clearInterval(imgTimer);
+    if (textTimer) clearInterval(textTimer);
+    imgTimer = setInterval(nextImage, IMG_INTERVAL);
+    textTimer = setInterval(showText, TEXT_INTERVAL);
+    startRefresh();
+
+    showCursorBriefly();
+  }
+
+  // Synchronously start the first audio track. Must be called from within a
+  // user-gesture event handler (e.g. the curtain click) or the browser will
+  // silently reject the play() promise.
+  function _startFirstAudioInGesture() {
+    if (MODE === 'visual') return false;
+    if (!audios.length) return false;
+
+    // Find the first non-blacklisted audio
+    let idx = -1;
+    for (let i = 0; i < audios.length; i++) {
+      const u = audios[i] && audios[i].audioUrl;
+      if (u && !_failedAudioUrls.has(u)) { idx = i; break; }
+    }
+    if (idx < 0) return false;
+
+    audioIdx = idx;
+    const t = audios[idx];
+    const url = t.audioUrl;
+    _currentAudioUrl = url;
+
+    try { $audio.pause(); } catch (_e) {}
+    $audio.src = url;
+
+    _audioWatchdog = setTimeout(() => {
+      _audioWatchdog = null;
+      _markAudioFailed(url, 'watchdog timeout (initial)');
+    }, 9000);
+
+    // Crucial: this play() call is synchronous inside the click handler,
+    // so it counts as user-initiated and the autoplay policy is satisfied.
+    const p = $audio.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(err => {
+        console.warn('[Atelier Player] initial play() rejected', err);
+        _markAudioFailed(url, 'initial play rejected');
+      });
+    }
+
+    setNowPlaying(t.title, t.artist || t._owner, t.phrase);
+    return true;
+  }
+
+  // ─── Curtain (entry tap unlocks audio autoplay) ─────────────────────
+  // NOTE: This handler is intentionally NOT async, because any `await` would
+  // discard the user-gesture flag the browser uses to authorise audio.play().
+  $curtain.addEventListener('click', () => {
+    $curtain.classList.add('gone');
+    setTimeout(() => { $curtain.style.display = 'none'; }, 1700);
+
+    // If the feed has finished loading, start audio NOW (in the user gesture).
+    // Otherwise fall back to async kickoff and accept that the first audio
+    // attempt may be blocked — the user can tap again to retry.
+    const audioStarted = (blocks.length > 0) ? _startFirstAudioInGesture() : false;
+
+    if (!blocks.length) {
+      const wait = setInterval(() => {
+        if (blocks.length) {
+          clearInterval(wait);
+          // Feed arrived after the click. Try to start audio anyway — most
+          // browsers honour autoplay for a brief window after a click even
+          // across async boundaries, but treat any failure as expected.
+          const lateStart = _startFirstAudioInGesture();
+          kickoff(lateStart);
+        }
+      }, 200);
+      setTimeout(() => clearInterval(wait), 15000);
+      return;
+    }
+    kickoff(audioStarted);
+  });
+
+  // ─── Boot ───────────────────────────────────────────────────────────
+  (async function boot(){
+    const ok = await fetchFeed();
+    $loading.classList.add('gone');
+    if (!ok) { showNoticeError(); return; }
+    // Preload the first audio's metadata so the curtain click can play()
+    // it with zero buffering delay.
+    if (audios.length > 0 && MODE !== 'visual') {
+      try {
+        $audio.preload = 'auto';
+        $audio.src = audios[0].audioUrl;
+        $audio.load();
+      } catch (_e) { /* preload failure is non-fatal */ }
+    }
+    // If curtain already lifted (e.g. user clicked very fast), kick off.
+    if ($curtain.classList.contains('gone')) kickoff();
+  })();
+
+})();
+</script>
+
+</body>
+</html>

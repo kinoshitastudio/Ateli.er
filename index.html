@@ -205,9 +205,13 @@
   }
   /* Mobile: only the image lane needs the heavy slowdown — text lanes
      scroll smoothly on mobile too. Image lane gets the most paint work
-     per frame because of decoded-image compositing. */
+     per frame because of decoded-image compositing.
+     2026-05-17: 300s → 180s. At 300s a single image lingered ~25s and
+     felt "stuck" against the sparse iPhone viewport (1 image visible
+     at a time), which read as broken. 180s halves that perceived dwell
+     time while keeping the slowdown intent for paint cost. */
   @media (max-width: 720px) {
-    .image-marquee { --duration: 300s; }
+    .image-marquee { --duration: 180s; }
     .image-marquee .image-item { width: 300px; height: 220px; }
   }
   /* Touch devices don't have stable hover state — ':hover' can stick
