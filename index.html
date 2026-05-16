@@ -203,16 +203,55 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
-  /* Mobile: only the image lane needs the heavy slowdown — text lanes
-     scroll smoothly on mobile too. Image lane gets the most paint work
-     per frame because of decoded-image compositing.
-     2026-05-17: 300s → 180s. At 300s a single image lingered ~25s and
-     felt "stuck" against the sparse iPhone viewport (1 image visible
-     at a time), which read as broken. 180s halves that perceived dwell
-     time while keeping the slowdown intent for paint cost. */
+  /* Mobile: text marquees keep scrolling horizontally (lightweight),
+     but the image marquee switches to a *fade slideshow* — one image
+     at a time in the same spot, crossfade to the next.
+     2026-05-17: chosen over horizontal scroll because iPhone viewport
+     only fits ~1 image anyway, and iOS Safari evicts off-viewport
+     decoded bitmaps aggressively → re-entering viewport produces blank
+     blinks (the symptom we kept seeing). Static slideshow means the
+     visible image never leaves viewport while shown = no eviction churn,
+     no blink. Crossfade also matches the courtyard's slow rhythm. */
   @media (max-width: 720px) {
-    .image-marquee { --duration: 180s; }
-    .image-marquee .image-item { width: 300px; height: 220px; }
+    .image-marquee {
+      height: 240px;
+      overflow: hidden;
+      position: relative;
+    }
+    .image-marquee .marquee-track {
+      animation: none;
+      transform: none;
+      display: block;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      gap: 0;
+    }
+    .image-marquee .image-item {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.4s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .image-marquee .image-item.is-current {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Inner image/thumb keeps its compact size and is centered inside
+       the full-width slot. */
+    .image-marquee .image-item > img,
+    .image-marquee .image-item > .audio-thumb-wrap {
+      width: 300px;
+      height: 220px;
+      max-width: 86vw;
+      flex: 0 0 auto;
+    }
   }
   /* Touch devices don't have stable hover state — ':hover' can stick
      to a recently-tapped item, which made every other image-item drop
@@ -5815,6 +5854,50 @@
     }
     return shuffled;
   }
+  // Mobile-only fade slideshow for the image marquee. Picks unique
+  // image-items from the (doubled) track, cycles `.is-current` between
+  // them on a 5s interval — the CSS handles the 1.4s crossfade. Idempotent:
+  // clears any prior interval before starting a new one, so calling this
+  // after every renderMarquees() is safe.
+  function _startMobileImageCycle() {
+    const track = document.getElementById('imageTrack');
+    if (!track) return;
+    // Always clear the previous timer; we'll only restart if we're on mobile.
+    if (track._fadeCycleTimer) {
+      clearInterval(track._fadeCycleTimer);
+      track._fadeCycleTimer = null;
+    }
+    if (!window.matchMedia('(max-width: 720px)').matches) {
+      // Desktop: leave the is-current classes off; the horizontal-scroll
+      // animation takes over via the default CSS.
+      track.querySelectorAll('.image-item.is-current').forEach(el => el.classList.remove('is-current'));
+      return;
+    }
+    // Dedupe by data-tid / data-bid because the track HTML is duplicated
+    // (imageHtml + imageHtml) for the desktop seamless-loop trick. On
+    // mobile we want each unique block in the rotation exactly once.
+    const all = Array.from(track.querySelectorAll('.image-item'));
+    const seen = new Set();
+    const items = [];
+    for (const it of all) {
+      const id = it.dataset.tid || it.dataset.bid || '';
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      items.push(it);
+    }
+    if (items.length === 0) return;
+    // Reset all (covers the case where some had .is-current from a prior run).
+    all.forEach(el => el.classList.remove('is-current'));
+    let idx = 0;
+    items[0].classList.add('is-current');
+    if (items.length === 1) return; // nothing to cycle through
+    track._fadeCycleTimer = setInterval(() => {
+      items[idx].classList.remove('is-current');
+      idx = (idx + 1) % items.length;
+      items[idx].classList.add('is-current');
+    }, 5000);
+  }
+
   function renderMarquees() {
     // ─── ROW 1 (top phrase lane) — own visible channel mainPhrases + cross-user
     //                              lyric/url phrases ───
@@ -6003,6 +6086,12 @@
     _setTrackIfChanged('titleTrack', titleHtml + titleHtml);
     _setTrackIfChanged('phraseTrack2', row3Html + row3Html);
     _setTrackIfChanged('imageTrack', imageHtml + imageHtml);
+
+    // Mobile only: drive the image marquee as a fade slideshow instead
+    // of a horizontal scroll. Safe to call on desktop too — bails on the
+    // media-query check. Restarts on every renderMarquees() so newly
+    // appearing blocks join the rotation without a manual reset.
+    _startMobileImageCycle();
 
     // ─── Pause-on-touch for the image marquee (mobile tap accuracy) ───
     // Without this, the 150-300ms iOS tap-confirm delay lets the marquee
