@@ -52,7 +52,6 @@ function buildHtml(opts: {
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${esc(image)}">
-<meta http-equiv="refresh" content="0;url=${esc(dest)}">
 <script>window.location.replace(${JSON.stringify(dest)});</script>
 </head>
 <body style="font-family:monospace;padding:40px;background:#faf8f4;color:#1a1a1a;">
@@ -63,6 +62,8 @@ function buildHtml(opts: {
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
+  // Reconstruct canonical public URL (internal req.url strips /functions/v1/).
+  const selfUrl = `https://boaslcfdjdjaryahpged.supabase.co/functions/v1/share?${url.searchParams.toString()}`;
   const type = url.searchParams.get('type');
   const id = url.searchParams.get('id');
   const ownerId = url.searchParams.get('owner');
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    buildHtml({ title, description, image, appHash, selfUrl: req.url }),
+    buildHtml({ title, description, image, appHash, selfUrl }),
     {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
