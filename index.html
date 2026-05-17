@@ -234,7 +234,12 @@
       height: 100%;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 1.4s ease;
+      /* Short crossfade (0.5s, was 1.4s) — long crossfade made it
+         visually ambiguous which image was "the tap target" during the
+         transition, so users tapped what looked like image A and got
+         image B's modal. Half-second feels intentional but doesn't
+         create a long window of confusion. */
+      transition: opacity 0.5s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -5856,26 +5861,31 @@
   }
   // Mobile-only fade slideshow for the image marquee. Picks unique
   // image-items from the (doubled) track, cycles `.is-current` between
-  // them on a 5s interval — the CSS handles the 1.4s crossfade. Idempotent:
-  // clears any prior interval before starting a new one, so calling this
-  // after every renderMarquees() is safe.
+  // them on an interval — CSS handles the 0.5s crossfade. Idempotent:
+  // safe to call after every renderMarquees().
+  //
+  // Touch handling: pause the cycle the moment the user touches the
+  // marquee area, so a tap can never race the swap (a swap mid-tap
+  // would otherwise route the click to the new is-current item — which
+  // is exactly the "tapped image ≠ opened block" bug we saw before).
+  // Resume after a generous quiet period.
   function _startMobileImageCycle() {
     const track = document.getElementById('imageTrack');
     if (!track) return;
-    // Always clear the previous timer; we'll only restart if we're on mobile.
-    if (track._fadeCycleTimer) {
-      clearInterval(track._fadeCycleTimer);
-      track._fadeCycleTimer = null;
-    }
+
+    // Clear any running timers (idempotent restart).
+    if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
+    if (track._fadeCycleResumeTimer) { clearTimeout(track._fadeCycleResumeTimer); track._fadeCycleResumeTimer = null; }
+
     if (!window.matchMedia('(max-width: 720px)').matches) {
-      // Desktop: leave the is-current classes off; the horizontal-scroll
-      // animation takes over via the default CSS.
+      // Desktop: drop any leftover .is-current so horizontal-scroll CSS owns the lane.
       track.querySelectorAll('.image-item.is-current').forEach(el => el.classList.remove('is-current'));
       return;
     }
-    // Dedupe by data-tid / data-bid because the track HTML is duplicated
-    // (imageHtml + imageHtml) for the desktop seamless-loop trick. On
-    // mobile we want each unique block in the rotation exactly once.
+
+    // Dedupe by data-tid / data-bid — the track HTML is doubled
+    // (imageHtml + imageHtml) for the desktop seamless-loop trick, but
+    // mobile only wants each unique block in rotation once.
     const all = Array.from(track.querySelectorAll('.image-item'));
     const seen = new Set();
     const items = [];
@@ -5886,16 +5896,53 @@
       items.push(it);
     }
     if (items.length === 0) return;
-    // Reset all (covers the case where some had .is-current from a prior run).
+
     all.forEach(el => el.classList.remove('is-current'));
-    let idx = 0;
     items[0].classList.add('is-current');
-    if (items.length === 1) return; // nothing to cycle through
-    track._fadeCycleTimer = setInterval(() => {
-      items[idx].classList.remove('is-current');
-      idx = (idx + 1) % items.length;
-      items[idx].classList.add('is-current');
-    }, 5000);
+
+    // Store state on the track so the (wire-once) pause handler always
+    // operates on the latest items array even after re-renders.
+    track._fadeCycleState = { items, idx: 0 };
+
+    const HOLD_MS = 6000;        // dwell per image (was 5000)
+    const RESUME_AFTER_MS = 7000; // quiet window before resuming after a touch
+
+    const advance = () => {
+      const s = track._fadeCycleState;
+      if (!s || s.items.length === 0) return;
+      s.items[s.idx]?.classList.remove('is-current');
+      s.idx = (s.idx + 1) % s.items.length;
+      s.items[s.idx]?.classList.add('is-current');
+    };
+    track._fadeCycleAdvance = advance;
+
+    const startTimer = () => {
+      if (track._fadeCycleTimer) clearInterval(track._fadeCycleTimer);
+      track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, HOLD_MS);
+    };
+
+    if (items.length > 1) startTimer();
+
+    // Wire pause-on-touch once. Re-renders keep the same wiring; the
+    // handler reads the latest advance/state from the track object.
+    if (!track._fadeCycleTouchWired) {
+      track._fadeCycleTouchWired = true;
+      const pause = () => {
+        if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
+        if (track._fadeCycleResumeTimer) clearTimeout(track._fadeCycleResumeTimer);
+        track._fadeCycleResumeTimer = setTimeout(() => {
+          track._fadeCycleResumeTimer = null;
+          if (!window.matchMedia('(max-width: 720px)').matches) return;
+          const s = track._fadeCycleState;
+          if (!s || s.items.length <= 1 || !track._fadeCycleAdvance) return;
+          track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, HOLD_MS);
+        }, RESUME_AFTER_MS);
+      };
+      // touchstart catches all iOS taps before click dispatches.
+      // pointerdown is the modern equivalent; both fire on mobile.
+      track.addEventListener('touchstart', pause, { passive: true });
+      track.addEventListener('pointerdown', pause, { passive: true });
+    }
   }
 
   function renderMarquees() {
