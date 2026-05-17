@@ -203,61 +203,12 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
-  /* Mobile: text marquees keep scrolling horizontally (lightweight),
-     but the image marquee switches to a *fade slideshow* — one image
-     at a time in the same spot, crossfade to the next.
-     2026-05-17: chosen over horizontal scroll because iPhone viewport
-     only fits ~1 image anyway, and iOS Safari evicts off-viewport
-     decoded bitmaps aggressively → re-entering viewport produces blank
-     blinks (the symptom we kept seeing). Static slideshow means the
-     visible image never leaves viewport while shown = no eviction churn,
-     no blink. Crossfade also matches the courtyard's slow rhythm. */
+  /* Mobile: only the image lane needs the heavy slowdown — text lanes
+     scroll smoothly on mobile too. Image lane gets the most paint work
+     per frame because of decoded-image compositing. */
   @media (max-width: 720px) {
-    .image-marquee {
-      height: 240px;
-      overflow: hidden;
-      position: relative;
-    }
-    .image-marquee .marquee-track {
-      animation: none;
-      transform: none;
-      display: block;
-      position: relative;
-      width: 100%;
-      height: 100%;
-      gap: 0;
-    }
-    .image-marquee .image-item {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      pointer-events: none;
-      /* 0.6s fade — soft "ふわっと消えてふわっと表示" per user request.
-         Crossfade was abandoned: JS now drives a *sequential* fade
-         (old fully fades out, then new fades in) so the visible image
-         and the clickable target always match — no "tapped A, got B's
-         modal". Sequential fade means a longer transition is safe; it
-         doesn't create an ambiguous overlap window. */
-      transition: opacity 0.6s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .image-marquee .image-item.is-current {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    /* Inner image/thumb keeps its compact size and is centered inside
-       the full-width slot. */
-    .image-marquee .image-item > img,
-    .image-marquee .image-item > .audio-thumb-wrap {
-      width: 300px;
-      height: 220px;
-      max-width: 86vw;
-      flex: 0 0 auto;
-    }
+    .image-marquee { --duration: 300s; }
+    .image-marquee .image-item { width: 300px; height: 220px; }
   }
   /* Touch devices don't have stable hover state — ':hover' can stick
      to a recently-tapped item, which made every other image-item drop
@@ -5860,129 +5811,6 @@
     }
     return shuffled;
   }
-  // ──────────────── MOBILE IMAGE SLIDESHOW ────────────────
-  // Mobile-only. Replaces the horizontal scroll with a one-at-a-time
-  // fade slideshow inside the same #imageTrack. Sequential fade (old
-  // fades out, then new fades in — never overlap). Tap → block modal,
-  // tap also pauses the cycle. Preserves the visible block across
-  // re-renders by tracking by data-bid/data-tid, not by index.
-  //
-  // Assumes the track contains UNIQUE items (one per block), which is
-  // guaranteed on mobile by the conditional `imageHtml` (no doubling)
-  // emitted from renderMarquees().
-  const _MOBILE_BREAKPOINT = '(max-width: 720px)';
-  const _SLIDE_FADE_MS  = 600;   // matches CSS opacity transition
-  const _SLIDE_HOLD_MS  = 3000;  // time visible before next swap
-  const _SLIDE_RESUME_MS = 5000; // wait time after a touch before resuming
-
-  function _slideshowTeardown(track) {
-    if (track._ssInterval)    { clearInterval(track._ssInterval); track._ssInterval = null; }
-    if (track._ssSwapTimer)   { clearTimeout(track._ssSwapTimer); track._ssSwapTimer = null; }
-    if (track._ssResumeTimer) { clearTimeout(track._ssResumeTimer); track._ssResumeTimer = null; }
-  }
-
-  function _slideshowAdvance(track) {
-    const s = track._ssState;
-    if (!s || s.items.length === 0) return;
-    // Phase 1: fade out current. No item has .is-current during this
-    // ~0.6s window — taps land on nothing, which is correct (the
-    // current image is mid-disappear, so there's no "right answer").
-    const cur = s.items[s.idx];
-    cur?.classList.remove('is-current');
-    // Phase 2: after fade-out completes, promote next item.
-    track._ssSwapTimer = setTimeout(() => {
-      track._ssSwapTimer = null;
-      const s2 = track._ssState;
-      if (!s2 || s2.items.length === 0) return;
-      s2.idx = (s2.idx + 1) % s2.items.length;
-      s2.items[s2.idx]?.classList.add('is-current');
-    }, _SLIDE_FADE_MS);
-  }
-
-  function _startMobileImageCycle() {
-    const track = document.getElementById('imageTrack');
-    if (!track) return;
-
-    // Off-mobile: tear down any leftover slideshow state and let the
-    // desktop horizontal-scroll CSS animation own the lane.
-    if (!window.matchMedia(_MOBILE_BREAKPOINT).matches) {
-      _slideshowTeardown(track);
-      track._ssState = null;
-      track.querySelectorAll('.image-item.is-current').forEach(el => el.classList.remove('is-current'));
-      return;
-    }
-
-    // Mobile path. Items in the track are now unique (no doubling).
-    const items = Array.from(track.querySelectorAll('.image-item'));
-    if (items.length === 0) {
-      _slideshowTeardown(track);
-      track._ssState = null;
-      return;
-    }
-
-    // Preserve the *currently-visible block* across re-renders. If the
-    // block the user was looking at still exists in the new item set,
-    // resume the cycle from there instead of jumping back to idx 0
-    // (the historical "tapped block ≠ opened modal" bug — re-renders
-    // were resetting the slideshow back to item 0 just as the user
-    // was tapping item N).
-    const newIds = items.map(it => it.dataset.tid || it.dataset.bid || '');
-    let idx = 0;
-    const prev = track._ssState;
-    if (prev && prev.items && prev.items[prev.idx]) {
-      const prevEl = prev.items[prev.idx];
-      const prevId = prevEl.dataset?.tid || prevEl.dataset?.bid || '';
-      const found = prevId ? newIds.indexOf(prevId) : -1;
-      if (found >= 0) idx = found;
-    }
-
-    // Fresh DOM may already lack is-current; sync explicitly.
-    items.forEach(el => el.classList.remove('is-current'));
-    items[idx].classList.add('is-current');
-
-    // Replace state with new items + (preserved) idx.
-    _slideshowTeardown(track);
-    track._ssState = { items, idx };
-
-    // Start cycle when more than one item.
-    if (items.length > 1) {
-      track._ssInterval = setInterval(() => _slideshowAdvance(track), _SLIDE_HOLD_MS);
-    }
-
-    // Touch handlers — wire once. Re-reads track._ssState dynamically
-    // so re-renders don't break the closure.
-    if (!track._ssTouchWired) {
-      track._ssTouchWired = true;
-      const pause = () => {
-        // Stop cycling immediately so a tap cannot race the swap.
-        if (track._ssInterval)  { clearInterval(track._ssInterval); track._ssInterval = null; }
-        if (track._ssSwapTimer) {
-          clearTimeout(track._ssSwapTimer);
-          track._ssSwapTimer = null;
-          // If we were mid-fade (current item lost is-current but next
-          // not yet added), restore is-current on the current item so
-          // the user's tap routes to a valid target.
-          const s = track._ssState;
-          const cur = s?.items?.[s.idx];
-          if (cur && !cur.classList.contains('is-current')) {
-            cur.classList.add('is-current');
-          }
-        }
-        // Schedule resume after a quiet window.
-        if (track._ssResumeTimer) clearTimeout(track._ssResumeTimer);
-        track._ssResumeTimer = setTimeout(() => {
-          track._ssResumeTimer = null;
-          if (!window.matchMedia(_MOBILE_BREAKPOINT).matches) return;
-          const s = track._ssState;
-          if (!s || s.items.length <= 1) return;
-          track._ssInterval = setInterval(() => _slideshowAdvance(track), _SLIDE_HOLD_MS);
-        }, _SLIDE_RESUME_MS);
-      };
-      track.addEventListener('touchstart', pause, { passive: true });
-      track.addEventListener('pointerdown', pause, { passive: true });
-    }
-  }
-
   function renderMarquees() {
     // ─── ROW 1 (top phrase lane) — own visible channel mainPhrases + cross-user
     //                              lyric/url phrases ───
@@ -6170,16 +5998,7 @@
     _setTrackIfChanged('phraseTrack', row1Html + row1Html);
     _setTrackIfChanged('titleTrack', titleHtml + titleHtml);
     _setTrackIfChanged('phraseTrack2', row3Html + row3Html);
-    // Image track: doubled HTML for desktop seamless-scroll, single set
-    // for mobile slideshow (no need to dedupe later).
-    const _isImageMobile = window.matchMedia('(max-width: 720px)').matches;
-    _setTrackIfChanged('imageTrack', _isImageMobile ? imageHtml : (imageHtml + imageHtml));
-
-    // Mobile only: drive the image marquee as a fade slideshow instead
-    // of a horizontal scroll. Safe to call on desktop too — bails on the
-    // media-query check. Restarts on every renderMarquees() so newly
-    // appearing blocks join the rotation without a manual reset.
-    _startMobileImageCycle();
+    _setTrackIfChanged('imageTrack', imageHtml + imageHtml);
 
     // ─── Pause-on-touch for the image marquee (mobile tap accuracy) ───
     // Without this, the 150-300ms iOS tap-confirm delay lets the marquee
