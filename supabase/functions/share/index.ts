@@ -1,12 +1,13 @@
 // Ateli.er — Share Edge Function
-// Serves OG-tagged HTML redirect pages for block / channel / user shares.
-// SNS bots (Twitter, Discord, Slack) see correct og:title / og:image / og:description.
-// Human visitors are redirected immediately to the SPA with the correct hash.
+// Bots (Twitterbot, Discordbot, etc.) get OG-tagged HTML.
+// Human browsers get a 302 redirect straight to the SPA.
 
 const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
 const APP_URL = 'https://atelistudio.com/';
 const DEFAULT_OG_IMAGE = 'https://atelistudio.com/og-image.png';
+
+const BOT_UA = /Twitterbot|facebookexternalhit|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|Pinterest|redditbot|Applebot|Googlebot|bingbot|DuckDuckBot/i;
 
 // Same conversion logic as the client-side convertImageUrl().
 function convertImageUrl(url: string): string {
@@ -80,25 +81,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
   <p class="title">${esc(title)}</p>
   <p class="desc">${esc(description)}</p>
   <a href="${esc(dest)}" class="btn">Open in Ateli.er →</a>
-  <p class="hint">redirecting automatically…</p>
+  <p class="hint">redirecting…</p>
 </div>
-<script>setTimeout(function(){window.location.replace(${JSON.stringify(dest)});},800);</script>
+<script>window.location.replace(${JSON.stringify(dest)});</script>
 </body>
 </html>`;
 }
 
 Deno.serve(async (req) => {
+  const ua = req.headers.get('user-agent') || '';
   const url = new URL(req.url);
-  // Reconstruct canonical public URL (internal req.url strips /functions/v1/).
-  const selfUrl = `https://boaslcfdjdjaryahpged.supabase.co/functions/v1/share?${url.searchParams.toString()}`;
   const type = url.searchParams.get('type');
   const id = url.searchParams.get('id');
   const ownerId = url.searchParams.get('owner');
 
+  // Compute app hash (needed for both bot and human paths).
+  let appHash = '';
+  if (type === 'block' && id) {
+    appHash = `#b=${encodeURIComponent(id)}`;
+  } else if (type === 'user' && id) {
+    appHash = `#u=${encodeURIComponent(id)}`;
+  } else if (type === 'channel' && ownerId) {
+    appHash = id && id !== '_unkn' ? `#ch=${encodeURIComponent(id)}` : '';
+  }
+
+  // Human browsers: 302 straight to the SPA — no HTML rendering issues.
+  if (!BOT_UA.test(ua)) {
+    return new Response(null, {
+      status: 302,
+      headers: { 'Location': APP_URL + appHash },
+    });
+  }
+
+  // Bots: build OG-tagged HTML.
+  const selfUrl = `https://boaslcfdjdjaryahpged.supabase.co/functions/v1/share?${url.searchParams.toString()}`;
+
   let title = 'Ateli.er';
   let description = '未完成のまま、そっと置いておく場所。';
   let image = DEFAULT_OG_IMAGE;
-  let appHash = '';
 
   if (type === 'block' && id) {
     const rows = await sbGet(
@@ -112,7 +132,6 @@ Deno.serve(async (req) => {
         || p.caption
         || `by @${row.owner_handle || 'artist'} on Ateli.er`;
       if (p.imageUrl) image = convertImageUrl(p.imageUrl);
-      appHash = `#b=${encodeURIComponent(id)}`;
     }
   } else if (type === 'user' && id) {
     const rows = await sbGet(
@@ -123,11 +142,9 @@ Deno.serve(async (req) => {
       const handle = (profile.handle || '').replace(/^@+/, '');
       title = `@${handle} — Ateli.er`;
       description = profile.bio || '未完成のまま、そっと置いておく場所。';
-      if (profile.avatar_url) image = profile.avatar_url;
-      appHash = `#u=${encodeURIComponent(id)}`;
+      if (profile.avatar_url) image = convertImageUrl(profile.avatar_url);
     }
   } else if (type === 'channel' && ownerId) {
-    // Fetch owner profile for handle + avatar (fallback image).
     const pRows = await sbGet(
       `profiles?id=eq.${encodeURIComponent(ownerId)}&select=handle,bio,avatar_url&limit=1`
     );
@@ -135,12 +152,9 @@ Deno.serve(async (req) => {
     const ownerHandle = profile ? (profile.handle || '').replace(/^@+/, '') : 'artist';
     if (profile?.avatar_url) image = convertImageUrl(profile.avatar_url);
 
-    // Fetch a block with an image from this channel.
-    // _unkn is the client-side fallback for NULL channel_id rows.
     const channelFilter = (!id || id === '_unkn')
       ? `channel_id=is.null`
       : `channel_id=eq.${encodeURIComponent(id)}`;
-    // Try image blocks first for a better thumbnail.
     const imgRows = await sbGet(
       `public_blocks?${channelFilter}&owner_id=eq.${encodeURIComponent(ownerId)}&kind=eq.image&select=payload,channel_label,owner_handle&limit=1&order=ts.desc`
     );
@@ -151,7 +165,6 @@ Deno.serve(async (req) => {
       const lbl = (imgRow.channel_label as string) || id || 'channel';
       title = `${lbl} — @${ownerHandle} — Ateli.er`;
     } else {
-      // Fall back to any block in this channel for the label.
       const anyRows = await sbGet(
         `public_blocks?${channelFilter}&owner_id=eq.${encodeURIComponent(ownerId)}&select=channel_label,owner_handle&limit=1&order=ts.desc`
       );
@@ -160,7 +173,6 @@ Deno.serve(async (req) => {
       title = `${lbl} — @${ownerHandle} — Ateli.er`;
     }
     description = '未完成のまま、そっと置いておく場所。';
-    appHash = id && id !== '_unkn' ? `#ch=${encodeURIComponent(id)}` : '';
   }
 
   return new Response(
