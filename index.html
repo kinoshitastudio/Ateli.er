@@ -234,12 +234,13 @@
       height: 100%;
       opacity: 0;
       pointer-events: none;
-      /* Short crossfade (0.5s, was 1.4s) — long crossfade made it
-         visually ambiguous which image was "the tap target" during the
-         transition, so users tapped what looked like image A and got
-         image B's modal. Half-second feels intentional but doesn't
-         create a long window of confusion. */
-      transition: opacity 0.5s ease;
+      /* 0.6s fade — soft "ふわっと消えてふわっと表示" per user request.
+         Crossfade was abandoned: JS now drives a *sequential* fade
+         (old fully fades out, then new fades in) so the visible image
+         and the clickable target always match — no "tapped A, got B's
+         modal". Sequential fade means a longer transition is safe; it
+         doesn't create an ambiguous overlap window. */
+      transition: opacity 0.6s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -5859,33 +5860,35 @@
     }
     return shuffled;
   }
-  // Mobile-only fade slideshow for the image marquee. Picks unique
-  // image-items from the (doubled) track, cycles `.is-current` between
-  // them on an interval — CSS handles the 0.5s crossfade. Idempotent:
-  // safe to call after every renderMarquees().
+  // Mobile-only fade slideshow for the image marquee.
+  // Sequential fade (not crossfade): old item fully fades out, then new
+  // item fades in. Guarantees the visible image and click target always
+  // match. Pause on touch + resume after quiet window.
   //
-  // Touch handling: pause the cycle the moment the user touches the
-  // marquee area, so a tap can never race the swap (a swap mid-tap
-  // would otherwise route the click to the new is-current item — which
-  // is exactly the "tapped image ≠ opened block" bug we saw before).
-  // Resume after a generous quiet period.
+  // KEY: only re-initializes when the underlying item set has CHANGED.
+  // renderMarquees() fires repeatedly (cross-user cache populate, language
+  // switch, language-tag refresh, etc.) and each prior implementation reset
+  // idx=0, snapping the visible item back to the first thumb — so a user
+  // watching item 4 would see item 1 fade in, tap thinking it was item 4,
+  // and get item 4 / item 5's modal. That was the "tapped block ≠ opened
+  // block" bug. Now we treat a re-render with identical items as a no-op.
   function _startMobileImageCycle() {
     const track = document.getElementById('imageTrack');
     if (!track) return;
 
-    // Clear any running timers (idempotent restart).
-    if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
-    if (track._fadeCycleResumeTimer) { clearTimeout(track._fadeCycleResumeTimer); track._fadeCycleResumeTimer = null; }
-
-    if (!window.matchMedia('(max-width: 720px)').matches) {
-      // Desktop: drop any leftover .is-current so horizontal-scroll CSS owns the lane.
+    const isMobile = window.matchMedia('(max-width: 720px)').matches;
+    if (!isMobile) {
+      // Tear down any leftover state from a prior mobile session.
+      if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
+      if (track._fadeSwapTimer) { clearTimeout(track._fadeSwapTimer); track._fadeSwapTimer = null; }
+      if (track._fadeResumeTimer) { clearTimeout(track._fadeResumeTimer); track._fadeResumeTimer = null; }
+      track._fadeCycleSignature = null;
       track.querySelectorAll('.image-item.is-current').forEach(el => el.classList.remove('is-current'));
       return;
     }
 
-    // Dedupe by data-tid / data-bid — the track HTML is doubled
-    // (imageHtml + imageHtml) for the desktop seamless-loop trick, but
-    // mobile only wants each unique block in rotation once.
+    // Dedupe by data-tid / data-bid — track HTML is doubled (imageHtml + imageHtml)
+    // for the desktop seamless-loop, but mobile only rotates each unique block once.
     const all = Array.from(track.querySelectorAll('.image-item'));
     const seen = new Set();
     const items = [];
@@ -5897,49 +5900,82 @@
     }
     if (items.length === 0) return;
 
+    // Signature of the current item set. If unchanged AND a cycle is
+    // already running on the *same DOM nodes*, leave it alone — do not
+    // reset idx, do not flicker. We also verify the prior items are
+    // still attached to the document because _setTrackIfChanged may
+    // have rewritten innerHTML (creating fresh nodes with identical
+    // data-bids) — same signature but different DOM identity.
+    const signature = items.map(it => it.dataset.tid || it.dataset.bid).join('|');
+    const priorFirst = track._fadeCycleState?.items?.[0];
+    const sameDom = priorFirst && document.contains(priorFirst);
+    if (track._fadeCycleSignature === signature && track._fadeCycleState && sameDom) {
+      return;
+    }
+    track._fadeCycleSignature = signature;
+
+    // Item set changed (or first init) — full reset.
+    if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
+    if (track._fadeSwapTimer) { clearTimeout(track._fadeSwapTimer); track._fadeSwapTimer = null; }
+    if (track._fadeResumeTimer) { clearTimeout(track._fadeResumeTimer); track._fadeResumeTimer = null; }
     all.forEach(el => el.classList.remove('is-current'));
     items[0].classList.add('is-current');
-
-    // Store state on the track so the (wire-once) pause handler always
-    // operates on the latest items array even after re-renders.
     track._fadeCycleState = { items, idx: 0 };
 
-    const HOLD_MS = 6000;        // dwell per image (was 5000)
-    const RESUME_AFTER_MS = 7000; // quiet window before resuming after a touch
+    const FADE_MS = 600;          // matches CSS transition (soft "ふわっと")
+    const CYCLE_MS = 3000;        // hold time between swaps (faster, was 6000)
+    const RESUME_AFTER_MS = 6000; // quiet window before resuming after a touch
 
+    // Sequential fade:
+    //   T=0       : remove is-current from current item (it starts fading out)
+    //   T=FADE_MS : add is-current to next item (it starts fading in)
+    // Between those two events nothing has is-current → nothing is
+    // clickable for ~0.4s, which is a far better failure mode than
+    // "click landed on the wrong item".
     const advance = () => {
       const s = track._fadeCycleState;
       if (!s || s.items.length === 0) return;
-      s.items[s.idx]?.classList.remove('is-current');
-      s.idx = (s.idx + 1) % s.items.length;
-      s.items[s.idx]?.classList.add('is-current');
+      const oldEl = s.items[s.idx];
+      oldEl?.classList.remove('is-current');
+      track._fadeSwapTimer = setTimeout(() => {
+        track._fadeSwapTimer = null;
+        const s2 = track._fadeCycleState;
+        if (!s2 || s2.items.length === 0) return;
+        s2.idx = (s2.idx + 1) % s2.items.length;
+        s2.items[s2.idx]?.classList.add('is-current');
+      }, FADE_MS);
     };
     track._fadeCycleAdvance = advance;
 
-    const startTimer = () => {
-      if (track._fadeCycleTimer) clearInterval(track._fadeCycleTimer);
-      track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, HOLD_MS);
-    };
+    if (items.length > 1) {
+      track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, CYCLE_MS);
+    }
 
-    if (items.length > 1) startTimer();
-
-    // Wire pause-on-touch once. Re-renders keep the same wiring; the
-    // handler reads the latest advance/state from the track object.
     if (!track._fadeCycleTouchWired) {
       track._fadeCycleTouchWired = true;
       const pause = () => {
         if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
-        if (track._fadeCycleResumeTimer) clearTimeout(track._fadeCycleResumeTimer);
-        track._fadeCycleResumeTimer = setTimeout(() => {
-          track._fadeCycleResumeTimer = null;
+        if (track._fadeSwapTimer) {
+          clearTimeout(track._fadeSwapTimer);
+          track._fadeSwapTimer = null;
+          // Mid-swap: if we removed is-current from current item but
+          // haven't added it to next yet, restore current so the user's
+          // tap has a valid target.
+          const s = track._fadeCycleState;
+          const cur = s?.items?.[s.idx];
+          if (cur && !cur.classList.contains('is-current')) {
+            cur.classList.add('is-current');
+          }
+        }
+        if (track._fadeResumeTimer) clearTimeout(track._fadeResumeTimer);
+        track._fadeResumeTimer = setTimeout(() => {
+          track._fadeResumeTimer = null;
           if (!window.matchMedia('(max-width: 720px)').matches) return;
           const s = track._fadeCycleState;
           if (!s || s.items.length <= 1 || !track._fadeCycleAdvance) return;
-          track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, HOLD_MS);
+          track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, CYCLE_MS);
         }, RESUME_AFTER_MS);
       };
-      // touchstart catches all iOS taps before click dispatches.
-      // pointerdown is the modern equivalent; both fire on mobile.
       track.addEventListener('touchstart', pause, { passive: true });
       track.addEventListener('pointerdown', pause, { passive: true });
     }
