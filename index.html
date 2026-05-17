@@ -5860,121 +5860,123 @@
     }
     return shuffled;
   }
-  // Mobile-only fade slideshow for the image marquee.
-  // Sequential fade (not crossfade): old item fully fades out, then new
-  // item fades in. Guarantees the visible image and click target always
-  // match. Pause on touch + resume after quiet window.
+  // ──────────────── MOBILE IMAGE SLIDESHOW ────────────────
+  // Mobile-only. Replaces the horizontal scroll with a one-at-a-time
+  // fade slideshow inside the same #imageTrack. Sequential fade (old
+  // fades out, then new fades in — never overlap). Tap → block modal,
+  // tap also pauses the cycle. Preserves the visible block across
+  // re-renders by tracking by data-bid/data-tid, not by index.
   //
-  // KEY: only re-initializes when the underlying item set has CHANGED.
-  // renderMarquees() fires repeatedly (cross-user cache populate, language
-  // switch, language-tag refresh, etc.) and each prior implementation reset
-  // idx=0, snapping the visible item back to the first thumb — so a user
-  // watching item 4 would see item 1 fade in, tap thinking it was item 4,
-  // and get item 4 / item 5's modal. That was the "tapped block ≠ opened
-  // block" bug. Now we treat a re-render with identical items as a no-op.
+  // Assumes the track contains UNIQUE items (one per block), which is
+  // guaranteed on mobile by the conditional `imageHtml` (no doubling)
+  // emitted from renderMarquees().
+  const _MOBILE_BREAKPOINT = '(max-width: 720px)';
+  const _SLIDE_FADE_MS  = 600;   // matches CSS opacity transition
+  const _SLIDE_HOLD_MS  = 3000;  // time visible before next swap
+  const _SLIDE_RESUME_MS = 5000; // wait time after a touch before resuming
+
+  function _slideshowTeardown(track) {
+    if (track._ssInterval)    { clearInterval(track._ssInterval); track._ssInterval = null; }
+    if (track._ssSwapTimer)   { clearTimeout(track._ssSwapTimer); track._ssSwapTimer = null; }
+    if (track._ssResumeTimer) { clearTimeout(track._ssResumeTimer); track._ssResumeTimer = null; }
+  }
+
+  function _slideshowAdvance(track) {
+    const s = track._ssState;
+    if (!s || s.items.length === 0) return;
+    // Phase 1: fade out current. No item has .is-current during this
+    // ~0.6s window — taps land on nothing, which is correct (the
+    // current image is mid-disappear, so there's no "right answer").
+    const cur = s.items[s.idx];
+    cur?.classList.remove('is-current');
+    // Phase 2: after fade-out completes, promote next item.
+    track._ssSwapTimer = setTimeout(() => {
+      track._ssSwapTimer = null;
+      const s2 = track._ssState;
+      if (!s2 || s2.items.length === 0) return;
+      s2.idx = (s2.idx + 1) % s2.items.length;
+      s2.items[s2.idx]?.classList.add('is-current');
+    }, _SLIDE_FADE_MS);
+  }
+
   function _startMobileImageCycle() {
     const track = document.getElementById('imageTrack');
     if (!track) return;
 
-    const isMobile = window.matchMedia('(max-width: 720px)').matches;
-    if (!isMobile) {
-      // Tear down any leftover state from a prior mobile session.
-      if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
-      if (track._fadeSwapTimer) { clearTimeout(track._fadeSwapTimer); track._fadeSwapTimer = null; }
-      if (track._fadeResumeTimer) { clearTimeout(track._fadeResumeTimer); track._fadeResumeTimer = null; }
-      track._fadeCycleSignature = null;
+    // Off-mobile: tear down any leftover slideshow state and let the
+    // desktop horizontal-scroll CSS animation own the lane.
+    if (!window.matchMedia(_MOBILE_BREAKPOINT).matches) {
+      _slideshowTeardown(track);
+      track._ssState = null;
       track.querySelectorAll('.image-item.is-current').forEach(el => el.classList.remove('is-current'));
       return;
     }
 
-    // Dedupe by data-tid / data-bid — track HTML is doubled (imageHtml + imageHtml)
-    // for the desktop seamless-loop, but mobile only rotates each unique block once.
-    const all = Array.from(track.querySelectorAll('.image-item'));
-    const seen = new Set();
-    const items = [];
-    for (const it of all) {
-      const id = it.dataset.tid || it.dataset.bid || '';
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      items.push(it);
-    }
-    if (items.length === 0) return;
-
-    // Signature of the current item set. If unchanged AND a cycle is
-    // already running on the *same DOM nodes*, leave it alone — do not
-    // reset idx, do not flicker. We also verify the prior items are
-    // still attached to the document because _setTrackIfChanged may
-    // have rewritten innerHTML (creating fresh nodes with identical
-    // data-bids) — same signature but different DOM identity.
-    const signature = items.map(it => it.dataset.tid || it.dataset.bid).join('|');
-    const priorFirst = track._fadeCycleState?.items?.[0];
-    const sameDom = priorFirst && document.contains(priorFirst);
-    if (track._fadeCycleSignature === signature && track._fadeCycleState && sameDom) {
+    // Mobile path. Items in the track are now unique (no doubling).
+    const items = Array.from(track.querySelectorAll('.image-item'));
+    if (items.length === 0) {
+      _slideshowTeardown(track);
+      track._ssState = null;
       return;
     }
-    track._fadeCycleSignature = signature;
 
-    // Item set changed (or first init) — full reset.
-    if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
-    if (track._fadeSwapTimer) { clearTimeout(track._fadeSwapTimer); track._fadeSwapTimer = null; }
-    if (track._fadeResumeTimer) { clearTimeout(track._fadeResumeTimer); track._fadeResumeTimer = null; }
-    all.forEach(el => el.classList.remove('is-current'));
-    items[0].classList.add('is-current');
-    track._fadeCycleState = { items, idx: 0 };
-
-    const FADE_MS = 600;          // matches CSS transition (soft "ふわっと")
-    const CYCLE_MS = 3000;        // hold time between swaps (faster, was 6000)
-    const RESUME_AFTER_MS = 6000; // quiet window before resuming after a touch
-
-    // Sequential fade:
-    //   T=0       : remove is-current from current item (it starts fading out)
-    //   T=FADE_MS : add is-current to next item (it starts fading in)
-    // Between those two events nothing has is-current → nothing is
-    // clickable for ~0.4s, which is a far better failure mode than
-    // "click landed on the wrong item".
-    const advance = () => {
-      const s = track._fadeCycleState;
-      if (!s || s.items.length === 0) return;
-      const oldEl = s.items[s.idx];
-      oldEl?.classList.remove('is-current');
-      track._fadeSwapTimer = setTimeout(() => {
-        track._fadeSwapTimer = null;
-        const s2 = track._fadeCycleState;
-        if (!s2 || s2.items.length === 0) return;
-        s2.idx = (s2.idx + 1) % s2.items.length;
-        s2.items[s2.idx]?.classList.add('is-current');
-      }, FADE_MS);
-    };
-    track._fadeCycleAdvance = advance;
-
-    if (items.length > 1) {
-      track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, CYCLE_MS);
+    // Preserve the *currently-visible block* across re-renders. If the
+    // block the user was looking at still exists in the new item set,
+    // resume the cycle from there instead of jumping back to idx 0
+    // (the historical "tapped block ≠ opened modal" bug — re-renders
+    // were resetting the slideshow back to item 0 just as the user
+    // was tapping item N).
+    const newIds = items.map(it => it.dataset.tid || it.dataset.bid || '');
+    let idx = 0;
+    const prev = track._ssState;
+    if (prev && prev.items && prev.items[prev.idx]) {
+      const prevEl = prev.items[prev.idx];
+      const prevId = prevEl.dataset?.tid || prevEl.dataset?.bid || '';
+      const found = prevId ? newIds.indexOf(prevId) : -1;
+      if (found >= 0) idx = found;
     }
 
-    if (!track._fadeCycleTouchWired) {
-      track._fadeCycleTouchWired = true;
+    // Fresh DOM may already lack is-current; sync explicitly.
+    items.forEach(el => el.classList.remove('is-current'));
+    items[idx].classList.add('is-current');
+
+    // Replace state with new items + (preserved) idx.
+    _slideshowTeardown(track);
+    track._ssState = { items, idx };
+
+    // Start cycle when more than one item.
+    if (items.length > 1) {
+      track._ssInterval = setInterval(() => _slideshowAdvance(track), _SLIDE_HOLD_MS);
+    }
+
+    // Touch handlers — wire once. Re-reads track._ssState dynamically
+    // so re-renders don't break the closure.
+    if (!track._ssTouchWired) {
+      track._ssTouchWired = true;
       const pause = () => {
-        if (track._fadeCycleTimer) { clearInterval(track._fadeCycleTimer); track._fadeCycleTimer = null; }
-        if (track._fadeSwapTimer) {
-          clearTimeout(track._fadeSwapTimer);
-          track._fadeSwapTimer = null;
-          // Mid-swap: if we removed is-current from current item but
-          // haven't added it to next yet, restore current so the user's
-          // tap has a valid target.
-          const s = track._fadeCycleState;
+        // Stop cycling immediately so a tap cannot race the swap.
+        if (track._ssInterval)  { clearInterval(track._ssInterval); track._ssInterval = null; }
+        if (track._ssSwapTimer) {
+          clearTimeout(track._ssSwapTimer);
+          track._ssSwapTimer = null;
+          // If we were mid-fade (current item lost is-current but next
+          // not yet added), restore is-current on the current item so
+          // the user's tap routes to a valid target.
+          const s = track._ssState;
           const cur = s?.items?.[s.idx];
           if (cur && !cur.classList.contains('is-current')) {
             cur.classList.add('is-current');
           }
         }
-        if (track._fadeResumeTimer) clearTimeout(track._fadeResumeTimer);
-        track._fadeResumeTimer = setTimeout(() => {
-          track._fadeResumeTimer = null;
-          if (!window.matchMedia('(max-width: 720px)').matches) return;
-          const s = track._fadeCycleState;
-          if (!s || s.items.length <= 1 || !track._fadeCycleAdvance) return;
-          track._fadeCycleTimer = setInterval(track._fadeCycleAdvance, CYCLE_MS);
-        }, RESUME_AFTER_MS);
+        // Schedule resume after a quiet window.
+        if (track._ssResumeTimer) clearTimeout(track._ssResumeTimer);
+        track._ssResumeTimer = setTimeout(() => {
+          track._ssResumeTimer = null;
+          if (!window.matchMedia(_MOBILE_BREAKPOINT).matches) return;
+          const s = track._ssState;
+          if (!s || s.items.length <= 1) return;
+          track._ssInterval = setInterval(() => _slideshowAdvance(track), _SLIDE_HOLD_MS);
+        }, _SLIDE_RESUME_MS);
       };
       track.addEventListener('touchstart', pause, { passive: true });
       track.addEventListener('pointerdown', pause, { passive: true });
@@ -6168,7 +6170,10 @@
     _setTrackIfChanged('phraseTrack', row1Html + row1Html);
     _setTrackIfChanged('titleTrack', titleHtml + titleHtml);
     _setTrackIfChanged('phraseTrack2', row3Html + row3Html);
-    _setTrackIfChanged('imageTrack', imageHtml + imageHtml);
+    // Image track: doubled HTML for desktop seamless-scroll, single set
+    // for mobile slideshow (no need to dedupe later).
+    const _isImageMobile = window.matchMedia('(max-width: 720px)').matches;
+    _setTrackIfChanged('imageTrack', _isImageMobile ? imageHtml : (imageHtml + imageHtml));
 
     // Mobile only: drive the image marquee as a fade slideshow instead
     // of a horizontal scroll. Safe to call on desktop too — bails on the
