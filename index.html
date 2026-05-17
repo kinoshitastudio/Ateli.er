@@ -12972,57 +12972,77 @@
     }, 200);
   })();
 
-  // On load, detect a #b=<id> / #ch=<id> / #u=<ownerId> deep link and open the relevant view.
+  // On load, capture any #b= / #ch= / #u= deep-link params and clear the hash.
+  // Actual navigation runs in _resolveDeepLink() after auth + data are ready.
   (function detectDeepLinkOnLoad() {
     const mBlock   = location.hash.match(/^#b=(.+)$/);
     const mChannel = location.hash.match(/^#ch=(.+)$/);
     const mUser    = location.hash.match(/^#u=(.+)$/);
     if (!mBlock && !mChannel && !mUser) return;
-    setTimeout(() => {
-      history.replaceState(null, '', location.pathname);
-      if (mUser) {
-        const uid = decodeURIComponent(mUser[1]);
-        // Fetch this resident's profile row, then open their portfolio overlay.
-        try {
-          fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${encodeURIComponent(uid)}`, { headers: { apikey: SUPABASE_PUB_KEY } })
-            .then(r => r.ok ? r.json() : [])
-            .then(rows => {
-              const p = rows && rows[0];
-              if (!p) { try { showToast('その住民が見つかりませんでした'); } catch (e) {} return; }
-              if (typeof _exploreProfilesCache !== 'undefined') _exploreProfilesCache[p.id] = p;
-              openModal('explore');
-              openUserPortfolio({
-                id: p.id,
-                handle: p.handle,
-                avatarUrl: p.avatar_url ? convertImageUrl(p.avatar_url) : '',
-                joinedLabel: p.created_at ? ageString(new Date(p.created_at).getTime()) : '',
-                bio: p.bio || '',
-                snsUrl: p.sns_url || '',
-              });
-            })
-            .catch(() => {});
-        } catch (e) {}
+    window._pendingDeepLink = { mBlock, mChannel, mUser };
+    history.replaceState(null, '', location.pathname);
+  })();
+
+  // Resolve a pending deep link after auth is confirmed and data is loaded.
+  async function _resolveDeepLink() {
+    const p = window._pendingDeepLink;
+    if (!p) return;
+    window._pendingDeepLink = null;
+
+    if (p.mUser) {
+      const uid = decodeURIComponent(p.mUser[1]);
+      try {
+        const rows = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${encodeURIComponent(uid)}`,
+          { headers: { apikey: SUPABASE_PUB_KEY } }
+        ).then(r => r.ok ? r.json() : []);
+        const pr = rows && rows[0];
+        if (!pr) { try { showToast('その住民が見つかりませんでした'); } catch (e) {} return; }
+        if (typeof _exploreProfilesCache !== 'undefined') _exploreProfilesCache[pr.id] = pr;
+        openModal('explore');
+        openUserPortfolio({
+          id: pr.id, handle: pr.handle,
+          avatarUrl: pr.avatar_url ? convertImageUrl(pr.avatar_url) : '',
+          joinedLabel: pr.created_at ? ageString(new Date(pr.created_at).getTime()) : '',
+          bio: pr.bio || '', snsUrl: pr.sns_url || '',
+        });
+      } catch (e) {}
+      return;
+    }
+
+    if (p.mBlock) {
+      const bid = decodeURIComponent(p.mBlock[1]);
+      // Own audio block.
+      const tr = TRACKS.find(t => t.id === bid);
+      if (tr) { openPieceModal(tr); return; }
+      // Own non-audio block.
+      const b = loadBlocks().find(x => x.id === bid);
+      if (b) {
+        if (b.kind === 'image')     openImageModal(b);
+        else if (b.kind === 'text') openTextModal(b);
+        else if (b.kind === 'url')  openUrlModal(b);
         return;
       }
-      if (mBlock) {
-        const bid = decodeURIComponent(mBlock[1]);
-        // Audio is in TRACKS (seed + injected). Other kinds live in loadBlocks().
-        const tr = TRACKS.find(t => t.id === bid);
-        if (tr) { openPieceModal(tr); return; }
-        const b = loadBlocks().find(x => x.id === bid);
-        if (!b) return;
-        if (b.kind === 'image')      openImageModal(b);
-        else if (b.kind === 'text')  openTextModal(b);
-        else if (b.kind === 'url')   openUrlModal(b);
-      } else if (mChannel) {
-        const cid = decodeURIComponent(mChannel[1]);
-        const ch = CHANNELS.find(c => c.id === cid);
-        if (!ch) return;
-        openModal('pieces');
-        openChannelDetail(cid);
-      }
-    }, 250);
-  })();
+      // Public block from another user — fetch and open in explore view.
+      try {
+        const rows = await fetch(
+          `${SUPABASE_URL}/rest/v1/public_blocks?id=eq.${encodeURIComponent(bid)}&select=*&limit=1`,
+          { headers: { apikey: SUPABASE_PUB_KEY } }
+        ).then(r => r.ok ? r.json() : []);
+        if (rows && rows[0]) {
+          _explorePublicCache[bid] = rows[0];
+          openExternalFromCache(bid);
+        }
+      } catch (e) {}
+      return;
+    }
+
+    if (p.mChannel) {
+      const cid = decodeURIComponent(p.mChannel[1]);
+      const ch = CHANNELS.find(c => c.id === cid);
+      if (ch) { openModal('pieces'); openChannelDetail(cid); }
+    }
+  }
 
   // ──────────────── AUTH (Phase B — Supabase magic-link auth) ────────────────
   const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
@@ -14129,6 +14149,8 @@
             refreshAllViews();
           }
         } catch (e) { console.warn('[atelierSync] sign-in pull failed:', e); }
+        // Open any share deep-link that arrived before auth completed.
+        setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 400);
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
         // Phase E-prep: prime the cross-user broadcast pool so TOP marquee
@@ -14208,6 +14230,8 @@
         refreshAllViews();
       }
     } catch (e) { console.warn('[atelierSync] reload pull failed:', e); }
+    // Open any share deep-link that was in the URL on this page load.
+    setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 400);
     // Backfill own public_blocks columns (channel_id / channel_label) on
     // every load. Same one-shot per session reasoning as on SIGNED_IN.
     if (atelierPublic?.backfillOwnPublicBlocks) {
