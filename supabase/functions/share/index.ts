@@ -8,6 +8,16 @@ const SUPABASE_ANON_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
 const APP_URL = 'https://atelistudio.com/';
 const DEFAULT_OG_IMAGE = 'https://atelistudio.com/og-image.png';
 
+// Same conversion logic as the client-side convertImageUrl().
+function convertImageUrl(url: string): string {
+  if (!url) return '';
+  let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
+  return url;
+}
+
 function esc(s: string): string {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -84,7 +94,7 @@ Deno.serve(async (req) => {
       description = (p.text as string)?.slice(0, 200)
         || p.caption
         || `by @${row.owner_handle || 'artist'} on Ateli.er`;
-      if (p.imageUrl) image = p.imageUrl;
+      if (p.imageUrl) image = convertImageUrl(p.imageUrl);
       appHash = `#b=${encodeURIComponent(id)}`;
     }
   } else if (type === 'user' && id) {
@@ -106,7 +116,7 @@ Deno.serve(async (req) => {
     );
     const profile = Array.isArray(pRows) ? pRows[0] as Record<string, string> : null;
     const ownerHandle = profile ? (profile.handle || '').replace(/^@+/, '') : 'artist';
-    if (profile?.avatar_url) image = profile.avatar_url;
+    if (profile?.avatar_url) image = convertImageUrl(profile.avatar_url);
 
     // Fetch a block with an image from this channel.
     // _unkn is the client-side fallback for NULL channel_id rows.
@@ -120,7 +130,7 @@ Deno.serve(async (req) => {
     const imgRow = Array.isArray(imgRows) ? imgRows[0] as Record<string, unknown> : null;
     if (imgRow) {
       const p = (imgRow.payload as Record<string, string>) || {};
-      if (p.imageUrl) image = p.imageUrl;
+      if (p.imageUrl) image = convertImageUrl(p.imageUrl);
       const lbl = (imgRow.channel_label as string) || id || 'channel';
       title = `${lbl} — @${ownerHandle} — Ateli.er`;
     } else {
