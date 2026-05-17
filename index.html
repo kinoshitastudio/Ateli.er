@@ -779,6 +779,25 @@
     letter-spacing: 0.06em;
   }
   .explore-block-by .by-handle { color: var(--ink); }
+  .explore-block-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .explore-share-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    color: var(--gray);
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    transition: color 0.15s;
+    line-height: 1;
+  }
+  .explore-share-btn:hover { color: var(--ink); }
   /* Public toggle inside edit form */
   .uf-row-public .uf-public-toggle {
     display: inline-flex;
@@ -11254,6 +11273,22 @@
     return `<p class="block-meta-line">${t('blockMetaPlaced')} ${escapeHtml(placed)}${editedPart}</p>`;
   }
   // Share-icon button HTML — same icon as channel detail; identified by data-act="share".
+  // Share via the Supabase Edge Function — builds OG-tagged redirect URL and
+  // copies it to clipboard (Web Share API fallback on mobile).
+  async function _shareViaFn(params, fallbackTitle) {
+    const qs = new URLSearchParams(params).toString();
+    const shareUrl = `${_SHARE_FN_URL}?${qs}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('URL をコピーしました');
+      } else if (navigator.share) {
+        await navigator.share({ title: fallbackTitle || 'Ateli.er', url: shareUrl });
+      } else {
+        window.prompt('copy this URL:', shareUrl);
+      }
+    } catch (e) { /* user cancelled */ }
+  }
   function _shareBlockBtnHtml() {
     return `<button class="pm-close" data-act="share" title="${t('blockShare')}" aria-label="${t('blockShare')}"
       style="display:inline-flex;align-items:center;gap:6px;">
@@ -11754,17 +11789,27 @@
         thumbHtml = `<span class="explore-block-thumb">audio · ${fmtDur(p.sec || 0)}</span>`;
         title = p.title || '(untitled)';
       }
+      const _shareIcon = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>`;
       return `
         <li class="explore-block-card" data-pb-id="${escapeHtml(r.id)}" data-kind="${escapeHtml(r.kind)}">
           ${thumbHtml}
           <div class="explore-block-title">${escapeHtml(title)}</div>
-          <div class="explore-block-by">— by <span class="by-handle">@${escapeHtml(handle)}</span> · ${escapeHtml(ago)}</div>
+          <div class="explore-block-card-footer">
+            <div class="explore-block-by">— by <span class="by-handle">@${escapeHtml(handle)}</span> · ${escapeHtml(ago)}</div>
+            <button class="explore-share-btn" data-share-id="${escapeHtml(r.id)}" title="share" aria-label="share">${_shareIcon}</button>
+          </div>
         </li>
       `;
     }).join('');
     // Wire (idempotent) click handler on the list — open external block preview.
     if (!list._wiredC2) {
       list.addEventListener('click', (e) => {
+        const shareBtn = e.target.closest('.explore-share-btn[data-share-id]');
+        if (shareBtn) {
+          e.stopPropagation();
+          _shareViaFn({ type: 'block', id: shareBtn.dataset.shareId });
+          return;
+        }
         const card = e.target.closest('.explore-block-card[data-pb-id]');
         if (!card) return;
         e.preventDefault();
@@ -11850,20 +11895,10 @@
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     currentBlockModalId = null;
     currentBlockModalKind = 'portfolio';
-    // Share this resident's page — copies a #u=<ownerId> deep link ("this is me").
+    // Share this resident's page via Edge Function (OG-tagged redirect).
     const _upShareBtn = document.getElementById('upShareBtn');
-    if (_upShareBtn) _upShareBtn.addEventListener('click', async () => {
-      const shareUrl = `${location.origin}${location.pathname}#u=${encodeURIComponent(ownerId)}`;
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(shareUrl);
-          showToast('URL をコピーしました');
-        } else if (navigator.share) {
-          await navigator.share({ title: `@${handle || 'resident'} — Ateli.er`, url: shareUrl });
-        } else {
-          window.prompt('copy this URL:', shareUrl);
-        }
-      } catch (e) { /* user cancelled */ }
+    if (_upShareBtn) _upShareBtn.addEventListener('click', () => {
+      _shareViaFn({ type: 'user', id: ownerId }, `@${handle || 'resident'} — Ateli.er`);
     });
     // Fetch all public_blocks for this owner.
     const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&owner_id=eq.${encodeURIComponent(ownerId)}&order=ts.desc&limit=200`;
@@ -12031,13 +12066,15 @@
       const _connectBadgeHtml = _hasConnect
         ? `<span class="bc-connect-badge" title="${escapeHtml(t('connectBadgeTitle'))}">${escapeHtml(t('connectBadgeLabel'))}</span>`
         : '';
+      const _chShareIcon = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>`;
       return `
-        <div class="ch-card" data-pb-cid="${escapeHtml(c.channelId)}" data-pb-clabel="${escapeHtml(c.channelLabel)}" style="cursor:pointer;">
+        <div class="ch-card" data-pb-cid="${escapeHtml(c.channelId)}" data-pb-clabel="${escapeHtml(c.channelLabel)}" data-pb-oid="${escapeHtml(ownerId)}" style="cursor:pointer;">
           <div class="ch-card-thumb">
             ${ cells.map(_miniCellHtml).join('') }
           </div>
           <div class="ch-card-info">
             <span class="ch-card-name">${_connectBadgeHtml}${escapeHtml(c.channelLabel)}</span>
+            <button class="explore-share-btn" data-share-type="channel" data-share-cid="${escapeHtml(c.channelId)}" data-share-oid="${escapeHtml(ownerId)}" title="share" aria-label="share" style="margin-top:6px;">${_chShareIcon}</button>
           </div>
         </div>
       `;
@@ -12063,7 +12100,13 @@
     `;
     // Wire click handlers.
     grid.querySelectorAll('.ch-card[data-pb-cid]').forEach(el => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', (e) => {
+        const shareBtn = e.target.closest('.explore-share-btn[data-share-type="channel"]');
+        if (shareBtn) {
+          e.stopPropagation();
+          _shareViaFn({ type: 'channel', id: shareBtn.dataset.shareCid, owner: shareBtn.dataset.shareOid });
+          return;
+        }
         openUserChannel({ ownerId, handle, channelId: el.dataset.pbCid, channelLabel: el.dataset.pbClabel });
       });
     });
@@ -12331,19 +12374,11 @@
         });
       });
     }
-    // Share: copy a human-readable reference + the home URL to clipboard.
+    // Share via Edge Function for OG-tagged SNS preview.
     const shareBtn = document.getElementById('ucShareBtn');
     if (shareBtn) {
-      shareBtn.addEventListener('click', async () => {
-        const text = `Ateli.er — visit @${handle}'s ${channelLabel} on https://atelistudio.com/`;
-        try {
-          if (navigator.share) {
-            await navigator.share({ text, url: 'https://atelistudio.com/' });
-          } else if (navigator.clipboard) {
-            await navigator.clipboard.writeText(text);
-            showToast('link をコピーしました');
-          }
-        } catch (e) { /* user cancelled or permission denied */ }
+      shareBtn.addEventListener('click', () => {
+        _shareViaFn({ type: 'channel', id: channelId, owner: ownerId }, `${channelLabel} — Ateli.er`);
       });
     }
     inner.querySelectorAll('.pane-index li[data-pb-id]').forEach(el => {
@@ -13016,6 +13051,8 @@
   // ──────────────── AUTH (Phase B — Supabase magic-link auth) ────────────────
   const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
   const SUPABASE_PUB_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
+  // Share Edge Function base URL — generates OG-tagged redirect pages for SNS.
+  const _SHARE_FN_URL = `${SUPABASE_URL}/functions/v1/share`;
   const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUB_KEY, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
