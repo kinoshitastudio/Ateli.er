@@ -62,7 +62,6 @@ function buildHtml(opts: {
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${esc(image)}">
-<script>window.location.replace(${JSON.stringify(dest)});</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#faf8f4;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -83,6 +82,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
   <a href="${esc(dest)}" class="btn">Open in Ateli.er →</a>
   <p class="hint">redirecting automatically…</p>
 </div>
+<script>setTimeout(function(){window.location.replace(${JSON.stringify(dest)});},800);</script>
 </body>
 </html>`;
 }
