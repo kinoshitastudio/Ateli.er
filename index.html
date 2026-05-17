@@ -7612,22 +7612,11 @@
     // Wire share button — Web Share API on mobile, clipboard fallback on desktop.
     const shareBtn = detail.querySelector('#chShareBtn');
     if (shareBtn) {
-      shareBtn.addEventListener('click', async () => {
-        const url = `${location.origin}${location.pathname}#ch=${encodeURIComponent(cid)}`;
-        const title = `${c.label} — Ateli.er`;
-        const text  = c.mainPhrase || c.meta || '';
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(url);
-            showToast('URL をコピーしました');
-          } else if (navigator.share) {
-            await navigator.share({ title, text, url });
-          } else {
-            window.prompt('copy this URL:', url);
-          }
-        } catch (e) {
-          // User cancelled share sheet — silent
-        }
+      shareBtn.addEventListener('click', () => {
+        _shareViaFn(
+          { type: 'channel', id: cid, owner: currentUser?.id || '' },
+          `${c.label} — Ateli.er`
+        );
       });
     }
 
@@ -11297,25 +11286,17 @@
     </button>`;
   }
   async function _shareBlock(blockId) {
+    // Resolve title from local state or Explore cache (external blocks).
     const r = _resolveBlockOrTrack(blockId);
-    if (!r) return;
-    const title = r.kind === 'audio' ? (r.obj.title || 'block') :
-                  r.kind === 'image' ? (r.obj.caption || 'image') :
-                  r.kind === 'text'  ? (r.obj.title || (r.obj.text || 'text').slice(0, 60)) :
-                  (r.obj.title || 'link');
-    const url = `${location.origin}${location.pathname}#b=${encodeURIComponent(blockId)}`;
-    // Prefer clipboard (clear feedback via toast). Fall back to share sheet
-    // when clipboard is unavailable (older browsers / non-secure contexts).
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-        showToast('URL をコピーしました');
-      } else if (navigator.share) {
-        await navigator.share({ title: `${title} — Ateli.er`, url });
-      } else {
-        window.prompt('copy this URL:', url);
-      }
-    } catch (e) { /* user cancelled */ }
+    const cached = (!r && typeof _explorePublicCache !== 'undefined') ? _explorePublicCache[blockId] : null;
+    const p = cached?.payload || {};
+    const title = r
+      ? (r.kind === 'audio' ? (r.obj.title || 'block') :
+         r.kind === 'image' ? (r.obj.caption || 'image') :
+         r.kind === 'text'  ? (r.obj.title || (r.obj.text || 'text').slice(0, 60)) :
+         (r.obj.title || 'link'))
+      : (p.title || p.caption || (p.text || '').slice(0, 60) || 'block');
+    _shareViaFn({ type: 'block', id: blockId }, `${title} — Ateli.er`);
   }
 
   // ──────────────── TABBED MODAL ────────────────

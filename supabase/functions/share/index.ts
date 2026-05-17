@@ -98,25 +98,41 @@ Deno.serve(async (req) => {
       if (profile.avatar_url) image = profile.avatar_url;
       appHash = `#u=${encodeURIComponent(id)}`;
     }
-  } else if (type === 'channel' && id && ownerId) {
-    // Fetch the first block for channel label + possible image thumbnail.
-    const rows = await sbGet(
-      `public_blocks?channel_id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(ownerId)}&select=*&limit=1&order=ts.desc`
-    );
-    const row = Array.isArray(rows) ? rows[0] as Record<string, unknown> : null;
-    if (row) {
-      const p = (row.payload as Record<string, string>) || {};
-      title = `${row.channel_label || 'channel'} — @${row.owner_handle || 'artist'} — Ateli.er`;
-      description = '未完成のまま、そっと置いておく場所。';
-      if (p.imageUrl) image = p.imageUrl;
-    }
-    // Prefer owner avatar over block image for channels.
+  } else if (type === 'channel' && ownerId) {
+    // Fetch owner profile for handle + avatar (fallback image).
     const pRows = await sbGet(
-      `profiles?id=eq.${encodeURIComponent(ownerId)}&select=avatar_url&limit=1`
+      `profiles?id=eq.${encodeURIComponent(ownerId)}&select=handle,bio,avatar_url&limit=1`
     );
     const profile = Array.isArray(pRows) ? pRows[0] as Record<string, string> : null;
+    const ownerHandle = profile ? (profile.handle || '').replace(/^@+/, '') : 'artist';
     if (profile?.avatar_url) image = profile.avatar_url;
-    appHash = `#ch=${encodeURIComponent(id)}`;
+
+    // Fetch a block with an image from this channel.
+    // _unkn is the client-side fallback for NULL channel_id rows.
+    const channelFilter = (!id || id === '_unkn')
+      ? `channel_id=is.null`
+      : `channel_id=eq.${encodeURIComponent(id)}`;
+    // Try image blocks first for a better thumbnail.
+    const imgRows = await sbGet(
+      `public_blocks?${channelFilter}&owner_id=eq.${encodeURIComponent(ownerId)}&kind=eq.image&select=payload,channel_label,owner_handle&limit=1&order=ts.desc`
+    );
+    const imgRow = Array.isArray(imgRows) ? imgRows[0] as Record<string, unknown> : null;
+    if (imgRow) {
+      const p = (imgRow.payload as Record<string, string>) || {};
+      if (p.imageUrl) image = p.imageUrl;
+      const lbl = (imgRow.channel_label as string) || id || 'channel';
+      title = `${lbl} — @${ownerHandle} — Ateli.er`;
+    } else {
+      // Fall back to any block in this channel for the label.
+      const anyRows = await sbGet(
+        `public_blocks?${channelFilter}&owner_id=eq.${encodeURIComponent(ownerId)}&select=channel_label,owner_handle&limit=1&order=ts.desc`
+      );
+      const anyRow = Array.isArray(anyRows) ? anyRows[0] as Record<string, unknown> : null;
+      const lbl = (anyRow?.channel_label as string) || id || 'channel';
+      title = `${lbl} — @${ownerHandle} — Ateli.er`;
+    }
+    description = '未完成のまま、そっと置いておく場所。';
+    appHash = id && id !== '_unkn' ? `#ch=${encodeURIComponent(id)}` : '';
   }
 
   return new Response(
