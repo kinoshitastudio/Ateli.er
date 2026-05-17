@@ -4236,9 +4236,9 @@
     <div class="landing-cta-block">
       <div>
         <div class="landing-cta-block-title">Sign up</div>
-        <div class="landing-cta-block-sub">招待コード必須 · 無料 · 永続</div>
+        <div class="landing-cta-block-sub">無料 · 永続</div>
       </div>
-      <span class="landing-cta-block-action">— invite-only</span>
+      <span class="landing-cta-block-action">— sign up</span>
     </div>
     <div class="landing-cta-block">
       <div>
@@ -4249,7 +4249,6 @@
     </div>
 
     <p class="landing-foot">
-      currently invite-only · 限定招待制でゆっくり育てています。<br>
       Ateli.er is a project by kinoshita studio.<br><br>
       <a href="about.html" style="color:inherit;border-bottom:1px solid currentColor;text-decoration:none;">About</a>
       &nbsp;·&nbsp;
@@ -4275,12 +4274,8 @@
       <button type="button" class="auth-form-cancel" data-act="auth-close">— close</button>
     </div>
     <h2 class="auth-modal-title">中庭に入る</h2>
-    <p class="auth-modal-sub">招待コードと email を入力してください。マジックリンクで入室確認を行います。</p>
+    <p class="auth-modal-sub">email を入力してください。マジックリンクで入室確認を行います。</p>
     <form class="auth-form" id="signupForm" autocomplete="off">
-      <div class="auth-form-row">
-        <label for="suInvite" class="is-required">invite code</label>
-        <input type="text" id="suInvite" placeholder="…" autocomplete="off" required>
-      </div>
       <div class="auth-form-row">
         <label for="suEmail" class="is-required">email</label>
         <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="off" required>
@@ -4321,7 +4316,7 @@
       </div>
       <div class="auth-form-status" id="loginStatus"></div>
       <div class="auth-form-actions">
-        <button type="button" class="auth-form-cancel" data-act="auth-switch-signup">— need an invite?</button>
+        <button type="button" class="auth-form-cancel" data-act="auth-switch-signup">— need an account?</button>
         <button type="submit" class="auth-form-submit">— send magic link</button>
       </div>
     </form>
@@ -4816,8 +4811,8 @@
 
     <div class="brand-info-logo">Ateli<span style="color:var(--ink);">.</span>er</div>
     <div class="brand-info-tag">
-      <span class="bi-ja-inline">招待制 · 静かな中庭</span>
-      <span class="bi-en-inline">invite only · quiet courtyard</span>
+      <span class="bi-ja-inline">静かな中庭</span>
+      <span class="bi-en-inline">quiet courtyard</span>
     </div>
 
     <div class="brand-info-lang" role="tablist">
@@ -13783,24 +13778,19 @@
     if (switchToSignup) { openAuthModal('signup'); return; }
   });
 
-  // Sign up: validate invite via Supabase, then send magic link with handle in metadata.
+  // Sign up: send magic link with handle in metadata.
   document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!supabaseClient) { setAuthStatus('signupStatus', 'バックエンドが読み込めていません。再読み込みしてください。', 'err'); return; }
-    const invite = document.getElementById('suInvite')?.value.trim();
     const email  = document.getElementById('suEmail')?.value.trim();
     const handle = document.getElementById('suHandle')?.value.trim();
     const tosAgreed = document.getElementById('suTos')?.checked;
-    if (!invite || !email || !handle) {
+    if (!email || !handle) {
       setAuthStatus('signupStatus', 'すべての項目を入力してください。', 'err'); return;
     }
     if (!tosAgreed) {
       setAuthStatus('signupStatus', '利用規約・プライバシーポリシー・コミュニティガイドラインへの同意が必要です。', 'err'); return;
     }
-    setAuthStatus('signupStatus', '招待コードを確認中…', 'ok');
-    const inv = await validateInvite(invite);
-    if (!inv.ok) { setAuthStatus('signupStatus', inv.message, 'err'); return; }
-
     setAuthStatus('signupStatus', `${email} にマジックリンクを送信しています…`, 'ok');
     const redirectTo = location.origin + location.pathname;
     const tosAcceptedAt = new Date().toISOString();
@@ -13809,7 +13799,7 @@
       email,
       options: {
         emailRedirectTo: redirectTo,
-        data: { handle, invite_code: invite, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion },
+        data: { handle, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion },
       },
     });
     if (error) {
