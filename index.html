@@ -12363,7 +12363,15 @@
     });
   }
   document.querySelectorAll('.triggers .trig[data-tab]').forEach(t => {
-    t.addEventListener('click', () => openModal(t.dataset.tab));
+    t.addEventListener('click', () => {
+      const tab = t.dataset.tab;
+      // Guest users: auth-required tabs prompt sign-in instead of opening.
+      if (!currentUser && (tab === 'pieces' || tab === 'atelier' || tab === 'traces')) {
+        openAuthModal('signin');
+        return;
+      }
+      openModal(tab);
+    });
   });
   document.querySelectorAll('.modal-tabs .tab').forEach(t => {
     t.addEventListener('click', () => setTab(t.dataset.pane));
@@ -14244,16 +14252,18 @@
     if (!supabaseClient) { showLanding(); return; }
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateUserMenu(session);
-    if (params.has('landing') || !session) {
-      // Guest viewer mode: if a shared deep-link arrived, skip the landing and
-      // resolve the block/user/channel directly with the anon key (public reads).
-      if (!params.has('landing') && window._pendingDeepLink) {
-        hideLanding();
-        try { refreshCrossUserBlocks(); } catch(e) {}
-        setTimeout(() => { try { _resolveDeepLink(); } catch(e) {} }, 300);
-        return;
-      }
+    if (params.has('landing')) {
       showLanding();
+      return;
+    }
+    if (!session) {
+      // Guest mode: show the app directly (marquee + explore visible to all).
+      // ?landing=1 remains as an escape hatch to reach the landing page.
+      hideLanding();
+      try { refreshCrossUserBlocks(); } catch(e) {}
+      if (window._pendingDeepLink) {
+        setTimeout(() => { try { _resolveDeepLink(); } catch(e) {} }, 300);
+      }
       return;
     }
     // Existing session on reload: pull latest state from DB before rendering.
