@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ateli.er — courtyard</title>
+<meta name="description" content="All public audio from Ateli.er — sounds left half-finished, quietly listed.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ateli.er — courtyard">
+<meta property="og:description" content="All public audio from Ateli.er — sounds left half-finished, quietly listed.">
+<meta property="og:image" content="https://atelistudio.com/og-image.png">
+<meta property="og:url" content="https://atelistudio.com/courtyard.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ateli.er — courtyard">
+<meta name="twitter:description" content="All public audio from Ateli.er — sounds left half-finished, quietly listed.">
+<meta name="twitter:image" content="https://atelistudio.com/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #DCDBD5;
+  --bg-soft:   #C8C7C1;
+  --ink:       #1600A2;
+  --ink-dim:   rgba(22,0,162,.62);
+  --ink-faint: rgba(22,0,162,.32);
+  --ink-soft:  rgba(22,0,162,.14);
+  --ink-xsoft: rgba(22,0,162,.07);
+  --sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --player-h: 60px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { background: var(--bg); color: var(--ink); }
+body {
+  font-family: var(--sans);
+  min-height: 100vh;
+  padding-bottom: calc(var(--player-h) + 32px);
+  background: var(--bg);
+}
+
+/* ── HEADER ── */
+#hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px 18px;
+  border-bottom: 1px solid var(--ink-soft);
+}
+#hd-logo {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .22em;
+  color: var(--ink);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+#hd-logo span { color: var(--ink-dim); }
+#hd-nav {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+#hd-nav a {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: var(--ink-dim);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color .15s;
+}
+#hd-nav a:hover { color: var(--ink); }
+
+/* ── INTRO ── */
+#intro {
+  padding: 32px 28px 24px;
+  max-width: 640px;
+  border-bottom: 1px solid var(--ink-xsoft);
+}
+#intro p {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 300;
+  line-height: 1.8;
+  color: var(--ink-dim);
+  letter-spacing: .01em;
+}
+#intro .links {
+  margin-top: 14px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+#intro .links a {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: var(--ink);
+  text-decoration: none;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ink-faint);
+  padding-bottom: 1px;
+  transition: border-color .15s;
+}
+#intro .links a:hover { border-color: var(--ink); }
+
+/* ── TRACK LIST ── */
+#track-list {
+  width: 100%;
+}
+#track-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+#track-list thead tr {
+  border-bottom: 1px solid var(--ink-soft);
+}
+#track-list thead th {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .2em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 400;
+}
+#track-list thead th:first-child { padding-left: 28px; width: 32px; }
+#track-list thead th:last-child  { padding-right: 28px; }
+#track-list tbody tr {
+  border-bottom: 1px solid var(--ink-xsoft);
+  cursor: pointer;
+  transition: background .1s;
+}
+#track-list tbody tr:hover   { background: var(--ink-xsoft); }
+#track-list tbody tr.playing { background: var(--ink-soft); }
+#track-list tbody td {
+  padding: 11px 12px;
+  font-size: 12px;
+  color: var(--ink);
+  vertical-align: middle;
+}
+#track-list tbody td:first-child {
+  padding-left: 28px;
+  width: 32px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+  user-select: none;
+}
+#track-list tbody tr.playing td:first-child { color: var(--ink); }
+#track-list tbody td:last-child { padding-right: 28px; }
+
+.td-title {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink);
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.td-artist {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .06em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.td-channel {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.td-date {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* hide channel col on small screens */
+@media (max-width: 520px) {
+  .col-channel { display: none; }
+  .td-channel  { display: none; }
+}
+
+/* ── LOADING / EMPTY ── */
+#status {
+  padding: 48px 28px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .14em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+/* ── NOW PLAYING BAR ── */
+#np-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: var(--player-h);
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  transform: translateY(100%);
+  transition: transform .3s ease;
+  z-index: 50;
+}
+#np-bar.visible { transform: translateY(0); }
+
+#np-play-btn {
+  width: 32px; height: 32px;
+  border: 1px solid rgba(255,255,255,.5);
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  transition: background .15s;
+}
+#np-play-btn:hover { background: rgba(255,255,255,.15); }
+
+#np-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+#np-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+#np-artist {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: rgba(255,255,255,.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+#np-progress-wrap {
+  flex: 1;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+#np-progress-bg {
+  width: 100%;
+  height: 2px;
+  background: rgba(255,255,255,.2);
+  cursor: pointer;
+  position: relative;
+}
+#np-progress-fill {
+  height: 100%;
+  background: rgba(255,255,255,.8);
+  width: 0%;
+  pointer-events: none;
+  transition: width .3s linear;
+}
+#np-time {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: rgba(255,255,255,.4);
+  letter-spacing: .08em;
+  text-align: right;
+}
+
+#np-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 16px;
+  padding: 4px;
+  transition: color .15s;
+  flex-shrink: 0;
+}
+#np-close:hover { color: #fff; }
+
+@media (max-width: 480px) {
+  #np-progress-wrap { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="hd">
+  <a id="hd-logo" href="https://atelistudio.com/">Ateli.er <span>— courtyard</span></a>
+  <nav id="hd-nav">
+    <a href="https://atelistudio.com/player.html">Player</a>
+    <a href="https://atelistudio.com/">Open app →</a>
+  </nav>
+</header>
+
+<!-- INTRO -->
+<section id="intro">
+  <p>未完成のまま、そっと置いておく音たち。<br>All public audio from Ateli.er — listed quietly, in order of arrival.</p>
+  <div class="links">
+    <a href="https://atelistudio.com/player.html">↗ Atelier Player — ambient mode</a>
+    <a id="bmbrowser-link" href="https://apps.html" style="display:none">↗ BMBrowser Chrome extension</a>
+  </div>
+</section>
+
+<!-- TRACK LIST -->
+<section id="track-list" style="display:none">
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Title</th>
+        <th>Artist</th>
+        <th class="col-channel">Channel</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="track-tbody"></tbody>
+  </table>
+</section>
+
+<div id="status">Loading…</div>
+
+<!-- NOW PLAYING BAR -->
+<div id="np-bar">
+  <button id="np-play-btn" aria-label="Play / Pause">▶</button>
+  <div id="np-info">
+    <div id="np-title">—</div>
+    <div id="np-artist">—</div>
+  </div>
+  <div id="np-progress-wrap">
+    <div id="np-progress-bg">
+      <div id="np-progress-fill"></div>
+    </div>
+    <div id="np-time">0:00 / 0:00</div>
+  </div>
+  <button id="np-close" aria-label="Close player">×</button>
+</div>
+
+<script>
+(function () {
+  const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
+  const ANON_KEY     = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
+  const CWS_URL      = ''; // fill in once Chrome Web Store listing is live
+
+  // ── BMBrowser link (show only when CWS URL is known) ──
+  if (CWS_URL) {
+    const a = document.getElementById('bmbrowser-link');
+    a.href = CWS_URL;
+    a.style.display = '';
+  }
+
+  // ── Fetch audio blocks ──
+  async function fetchAudio() {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/public_blocks?kind=eq.audio&select=id,ts,payload,owner_handle,channel_label&order=ts.desc`,
+      { headers: { apikey: ANON_KEY } }
+    );
+    if (!res.ok) throw new Error(res.status);
+    return res.json();
+  }
+
+  function fmtDate(ts) {
+    const d = new Date(Number(ts));
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  }
+
+  function fmtTime(sec) {
+    if (!isFinite(sec) || sec < 0) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = String(Math.floor(sec % 60)).padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // ── Audio engine ──
+  let audio = new Audio();
+  audio.preload = 'metadata';
+  let currentRow   = null;
+  let currentTrack = null;
+
+  const npBar         = document.getElementById('np-bar');
+  const npPlayBtn     = document.getElementById('np-play-btn');
+  const npTitle       = document.getElementById('np-title');
+  const npArtist      = document.getElementById('np-artist');
+  const npProgressBg  = document.getElementById('np-progress-bg');
+  const npProgressFill= document.getElementById('np-progress-fill');
+  const npTime        = document.getElementById('np-time');
+  const npClose       = document.getElementById('np-close');
+
+  function playTrack(track, rowEl) {
+    if (currentRow) currentRow.classList.remove('playing');
+    currentRow   = rowEl;
+    currentTrack = track;
+    rowEl.classList.add('playing');
+    rowEl.querySelector('td').textContent = '▶';
+
+    const url = track.payload?.audioUrl || '';
+    audio.pause();
+    audio = new Audio(url);
+    audio.play().catch(() => {});
+
+    npTitle.textContent  = track.payload?.title || track.payload?.caption || '—';
+    npArtist.textContent = (track.owner_handle ? `@${track.owner_handle}` : '') +
+                           (track.channel_label ? ` · ${track.channel_label}` : '');
+    npBar.classList.add('visible');
+    npPlayBtn.textContent = '❚❚';
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', () => {
+      npPlayBtn.textContent = '▶';
+      rowEl.querySelector('td').textContent = '♪';
+    });
+  }
+
+  function updateProgress() {
+    const dur = audio.duration || 0;
+    const cur = audio.currentTime || 0;
+    const pct = dur ? (cur / dur) * 100 : 0;
+    npProgressFill.style.width = pct + '%';
+    npTime.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
+  }
+
+  npPlayBtn.addEventListener('click', () => {
+    if (audio.paused) {
+      audio.play().catch(() => {});
+      npPlayBtn.textContent = '❚❚';
+      if (currentRow) currentRow.querySelector('td').textContent = '▶';
+    } else {
+      audio.pause();
+      npPlayBtn.textContent = '▶';
+      if (currentRow) currentRow.querySelector('td').textContent = '♪';
+    }
+  });
+
+  npProgressBg.addEventListener('click', (e) => {
+    const rect = npProgressBg.getBoundingClientRect();
+    const pct  = (e.clientX - rect.left) / rect.width;
+    if (audio.duration) audio.currentTime = pct * audio.duration;
+  });
+
+  npClose.addEventListener('click', () => {
+    audio.pause();
+    audio.currentTime = 0;
+    npBar.classList.remove('visible');
+    if (currentRow) {
+      currentRow.classList.remove('playing');
+      currentRow.querySelector('td').textContent = '♪';
+      currentRow = null;
+    }
+    npPlayBtn.textContent = '▶';
+  });
+
+  // ── Render ──
+  function render(tracks) {
+    const tbody   = document.getElementById('track-tbody');
+    const section = document.getElementById('track-list');
+    const status  = document.getElementById('status');
+
+    if (!tracks.length) {
+      status.textContent = 'No audio yet.';
+      return;
+    }
+
+    status.style.display = 'none';
+    section.style.display = '';
+
+    tracks.forEach((t) => {
+      const p        = t.payload || {};
+      const title    = p.title || p.caption || '(untitled)';
+      const artist   = t.owner_handle ? `@${t.owner_handle}` : '—';
+      const channel  = t.channel_label || '';
+      const date     = fmtDate(t.ts);
+      const hasAudio = !!p.audioUrl;
+
+      const tr = document.createElement('tr');
+      if (!hasAudio) tr.style.opacity = '.35';
+
+      tr.innerHTML = `
+        <td>♪</td>
+        <td><div class="td-title">${esc(title)}</div></td>
+        <td><div class="td-artist">${esc(artist)}</div></td>
+        <td class="td-channel col-channel">${esc(channel)}</td>
+        <td class="td-date">${date}</td>
+      `;
+
+      if (hasAudio) {
+        tr.addEventListener('click', () => {
+          if (currentTrack === t && !audio.paused) {
+            audio.pause();
+            npPlayBtn.textContent = '▶';
+            tr.querySelector('td').textContent = '♪';
+          } else if (currentTrack === t && audio.paused) {
+            audio.play().catch(() => {});
+            npPlayBtn.textContent = '❚❚';
+            tr.querySelector('td').textContent = '▶';
+          } else {
+            playTrack(t, tr);
+          }
+        });
+      }
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── Init ──
+  fetchAudio()
+    .then(render)
+    .catch((err) => {
+      document.getElementById('status').textContent = 'Could not load tracks.';
+      console.error(err);
+    });
+})();
+</script>
+</body>
+</html>
