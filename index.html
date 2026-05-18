@@ -13454,6 +13454,9 @@
     let _backfillInFlight = null;
     async function backfillOwnPublicBlocks() {
       if (!currentUser?.id) return false;
+      // Cross-device guard: abort if localStorage still belongs to a different user.
+      const _storedUid = localStorage.getItem('atelier_last_user_id');
+      if (_storedUid && _storedUid !== currentUser.id) return false;
       // Concurrency guard: SIGNED_IN handler and gateAppByAuth's reload
       // path both call this on entry. Without the guard, both kicked off
       // backfill in parallel — when an id-collision recovery fired, BOTH
@@ -14127,6 +14130,16 @@
           return;
         }
         _greetedUserId = user.id;
+        // Cross-device guard: if a different user was previously signed in on
+        // this device, their localStorage blocks must be wiped before backfill
+        // runs — otherwise stale blocks get uploaded under the new user's identity.
+        const _prevUserId = localStorage.getItem('atelier_last_user_id');
+        if (_prevUserId && _prevUserId !== user.id) {
+          try { localStorage.removeItem('atelier_blocks_v1'); } catch(e) {}
+          try { localStorage.removeItem('atelier_external_blocks_v1'); } catch(e) {}
+          try { localStorage.removeItem('atelier_seeded_v2'); } catch(e) {}
+        }
+        try { localStorage.setItem('atelier_last_user_id', user.id); } catch(e) {}
         const chosenHandle = user.user_metadata?.handle;
         if (chosenHandle) {
           // Best-effort sync of user-chosen handle into profiles (the trigger
