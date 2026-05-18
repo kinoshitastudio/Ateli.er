@@ -1631,14 +1631,14 @@
   .ch-grid.is-editing .ch-card:hover { opacity: 1; transform: none; }
 
   /* Activity graph (GitHub-style contribution heatmap) */
-  #activityGraph { margin: 12px 0 20px; overflow-x: auto; }
-  #activityGraph .ag-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--gray-2); margin-bottom: 8px; }
-  #activityGraph .ag-grid { display: grid; grid-template-rows: repeat(7, 9px); grid-auto-flow: column; grid-auto-columns: 9px; gap: 2px; width: max-content; }
-  #activityGraph .ag-cell { width: 9px; height: 9px; border-radius: 1.5px; background: var(--paper-2); }
-  #activityGraph .ag-cell[data-level="1"] { background: #b0bde8; }
-  #activityGraph .ag-cell[data-level="2"] { background: #7080d4; }
-  #activityGraph .ag-cell[data-level="3"] { background: #3a50c0; }
-  #activityGraph .ag-cell[data-level="4"] { background: var(--ink); }
+  #activityGraph, #upActivityGraph { margin: 12px 0 20px; overflow-x: auto; }
+  .ag-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: var(--gray-2); margin-bottom: 8px; }
+  .ag-grid { display: grid; grid-template-rows: repeat(7, 9px); grid-auto-flow: column; grid-auto-columns: 9px; gap: 2px; width: max-content; }
+  .ag-cell { width: 9px; height: 9px; border-radius: 1.5px; background: var(--paper-2); }
+  .ag-cell[data-level="1"] { background: #b0bde8; }
+  .ag-cell[data-level="2"] { background: #7080d4; }
+  .ag-cell[data-level="3"] { background: #3a50c0; }
+  .ag-cell[data-level="4"] { background: var(--ink); }
   .ch-card-edit-actions button {
     background: rgba(250, 250, 247, 0.9);
     border: 1px solid var(--line);
