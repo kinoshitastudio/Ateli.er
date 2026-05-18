@@ -11427,6 +11427,40 @@
     }).catch(() => {});
   }
 
+  function _buildActivityCells(rows) {
+    const counts = {};   // date → total
+    const detail = {};   // date → { upload:n, edit:n, comment:n }
+    rows.forEach(r => {
+      const d = r.occurred_at.slice(0, 10);
+      counts[d] = (counts[d] || 0) + 1;
+      if (!detail[d]) detail[d] = {};
+      detail[d][r.action] = (detail[d][r.action] || 0) + 1;
+    });
+    const today = new Date(); today.setHours(23, 59, 59, 999);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 364);
+    start.setDate(start.getDate() - start.getDay());
+    let cells = '';
+    const cur = new Date(start);
+    while (cur <= today) {
+      const key = cur.toISOString().slice(0, 10);
+      const n = counts[key] || 0;
+      const level = n === 0 ? 0 : n <= 2 ? 1 : n <= 5 ? 2 : n <= 9 ? 3 : 4;
+      let tip = key;
+      if (n > 0) {
+        const d = detail[key];
+        const parts = [];
+        if (d.upload)  parts.push(`${d.upload} upload${d.upload > 1 ? 's' : ''}`);
+        if (d.edit)    parts.push(`${d.edit} edit${d.edit > 1 ? 's' : ''}`);
+        if (d.comment) parts.push(`${d.comment} comment${d.comment > 1 ? 's' : ''}`);
+        tip += ': ' + parts.join(' · ');
+      }
+      cells += `<div class="ag-cell" data-level="${level}" title="${tip}"></div>`;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return { cells, total: rows.length };
+  }
+
   async function renderActivityGraph() {
     const container = document.getElementById('activityGraph');
     if (!container || !currentUser?.id) return;
@@ -11435,31 +11469,11 @@
     try {
       const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/activity_log?user_id=eq.${encodeURIComponent(currentUser.id)}&occurred_at=gte.${encodeURIComponent(since)}&select=occurred_at`,
+        `${SUPABASE_URL}/rest/v1/activity_log?user_id=eq.${encodeURIComponent(currentUser.id)}&occurred_at=gte.${encodeURIComponent(since)}&select=occurred_at,action`,
         { headers: { apikey: SUPABASE_PUB_KEY, Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) { container.innerHTML = ''; return; }
-      const rows = await res.json();
-      const counts = {};
-      rows.forEach(r => {
-        const d = r.occurred_at.slice(0, 10);
-        counts[d] = (counts[d] || 0) + 1;
-      });
-      // Build grid: start from Sunday ≥ 364 days ago
-      const today = new Date(); today.setHours(23, 59, 59, 999);
-      const start = new Date(today);
-      start.setDate(start.getDate() - 364);
-      start.setDate(start.getDate() - start.getDay());
-      let cells = '';
-      const cur = new Date(start);
-      while (cur <= today) {
-        const key = cur.toISOString().slice(0, 10);
-        const n = counts[key] || 0;
-        const level = n === 0 ? 0 : n <= 2 ? 1 : n <= 5 ? 2 : n <= 9 ? 3 : 4;
-        cells += `<div class="ag-cell" data-level="${level}" title="${key}${n ? ': ' + n : ''}"></div>`;
-        cur.setDate(cur.getDate() + 1);
-      }
-      const total = rows.length;
+      const { cells, total } = _buildActivityCells(await res.json());
       container.innerHTML =
         `<div class="ag-label">${total} action${total !== 1 ? 's' : ''} in the past year</div>` +
         `<div class="ag-grid">${cells}</div>`;
@@ -11472,30 +11486,11 @@
     try {
       const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/activity_log?user_id=eq.${encodeURIComponent(ownerId)}&occurred_at=gte.${encodeURIComponent(since)}&select=occurred_at`,
+        `${SUPABASE_URL}/rest/v1/activity_log?user_id=eq.${encodeURIComponent(ownerId)}&occurred_at=gte.${encodeURIComponent(since)}&select=occurred_at,action`,
         { headers: { apikey: SUPABASE_PUB_KEY } }
       );
       if (!res.ok) { container.innerHTML = ''; return; }
-      const rows = await res.json();
-      const counts = {};
-      rows.forEach(r => {
-        const d = r.occurred_at.slice(0, 10);
-        counts[d] = (counts[d] || 0) + 1;
-      });
-      const today = new Date(); today.setHours(23, 59, 59, 999);
-      const start = new Date(today);
-      start.setDate(start.getDate() - 364);
-      start.setDate(start.getDate() - start.getDay());
-      let cells = '';
-      const cur = new Date(start);
-      while (cur <= today) {
-        const key = cur.toISOString().slice(0, 10);
-        const n = counts[key] || 0;
-        const level = n === 0 ? 0 : n <= 2 ? 1 : n <= 5 ? 2 : n <= 9 ? 3 : 4;
-        cells += `<div class="ag-cell" data-level="${level}" title="${key}${n ? ': ' + n : ''}"></div>`;
-        cur.setDate(cur.getDate() + 1);
-      }
-      const total = rows.length;
+      const { cells, total } = _buildActivityCells(await res.json());
       container.innerHTML =
         `<div class="ag-label">${total} action${total !== 1 ? 's' : ''} in the past year</div>` +
         `<div class="ag-grid">${cells}</div>`;
