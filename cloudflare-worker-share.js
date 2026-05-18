@@ -19,6 +19,20 @@ function convertImageUrl(url) {
   return url;
 }
 
+// OG image variant: force landscape 1200×630 crop so portrait images fill the
+// full width of Twitter/OG summary_large_image cards instead of leaving blank bars.
+function convertOgImageUrl(url) {
+  if (!url) return '';
+  let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1200-h630-c`;
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w1200-h630-c`;
+  // lh3 URLs already converted (from previous call) — rewrite the size param
+  m = url.match(/^(https:\/\/lh3\.googleusercontent\.com\/d\/[^=]+)/);
+  if (m) return `${m[1]}=w1200-h630-c`;
+  return url;
+}
+
 function esc(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -96,7 +110,7 @@ export default {
         const p = row.payload || {};
         title = p.title || p.caption || `${row.kind} — Ateli.er`;
         description = (p.text || '').slice(0, 200) || p.caption || `by @${row.owner_handle || 'artist'} on Ateli.er`;
-        if (p.imageUrl) image = convertImageUrl(p.imageUrl);
+        if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
       }
     } else if (type === 'user' && id) {
       const rows = await sbGet(`profiles?id=eq.${encodeURIComponent(id)}&select=handle,bio,avatar_url&limit=1`);
@@ -105,7 +119,7 @@ export default {
         const handle = (profile.handle || '').replace(/^@+/, '');
         title = `@${handle} — Ateli.er`;
         description = profile.bio || '未完成のまま、そっと置いておく場所。';
-        if (profile.avatar_url) image = convertImageUrl(profile.avatar_url);
+        if (profile.avatar_url) image = convertOgImageUrl(profile.avatar_url);
       }
     } else if (type === 'channel' && ownerId) {
       const pRows = await sbGet(`profiles?id=eq.${encodeURIComponent(ownerId)}&select=handle,bio,avatar_url&limit=1`);
@@ -120,7 +134,7 @@ export default {
       const imgRow = Array.isArray(imgRows) ? imgRows[0] : null;
       if (imgRow) {
         const p = imgRow.payload || {};
-        if (p.imageUrl) image = convertImageUrl(p.imageUrl);
+        if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
         title = `${imgRow.channel_label || id || 'channel'} — @${ownerHandle} — Ateli.er`;
       } else {
         const anyRows = await sbGet(

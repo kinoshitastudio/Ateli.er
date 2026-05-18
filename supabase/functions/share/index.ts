@@ -19,6 +19,19 @@ function convertImageUrl(url: string): string {
   return url;
 }
 
+// OG image variant: force landscape 1200×630 crop so portrait images fill the
+// full width of Twitter/OG summary_large_image cards instead of leaving blank bars.
+function convertOgImageUrl(url: string): string {
+  if (!url) return '';
+  let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w1200-h630-c`;
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w1200-h630-c`;
+  const lh = url.match(/^(https:\/\/lh3\.googleusercontent\.com\/d\/[^=]+)/);
+  if (lh) return `${lh[1]}=w1200-h630-c`;
+  return url;
+}
+
 function esc(s: string): string {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -131,7 +144,7 @@ Deno.serve(async (req) => {
       description = (p.text as string)?.slice(0, 200)
         || p.caption
         || `by @${row.owner_handle || 'artist'} on Ateli.er`;
-      if (p.imageUrl) image = convertImageUrl(p.imageUrl);
+      if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
     }
   } else if (type === 'user' && id) {
     const rows = await sbGet(
@@ -142,7 +155,7 @@ Deno.serve(async (req) => {
       const handle = (profile.handle || '').replace(/^@+/, '');
       title = `@${handle} — Ateli.er`;
       description = profile.bio || '未完成のまま、そっと置いておく場所。';
-      if (profile.avatar_url) image = convertImageUrl(profile.avatar_url);
+      if (profile.avatar_url) image = convertOgImageUrl(profile.avatar_url);
     }
   } else if (type === 'channel' && ownerId) {
     const pRows = await sbGet(
@@ -150,7 +163,7 @@ Deno.serve(async (req) => {
     );
     const profile = Array.isArray(pRows) ? pRows[0] as Record<string, string> : null;
     const ownerHandle = profile ? (profile.handle || '').replace(/^@+/, '') : 'artist';
-    if (profile?.avatar_url) image = convertImageUrl(profile.avatar_url);
+    if (profile?.avatar_url) image = convertOgImageUrl(profile.avatar_url);
 
     const channelFilter = (!id || id === '_unkn')
       ? `channel_id=is.null`
@@ -161,7 +174,7 @@ Deno.serve(async (req) => {
     const imgRow = Array.isArray(imgRows) ? imgRows[0] as Record<string, unknown> : null;
     if (imgRow) {
       const p = (imgRow.payload as Record<string, string>) || {};
-      if (p.imageUrl) image = convertImageUrl(p.imageUrl);
+      if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
       const lbl = (imgRow.channel_label as string) || id || 'channel';
       title = `${lbl} — @${ownerHandle} — Ateli.er`;
     } else {
