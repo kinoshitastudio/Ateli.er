@@ -11466,6 +11466,42 @@
     } catch (e) { container.innerHTML = ''; }
   }
 
+  async function renderUserActivityGraph(ownerId, containerId) {
+    const container = document.getElementById(containerId || 'upActivityGraph');
+    if (!container || !ownerId) return;
+    try {
+      const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/activity_log?user_id=eq.${encodeURIComponent(ownerId)}&occurred_at=gte.${encodeURIComponent(since)}&select=occurred_at`,
+        { headers: { apikey: SUPABASE_PUB_KEY } }
+      );
+      if (!res.ok) { container.innerHTML = ''; return; }
+      const rows = await res.json();
+      const counts = {};
+      rows.forEach(r => {
+        const d = r.occurred_at.slice(0, 10);
+        counts[d] = (counts[d] || 0) + 1;
+      });
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      const start = new Date(today);
+      start.setDate(start.getDate() - 364);
+      start.setDate(start.getDate() - start.getDay());
+      let cells = '';
+      const cur = new Date(start);
+      while (cur <= today) {
+        const key = cur.toISOString().slice(0, 10);
+        const n = counts[key] || 0;
+        const level = n === 0 ? 0 : n <= 2 ? 1 : n <= 5 ? 2 : n <= 9 ? 3 : 4;
+        cells += `<div class="ag-cell" data-level="${level}" title="${key}${n ? ': ' + n : ''}"></div>`;
+        cur.setDate(cur.getDate() + 1);
+      }
+      const total = rows.length;
+      container.innerHTML =
+        `<div class="ag-label">${total} action${total !== 1 ? 's' : ''} in the past year</div>` +
+        `<div class="ag-grid">${cells}</div>`;
+    } catch (e) { container.innerHTML = ''; }
+  }
+
   function setTab(name) {
     document.querySelectorAll('.modal-tabs .tab').forEach(b => {
       b.classList.toggle('is-active', b.dataset.pane === name);
@@ -12092,6 +12128,7 @@
             <span style="font-family:var(--mono);font-size:10.5px;">${t('blockShare')}</span>
           </button>
         </div>
+        <div id="upActivityGraph"></div>
         <div class="ch-grid" id="upGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;"></div>
         <div id="upRecentSection" style="margin-top:32px;"></div>
       </div>
@@ -12100,6 +12137,7 @@
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     currentBlockModalId = null;
     currentBlockModalKind = 'portfolio';
+    renderUserActivityGraph(ownerId, 'upActivityGraph');
     // Share this resident's page via Edge Function (OG-tagged redirect).
     const _upShareBtn = document.getElementById('upShareBtn');
     if (_upShareBtn) _upShareBtn.addEventListener('click', () => {
