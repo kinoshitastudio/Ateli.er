@@ -28,14 +28,13 @@
   --ink-xsoft: rgba(22,0,162,.07);
   --sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --player-h: 60px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { background: var(--bg); color: var(--ink); }
 body {
   font-family: var(--sans);
   min-height: 100vh;
-  padding-bottom: calc(var(--player-h) + 32px);
+  padding-bottom: 60px;
   background: var(--bg);
 }
 
@@ -120,7 +119,7 @@ body {
   padding: 10px 12px;
   font-weight: 400;
 }
-#track-list thead th.th-bar { padding-left: 0; width: 72px; }
+#track-list thead th.th-bar { padding-left: 28px; width: 64px; }
 #track-list thead th:last-child { padding-right: 28px; }
 
 #track-list tbody tr {
@@ -128,8 +127,7 @@ body {
   cursor: pointer;
   transition: background .1s;
 }
-#track-list tbody tr:hover   { background: var(--ink-xsoft); }
-#track-list tbody tr.playing { background: var(--ink-soft); }
+#track-list tbody tr:hover { background: var(--ink-xsoft); }
 
 #track-list tbody td {
   padding: 10px 12px;
@@ -139,7 +137,7 @@ body {
 }
 #track-list tbody td:last-child { padding-right: 28px; }
 
-/* ── left bar cell ── */
+/* ── 5-segment bar ── */
 .td-bar {
   padding: 0 !important;
   width: 64px;
@@ -148,11 +146,8 @@ body {
 .bar-wrap {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   padding: 0 12px 0 28px;
-  height: 100%;
 }
-/* 5-segment vertical bar (chipmusic.org style) */
 .bar5 {
   display: flex;
   align-items: flex-end;
@@ -162,17 +157,11 @@ body {
   width: 4px;
   height: 10px;
   background: var(--ink-xsoft);
-  transition: background .2s;
 }
-.bar5-seg.on            { background: var(--ink-faint); }
-tr.playing .bar5-seg.on { background: var(--ink); }
-/* playing icon replaces bars */
-.bar-icon {
-  font-size: 10px;
-  color: var(--ink);
-  display: none;
-}
+.bar5-seg.on { background: var(--ink-faint); }
+tr:hover .bar5-seg.on { background: var(--ink); }
 
+/* ── row content ── */
 .td-title {
   font-family: var(--sans);
   font-size: 12px;
@@ -207,12 +196,8 @@ tr.playing .bar5-seg.on { background: var(--ink); }
   white-space: nowrap;
 }
 
-@media (max-width: 560px) {
-  .col-channel, .td-channel { display: none; }
-}
-@media (max-width: 380px) {
-  .col-date, .td-date { display: none; }
-}
+@media (max-width: 560px) { .col-channel, .td-channel { display: none; } }
+@media (max-width: 380px) { .col-date, .td-date { display: none; } }
 
 /* ── LOADING / EMPTY ── */
 #status {
@@ -223,105 +208,6 @@ tr.playing .bar5-seg.on { background: var(--ink); }
   color: var(--ink-faint);
   text-transform: uppercase;
 }
-
-/* ── NOW PLAYING BAR ── */
-#np-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: var(--player-h);
-  background: var(--ink);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 0 24px;
-  transform: translateY(100%);
-  transition: transform .3s ease;
-  z-index: 50;
-}
-#np-bar.visible { transform: translateY(0); }
-
-#np-play-btn {
-  width: 32px; height: 32px;
-  border: 1px solid rgba(255,255,255,.5);
-  background: none;
-  color: #fff;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  font-size: 13px;
-  transition: background .15s;
-}
-#np-play-btn:hover { background: rgba(255,255,255,.15); }
-
-#np-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-#np-title {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .12em;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-}
-#np-artist {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .1em;
-  color: rgba(255,255,255,.55);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-}
-#np-progress-wrap {
-  flex: 1;
-  max-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-#np-progress-bg {
-  width: 100%;
-  height: 2px;
-  background: rgba(255,255,255,.2);
-  cursor: pointer;
-  position: relative;
-}
-#np-progress-fill {
-  height: 100%;
-  background: rgba(255,255,255,.8);
-  width: 0%;
-  pointer-events: none;
-  transition: width .3s linear;
-}
-#np-time {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: rgba(255,255,255,.4);
-  letter-spacing: .08em;
-  text-align: right;
-}
-#np-close {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.5);
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 16px;
-  padding: 4px;
-  transition: color .15s;
-  flex-shrink: 0;
-}
-#np-close:hover { color: #fff; }
-@media (max-width: 480px) { #np-progress-wrap { display: none; } }
 </style>
 </head>
 <body>
@@ -337,7 +223,7 @@ tr.playing .bar5-seg.on { background: var(--ink); }
 
 <!-- INTRO -->
 <section id="intro">
-  <p>未完成のまま、そっと置いておく音たち。<br>All public audio from Ateli.er — listed quietly, in order of arrival.</p>
+  <p>未完成のまま、そっと置いておく音たち。<br>All public audio from Ateli.er — listed quietly, newest on top.</p>
   <div class="links">
     <a href="https://atelistudio.com/player.html">↗ Atelier Player — ambient mode</a>
     <a id="bmbrowser-link" href="#" style="display:none">↗ Atelier Player — Chrome extension</a>
@@ -362,27 +248,12 @@ tr.playing .bar5-seg.on { background: var(--ink); }
 
 <div id="status">Loading…</div>
 
-<!-- NOW PLAYING BAR -->
-<div id="np-bar">
-  <button id="np-play-btn" aria-label="Play / Pause">▶</button>
-  <div id="np-info">
-    <div id="np-title">—</div>
-    <div id="np-artist">—</div>
-  </div>
-  <div id="np-progress-wrap">
-    <div id="np-progress-bg">
-      <div id="np-progress-fill"></div>
-    </div>
-    <div id="np-time">0:00 / 0:00</div>
-  </div>
-  <button id="np-close" aria-label="Close player">×</button>
-</div>
-
 <script>
 (function () {
   const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
   const ANON_KEY     = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
   const CWS_URL      = 'https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb';
+  const APP_URL      = 'https://atelistudio.com/';
 
   if (CWS_URL) {
     const a = document.getElementById('bmbrowser-link');
@@ -392,16 +263,6 @@ tr.playing .bar5-seg.on { background: var(--ink); }
 
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  async function incrementPlayCount(blockId) {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_play_count`, {
-        method: 'POST',
-        headers: { apikey: ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ block_id: blockId }),
-      });
-    } catch (e) {}
   }
 
   async function fetchAudio() {
@@ -417,101 +278,14 @@ tr.playing .bar5-seg.on { background: var(--ink); }
     const d = new Date(Number(ts));
     return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
   }
-  function fmtTime(sec) {
-    if (!isFinite(sec)||sec<0) return '0:00';
-    return `${Math.floor(sec/60)}:${String(Math.floor(sec%60)).padStart(2,'0')}`;
+
+  function buildBar5(plays, maxPlays) {
+    const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
+    return Array.from({ length: 5 }, (_, i) =>
+      `<div class="bar5-seg${i < filled ? ' on' : ''}"></div>`
+    ).join('');
   }
 
-  // ── Audio engine ──
-  let audio = new Audio(), currentRow = null, currentTrack = null;
-
-  const npBar          = document.getElementById('np-bar');
-  const npPlayBtn      = document.getElementById('np-play-btn');
-  const npTitle        = document.getElementById('np-title');
-  const npArtist       = document.getElementById('np-artist');
-  const npProgressBg   = document.getElementById('np-progress-bg');
-  const npProgressFill = document.getElementById('np-progress-fill');
-  const npTime         = document.getElementById('np-time');
-  const npClose        = document.getElementById('np-close');
-
-  function showPlayingIcon(rowEl) {
-    rowEl.querySelector('.bar5').style.display  = 'none';
-    rowEl.querySelector('.bar-icon').style.display = '';
-    rowEl.classList.add('playing');
-  }
-  function restoreBar(rowEl) {
-    rowEl.querySelector('.bar5').style.display  = '';
-    rowEl.querySelector('.bar-icon').style.display = 'none';
-    rowEl.classList.remove('playing');
-  }
-
-  function playTrack(track, rowEl) {
-    if (currentRow) restoreBar(currentRow);
-
-    currentRow   = rowEl;
-    currentTrack = track;
-    showPlayingIcon(rowEl);
-
-    audio.pause();
-    audio = new Audio(track.payload?.audioUrl || '');
-
-    let counted = false;
-    audio.addEventListener('timeupdate', () => {
-      updateProgress();
-      if (!counted && audio.currentTime >= 10) {
-        counted = true;
-        track.play_count = (track.play_count ?? 0) + 1;
-        incrementPlayCount(track.id);
-      }
-    });
-    audio.addEventListener('ended', () => {
-      npPlayBtn.textContent = '▶';
-      restoreBar(rowEl);
-      currentRow = null;
-    });
-
-    audio.play().catch(() => {});
-    npTitle.textContent  = track.payload?.title || track.payload?.caption || '—';
-    npArtist.textContent = (track.owner_handle ? `@${track.owner_handle}` : '') +
-                           (track.channel_label ? ` · ${track.channel_label}` : '');
-    npBar.classList.add('visible');
-    npPlayBtn.textContent = '❚❚';
-  }
-
-  function updateProgress() {
-    const dur = audio.duration || 0, cur = audio.currentTime || 0;
-    npProgressFill.style.width = (dur ? (cur/dur)*100 : 0) + '%';
-    npTime.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
-  }
-
-  npPlayBtn.addEventListener('click', () => {
-    if (!currentRow) return;
-    if (audio.paused) {
-      audio.play().catch(() => {});
-      npPlayBtn.textContent = '❚❚';
-      showPlayingIcon(currentRow);
-    } else {
-      audio.pause();
-      npPlayBtn.textContent = '▶';
-      restoreBar(currentRow);
-      currentRow.classList.add('playing');
-    }
-  });
-
-  npProgressBg.addEventListener('click', (e) => {
-    const r = npProgressBg.getBoundingClientRect();
-    if (audio.duration) audio.currentTime = (e.clientX-r.left)/r.width * audio.duration;
-  });
-
-  npClose.addEventListener('click', () => {
-    audio.pause();
-    audio.currentTime = 0;
-    npBar.classList.remove('visible');
-    if (currentRow) { restoreBar(currentRow); currentRow = null; }
-    npPlayBtn.textContent = '▶';
-  });
-
-  // ── Render ──
   function render(tracks) {
     const tbody   = document.getElementById('track-tbody');
     const section = document.getElementById('track-list');
@@ -519,34 +293,24 @@ tr.playing .bar5-seg.on { background: var(--ink); }
 
     if (!tracks.length) { status.textContent = 'No audio yet.'; return; }
 
-    const maxPlays  = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
-    const segs = (plays) => {
-      const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
-      return Array.from({ length: 5 }, (_, i) =>
-        `<div class="bar5-seg${i < filled ? ' on' : ''}"></div>`
-      ).join('');
-    };
+    const maxPlays = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
 
     status.style.display = 'none';
     section.style.display = '';
 
     tracks.forEach((t) => {
-      const p        = t.payload || {};
-      const title    = p.title || p.caption || '(untitled)';
-      const artist   = t.owner_handle ? `@${t.owner_handle}` : '—';
-      const channel  = t.channel_label || '';
-      const date     = fmtDate(t.ts);
-      const plays    = t.play_count ?? 0;
-      const hasAudio = !!p.audioUrl;
+      const p       = t.payload || {};
+      const title   = p.title || p.caption || '(untitled)';
+      const artist  = t.owner_handle ? `@${t.owner_handle}` : '—';
+      const channel = t.channel_label || '';
+      const date    = fmtDate(t.ts);
+      const plays   = t.play_count ?? 0;
 
       const tr = document.createElement('tr');
-      if (!hasAudio) tr.style.opacity = '.35';
-
       tr.innerHTML = `
         <td class="td-bar">
           <div class="bar-wrap">
-            <div class="bar5">${segs(plays)}</div>
-            <div class="bar-icon" style="display:none">▶</div>
+            <div class="bar5">${buildBar5(plays, maxPlays)}</div>
           </div>
         </td>
         <td><div class="td-title">${esc(title)}</div></td>
@@ -555,24 +319,9 @@ tr.playing .bar5-seg.on { background: var(--ink); }
         <td class="td-date col-date">${date}</td>
       `;
 
-      if (hasAudio) {
-        tr.addEventListener('click', () => {
-          if (currentTrack === t) {
-            if (audio.paused) {
-              audio.play().catch(() => {});
-              npPlayBtn.textContent = '❚❚';
-              showPlayingIcon(tr);
-            } else {
-              audio.pause();
-              npPlayBtn.textContent = '▶';
-              restoreBar(tr);
-              tr.classList.add('playing');
-            }
-          } else {
-            playTrack(t, tr);
-          }
-        });
-      }
+      tr.addEventListener('click', () => {
+        window.location.href = `${APP_URL}s?type=block&id=${encodeURIComponent(t.id)}`;
+      });
 
       tbody.appendChild(tr);
     });
@@ -580,9 +329,8 @@ tr.playing .bar5-seg.on { background: var(--ink); }
 
   fetchAudio()
     .then(render)
-    .catch((err) => {
+    .catch(() => {
       document.getElementById('status').textContent = 'Could not load tracks.';
-      console.error(err);
     });
 })();
 </script>
