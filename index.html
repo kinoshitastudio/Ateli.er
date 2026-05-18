@@ -4631,7 +4631,7 @@
           <form id="blockForm" class="upload-form">
             <div class="uf-grid">
               <label class="uf-row uf-row-channel">
-                <span class="sp-k">channel</span>
+                <span class="sp-k is-required">channel</span>
                 <span class="uf-channel-wrap">
                   <span class="uf-channel-pick" id="bChannelPick">
                     <select class="uf-input" id="bChannel"></select>
@@ -9119,6 +9119,10 @@
     } else if (writeable.length > 0) {
       sel.value = writeable[0].id;
     }
+    // No channels yet: auto-open the inline create form so it's impossible to miss
+    if (writeable.length === 0) {
+      setTimeout(_showChannelCreateInline, 0);
+    }
   }
   // Inline channel creation — works on both PC and mobile by swapping the
   // channel picker for a small label input. Earlier prompt() chain felt
@@ -9320,8 +9324,14 @@
       e.preventDefault();
       const status = document.getElementById('bStatus');
       const submit = document.getElementById('bSubmit');
-      const channelId = document.getElementById('bChannel').value || '00';
+      const channelId = document.getElementById('bChannel').value || '';
       status.className = 'uf-status'; status.textContent = '';
+      if (!channelId || channelId === '__new__') {
+        status.textContent = '— channel is required. create one first.';
+        status.className = 'uf-status err';
+        _showChannelCreateInline();
+        return;
+      }
 
       let block = null;
       if (bkActive === 'audio') {
