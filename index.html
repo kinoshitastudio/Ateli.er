@@ -4348,6 +4348,7 @@
       <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span><span class="trig-incoming-badge" id="trigTracesIncoming" hidden>●</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
     </nav>
+    <button id="guestSignIn" type="button" hidden style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;background:none;border:1px solid var(--ink);padding:5px 14px;cursor:pointer;color:var(--ink);">— sign in</button>
     <button id="userMenu" type="button" hidden class="account-pill" title="account & settings">
       <span id="userAvatar" class="account-pill-avatar is-empty" aria-hidden="true"></span>
       <span id="userHandle" class="account-pill-handle"></span>
@@ -13879,7 +13880,13 @@
     if (!menu) return;
     // Update cached user (used by save flows so they don't need a network call)
     currentUser = session?.user || null;
-    if (!session?.user) { menu.hidden = true; return; }
+    const _guestBtn = document.getElementById('guestSignIn');
+    if (!session?.user) {
+      menu.hidden = true;
+      if (_guestBtn) _guestBtn.hidden = false;
+      return;
+    }
+    if (_guestBtn) _guestBtn.hidden = true;
 
     // Fast path: derive from user_metadata + email so the pill paints
     // immediately even before the profiles row is fetched.
@@ -13980,6 +13987,7 @@
     document.getElementById('settingsModal')?.classList.remove('is-open');
   }
   document.getElementById('userMenu')?.addEventListener('click', openSettingsModal);
+  document.getElementById('guestSignIn')?.addEventListener('click', () => openAuthModal('signin'));
   // Phase D-1: clicking the dot specifically marks all traces as read
   // (without opening the Settings modal — stop propagation).
   document.getElementById('userTracesBadge')?.addEventListener('click', (e) => {
@@ -14237,6 +14245,14 @@
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateUserMenu(session);
     if (params.has('landing') || !session) {
+      // Guest viewer mode: if a shared deep-link arrived, skip the landing and
+      // resolve the block/user/channel directly with the anon key (public reads).
+      if (!params.has('landing') && window._pendingDeepLink) {
+        hideLanding();
+        try { refreshCrossUserBlocks(); } catch(e) {}
+        setTimeout(() => { try { _resolveDeepLink(); } catch(e) {} }, 300);
+        return;
+      }
       showLanding();
       return;
     }
