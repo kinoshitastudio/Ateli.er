@@ -20,7 +20,6 @@
 <style>
 :root {
   --bg:        #DCDBD5;
-  --bg-soft:   #C8C7C1;
   --ink:       #1600A2;
   --ink-dim:   rgba(22,0,162,.62);
   --ink-faint: rgba(22,0,162,.32);
@@ -30,189 +29,112 @@
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { background: var(--bg); color: var(--ink); }
-body {
-  font-family: var(--sans);
-  min-height: 100vh;
-  padding-bottom: 60px;
-  background: var(--bg);
-}
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--sans); min-height: 100vh; padding-bottom: 60px; }
 
 /* ── HEADER ── */
 #hd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 20px 28px 18px;
   border-bottom: 1px solid var(--ink-soft);
 }
 #hd-logo {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .22em;
-  color: var(--ink);
-  text-decoration: none;
-  text-transform: uppercase;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+  color: var(--ink); text-decoration: none; text-transform: uppercase;
 }
 #hd-logo span { color: var(--ink-dim); }
-#hd-nav {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
+#hd-nav { display: flex; gap: 20px; }
 #hd-nav a {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .14em;
-  color: var(--ink-dim);
-  text-decoration: none;
-  text-transform: uppercase;
-  transition: color .15s;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+  color: var(--ink-dim); text-decoration: none; text-transform: uppercase; transition: color .15s;
 }
 #hd-nav a:hover { color: var(--ink); }
 
-/* ── INTRO ── */
-#intro {
-  padding: 32px 28px 24px;
-  max-width: 640px;
-  border-bottom: 1px solid var(--ink-xsoft);
+/* ── INNER WRAP (matches app modal pane padding) ── */
+#wrap { padding: 0 28px; }
+
+/* ── SECTION HEAD ── */
+.section-head {
+  margin: 18px 0 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
 }
-#intro p {
-  font-family: var(--sans);
-  font-size: 12.5px;
-  font-weight: 300;
-  line-height: 1.8;
-  color: var(--ink-dim);
-  letter-spacing: .01em;
-}
-#intro .links {
-  margin-top: 14px;
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-#intro .links a {
+
+/* ── NOTE TEXT (mirrors Traces/Explore bottom note) ── */
+.section-note {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .12em;
-  color: var(--ink);
-  text-decoration: none;
-  text-transform: uppercase;
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+  line-height: 1.85;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--ink-soft);
+  padding-bottom: 14px;
+}
+.section-note a {
+  color: var(--ink); text-decoration: none;
   border-bottom: 1px solid var(--ink-faint);
-  padding-bottom: 1px;
-  transition: border-color .15s;
 }
-#intro .links a:hover { border-color: var(--ink); }
+.section-note a:hover { border-color: var(--ink); }
 
-/* ── TRACK LIST ── */
-#track-list { width: 100%; }
-#track-list table { width: 100%; border-collapse: collapse; }
-
-#track-list thead tr { border-bottom: 1px solid var(--ink-soft); }
-#track-list thead th {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .2em;
-  color: var(--ink-faint);
-  text-transform: uppercase;
-  text-align: left;
-  padding: 10px 12px;
-  font-weight: 400;
+/* ── LIST (mirrors recent-posts ul) ── */
+#audio-list {
+  list-style: none; padding: 0; margin: 0;
+  font-family: var(--mono); font-size: 10.5px;
 }
-#track-list thead th.th-bar { padding-left: 28px; width: 64px; }
-#track-list thead th:last-child { padding-right: 28px; }
-
-#track-list tbody tr {
-  border-bottom: 1px solid var(--ink-xsoft);
+#audio-list li {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--ink-xsoft);
   cursor: pointer;
-  transition: background .1s;
-}
-#track-list tbody tr:hover { background: var(--ink-xsoft); }
-
-#track-list tbody td {
-  padding: 10px 12px;
-  font-size: 12px;
-  color: var(--ink);
-  vertical-align: middle;
-}
-#track-list tbody td:last-child { padding-right: 28px; }
-
-/* ── 5-segment bar ── */
-.td-bar {
-  padding: 0 !important;
-  width: 64px;
-  vertical-align: middle;
-}
-.bar-wrap {
   display: flex;
   align-items: center;
-  padding: 0 12px 0 28px;
+  justify-content: space-between;
+  gap: 14px;
+  transition: background .1s;
 }
-.bar5 {
+#audio-list li:hover { background: var(--ink-xsoft); margin: 0 -4px; padding-left: 4px; padding-right: 4px; }
+
+.row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+}
+.row-bar5 {
   display: flex;
   align-items: flex-end;
   gap: 2px;
+  flex-shrink: 0;
 }
-.bar5-seg {
-  width: 4px;
-  height: 10px;
-  background: var(--ink-xsoft);
-}
-.bar5-seg.on { background: var(--ink-faint); }
-tr:hover .bar5-seg.on { background: var(--ink); }
+.row-bar5 .seg { width: 3px; height: 8px; background: var(--ink-xsoft); }
+.row-bar5 .seg.on { background: var(--ink-faint); }
+li:hover .row-bar5 .seg.on { background: var(--ink); }
+.row-icon { flex-shrink: 0; color: var(--ink-dim); }
+.row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── row content ── */
-.td-title {
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--ink);
-  max-width: 240px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.td-artist {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .06em;
-  color: var(--ink-dim);
-  white-space: nowrap;
-}
-.td-channel {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: .04em;
-  color: var(--ink-faint);
-  white-space: nowrap;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.td-date {
-  font-family: var(--mono);
+.row-right {
   font-size: 10px;
   color: var(--ink-faint);
+  flex-shrink: 0;
   white-space: nowrap;
+  text-align: right;
 }
+.row-right .r-handle { color: var(--ink-dim); }
 
-@media (max-width: 560px) { .col-channel, .td-channel { display: none; } }
-@media (max-width: 380px) { .col-date, .td-date { display: none; } }
-
-/* ── LOADING / EMPTY ── */
+/* ── STATUS ── */
 #status {
-  padding: 48px 28px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: .14em;
-  color: var(--ink-faint);
-  text-transform: uppercase;
+  padding: 32px 0;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase;
 }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header id="hd">
   <a id="hd-logo" href="https://atelistudio.com/">Ateli.er <span>— courtyard</span></a>
   <nav id="hd-nav">
@@ -221,32 +143,17 @@ tr:hover .bar5-seg.on { background: var(--ink); }
   </nav>
 </header>
 
-<!-- INTRO -->
-<section id="intro">
-  <p>未完成のまま、そっと置いておく音たち。<br>All public audio from Ateli.er — listed quietly, newest on top.</p>
-  <div class="links">
-    <a href="https://atelistudio.com/player.html">↗ Atelier Player — ambient mode</a>
-    <a id="bmbrowser-link" href="#" style="display:none">↗ Atelier Player — Chrome extension</a>
-  </div>
-</section>
+<div id="wrap">
+  <h4 class="section-head">— audio</h4>
+  <p class="section-note">
+    未完成のまま、そっと置いておく音たち。 all public audio · newest on top.<br>
+    <a href="https://atelistudio.com/player.html">↗ atelier player — ambient mode</a>
+    &ensp;<a id="bmbrowser-link" href="#" style="display:none">↗ chrome extension</a>
+  </p>
 
-<!-- TRACK LIST -->
-<section id="track-list" style="display:none">
-  <table>
-    <thead>
-      <tr>
-        <th class="th-bar"></th>
-        <th>Title</th>
-        <th>Artist</th>
-        <th class="col-channel">Channel</th>
-        <th class="col-date">Date</th>
-      </tr>
-    </thead>
-    <tbody id="track-tbody"></tbody>
-  </table>
-</section>
-
-<div id="status">Loading…</div>
+  <ul id="audio-list"></ul>
+  <p id="status">Loading…</p>
+</div>
 
 <script>
 (function () {
@@ -257,12 +164,19 @@ tr:hover .bar5-seg.on { background: var(--ink); }
 
   if (CWS_URL) {
     const a = document.getElementById('bmbrowser-link');
-    a.href = CWS_URL;
-    a.style.display = '';
+    a.href = CWS_URL; a.style.display = '';
   }
 
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtDate(ts) {
+    const d = new Date(Number(ts));
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function bar5(plays, maxPlays) {
+    const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
+    return `<span class="row-bar5">${Array.from({length:5},(_,i)=>`<span class="seg${i<filled?' on':''}"></span>`).join('')}</span>`;
   }
 
   async function fetchAudio() {
@@ -274,64 +188,43 @@ tr:hover .bar5-seg.on { background: var(--ink); }
     return res.json();
   }
 
-  function fmtDate(ts) {
-    const d = new Date(Number(ts));
-    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-  }
-
-  function buildBar5(plays, maxPlays) {
-    const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
-    return Array.from({ length: 5 }, (_, i) =>
-      `<div class="bar5-seg${i < filled ? ' on' : ''}"></div>`
-    ).join('');
-  }
-
   function render(tracks) {
-    const tbody   = document.getElementById('track-tbody');
-    const section = document.getElementById('track-list');
-    const status  = document.getElementById('status');
-
+    const list   = document.getElementById('audio-list');
+    const status = document.getElementById('status');
     if (!tracks.length) { status.textContent = 'No audio yet.'; return; }
 
     const maxPlays = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
-
     status.style.display = 'none';
-    section.style.display = '';
 
-    tracks.forEach((t) => {
-      const p       = t.payload || {};
-      const title   = p.title || p.caption || '(untitled)';
-      const artist  = t.owner_handle ? `@${t.owner_handle}` : '—';
-      const channel = t.channel_label || '';
-      const date    = fmtDate(t.ts);
-      const plays   = t.play_count ?? 0;
+    tracks.forEach(t => {
+      const p      = t.payload || {};
+      const title  = p.title || p.caption || '(untitled)';
+      const handle = t.owner_handle ? `@${t.owner_handle}` : '';
+      const ch     = t.channel_label || '';
+      const date   = fmtDate(t.ts);
+      const plays  = t.play_count ?? 0;
 
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="td-bar">
-          <div class="bar-wrap">
-            <div class="bar5">${buildBar5(plays, maxPlays)}</div>
-          </div>
-        </td>
-        <td><div class="td-title">${esc(title)}</div></td>
-        <td><div class="td-artist">${esc(artist)}</div></td>
-        <td class="td-channel col-channel">${esc(channel)}</td>
-        <td class="td-date col-date">${date}</td>
+      const right  = [handle, ch, date].filter(Boolean).join(' · ');
+
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="row-left">
+          ${bar5(plays, maxPlays)}
+          <span class="row-icon">♪</span>
+          <span class="row-title">${esc(title)}</span>
+        </span>
+        <span class="row-right">${esc(right)}</span>
       `;
-
-      tr.addEventListener('click', () => {
+      li.addEventListener('click', () => {
         window.location.href = `${APP_URL}s?type=block&id=${encodeURIComponent(t.id)}`;
       });
-
-      tbody.appendChild(tr);
+      list.appendChild(li);
     });
   }
 
-  fetchAudio()
-    .then(render)
-    .catch(() => {
-      document.getElementById('status').textContent = 'Could not load tracks.';
-    });
+  fetchAudio().then(render).catch(() => {
+    document.getElementById('status').textContent = 'Could not load tracks.';
+  });
 })();
 </script>
 </body>
