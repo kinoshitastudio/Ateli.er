@@ -6998,7 +6998,7 @@
     for (const cid of Object.keys(map)) {
       const arr = map[cid] || [];
       for (const snap of arr) {
-        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id, channel_label: _resolveChannelLabel(cid) });
+        if (snap?.id) rows.push({ owner_id: currentUser.id, channel_id: cid, block_id: snap.id, channel_label: _resolveChannelLabel(cid) || null });
       }
     }
     if (rows.length === 0) return;
@@ -13316,7 +13316,7 @@
         owner_handle: _ownHandle(),
         kind: block.kind,
         channel_id: block.channelId || null,
-        channel_label: _channelLabel(block.channelId),
+        channel_label: _channelLabel(block.channelId) || null,
         payload: block,
         ts: block.ts || Date.now(),
       };
@@ -13400,13 +13400,19 @@
         return false;
       }
     }
+    // Channels warned about missing label this session (avoid toast spam).
+    const _warnedUnnamedChannels = new Set();
     // Sync helper: push to public_blocks if isPublic, else ensure removed.
     async function sync(block) {
       if (!block) return false;
-      // Propagate the underlying success/failure so the upload form (and
-      // any other caller) can surface a real error instead of swallowing
-      // an upsert that quietly returned false.
-      if (block.isPublic) return await upsert(block);
+      if (block.isPublic) {
+        // Warn once per session when publishing to a channel with no label.
+        if (block.channelId && !_channelLabel(block.channelId) && !_warnedUnnamedChannels.has(block.channelId)) {
+          _warnedUnnamedChannels.add(block.channelId);
+          try { showToast('チャンネル名が未設定です。Explore では "(untitled channel)" として表示されます。名前を設定することをお勧めします。'); } catch (e) {}
+        }
+        return await upsert(block);
+      }
       return await remove(block.id);
     }
     async function list(limit) {
