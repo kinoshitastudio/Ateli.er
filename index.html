@@ -154,6 +154,7 @@
   .triggers .trig:hover { opacity: 0.55; }
   .triggers .trig.alt { color: var(--gray); }
   .triggers .trig.alt:hover { color: var(--ink); opacity: 1; }
+  a.triggers .trig, .triggers a.trig { text-decoration: none; }
   .triggers .trig .num { display: none; }
 
   /* Hide the drifting marquees completely when any modal is open — the
@@ -4347,6 +4348,7 @@
       <button class="trig trig-desktop-only" data-tab="explore">— explore</button>
       <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span><span class="trig-incoming-badge" id="trigTracesIncoming" hidden>●</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
+      <a class="trig trig-desktop-only" href="/courtyard.html">— courtyard</a>
     </nav>
     <span id="guestButtons" style="display:none;gap:6px;align-items:center;white-space:nowrap;">
       <button id="guestLoginBtn" type="button" style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;background:none;border:1px solid var(--ink);padding:4px 10px;cursor:pointer;color:var(--ink);white-space:nowrap;">— log in</button>
