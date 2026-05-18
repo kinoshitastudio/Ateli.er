@@ -4800,8 +4800,8 @@
         </div>
         <p style="font-family: var(--mono); font-size: 10px; color: var(--gray); letter-spacing: 0.06em; line-height: 1.85; margin-bottom: 20px;">
           未完成のまま、そっと置いておく音たち。 all public audio · newest on top.<br>
-          <a href="/player.html" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ atelier player</a>
-          &ensp;<a href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ chrome extension</a>
+          <a href="/player.html" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ atelier player</a>
+          &ensp;<a href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ chrome extension</a>
         </p>
         <ul id="courtyardList" style="list-style:none;padding:0;margin:0;font-family:var(--mono);font-size:10.5px;"></ul>
         <p id="courtyardStatus" style="padding:20px 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--gray-2);text-transform:uppercase;display:none;"></p>
@@ -11568,16 +11568,18 @@
   async function renderCourtyard() {
     const list   = document.getElementById('courtyardList');
     const status = document.getElementById('courtyardStatus');
-    if (!list || _courtyardLoaded) return;
+    if (!list) return;
+    if (_courtyardLoaded) return;
     _courtyardLoaded = true;
+    list.innerHTML = '';
     status.textContent = 'loading…';
     status.style.display = '';
     try {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/public_blocks?kind=eq.audio&select=id,ts,payload,owner_handle,channel_label,play_count&order=ts.desc`,
+        `${SUPABASE_URL}/rest/v1/public_blocks?kind=eq.audio&select=*&order=ts.desc`,
         { headers: { apikey: SUPABASE_PUB_KEY } }
       );
-      if (!res.ok) throw new Error(res.status);
+      if (!res.ok) { _courtyardLoaded = false; throw new Error(res.status); }
       const tracks = await res.json();
       status.style.display = 'none';
       if (!tracks.length) { status.textContent = 'No audio yet.'; status.style.display = ''; return; }
