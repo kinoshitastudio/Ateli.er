@@ -8150,7 +8150,7 @@
       const sel = c.id === currentChannelId ? ' selected' : '';
       return `<option value="${c.id}"${sel}>${lbl}${m ? ' — ' + escapeHtml(m) : ''}</option>`;
     }).join('');
-    return `<label class="uf-row"><span class="sp-k">channel</span><select class="uf-input" id="ef-channel">${options}</select></label>`;
+    return `<label class="uf-row"><span class="sp-k">channel</span><select class="uf-input" id="ef-channel">${options}<option value="__new__">+ create new channel…</option></select></label>`;
   }
 
   function openEditForm(id) {
@@ -8309,6 +8309,21 @@
         if (existing.includes(btn.dataset.suggestTag.toLowerCase())) {
           btn.classList.add('is-active');
         }
+      });
+    }
+    // Channel select: handle "+ create new channel…" option
+    const efChannel = document.getElementById('ef-channel');
+    if (efChannel) {
+      efChannel.addEventListener('change', function() {
+        if (this.value !== '__new__') return;
+        const label = window.prompt('新しいチャンネル名を入力してください');
+        if (!label || !label.trim()) { this.value = r.obj?.channelId || this.options[0]?.value || ''; return; }
+        const newId = createChannel({ label: label.trim(), mainPhrase: '', lang: 'mixed', meta: '' });
+        const opt = document.createElement('option');
+        opt.value = newId;
+        opt.textContent = label.trim();
+        this.insertBefore(opt, this.querySelector('option[value="__new__"]'));
+        this.value = newId;
       });
     }
     // save / cancel buttons handled by delegated listener on #pieceModalInner
