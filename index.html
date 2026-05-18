@@ -4348,7 +4348,10 @@
       <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span><span class="trig-incoming-badge" id="trigTracesIncoming" hidden>●</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
     </nav>
-    <button id="guestSignIn" type="button" hidden style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;background:none;border:1px solid var(--ink);padding:5px 14px;cursor:pointer;color:var(--ink);">— sign in</button>
+    <span id="guestButtons" hidden style="display:inline-flex;gap:8px;">
+      <button id="guestLoginBtn" type="button" style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;background:none;border:1px solid var(--ink);padding:5px 14px;cursor:pointer;color:var(--ink);">— log in</button>
+      <button id="guestSignupBtn" type="button" style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;background:var(--ink);border:1px solid var(--ink);padding:5px 14px;cursor:pointer;color:var(--paper);">— sign up</button>
+    </span>
     <button id="userMenu" type="button" hidden class="account-pill" title="account & settings">
       <span id="userAvatar" class="account-pill-avatar is-empty" aria-hidden="true"></span>
       <span id="userHandle" class="account-pill-handle"></span>
@@ -12367,7 +12370,7 @@
       const tab = t.dataset.tab;
       // Guest users: auth-required tabs prompt sign-in instead of opening.
       if (!currentUser && (tab === 'pieces' || tab === 'atelier' || tab === 'traces')) {
-        openAuthModal('signin');
+        openAuthModal('login');
         return;
       }
       openModal(tab);
@@ -13888,13 +13891,13 @@
     if (!menu) return;
     // Update cached user (used by save flows so they don't need a network call)
     currentUser = session?.user || null;
-    const _guestBtn = document.getElementById('guestSignIn');
+    const _guestBtns = document.getElementById('guestButtons');
     if (!session?.user) {
       menu.hidden = true;
-      if (_guestBtn) _guestBtn.hidden = false;
+      if (_guestBtns) _guestBtns.hidden = false;
       return;
     }
-    if (_guestBtn) _guestBtn.hidden = true;
+    if (_guestBtns) _guestBtns.hidden = true;
 
     // Fast path: derive from user_metadata + email so the pill paints
     // immediately even before the profiles row is fetched.
@@ -13995,7 +13998,8 @@
     document.getElementById('settingsModal')?.classList.remove('is-open');
   }
   document.getElementById('userMenu')?.addEventListener('click', openSettingsModal);
-  document.getElementById('guestSignIn')?.addEventListener('click', () => openAuthModal('signin'));
+  document.getElementById('guestLoginBtn')?.addEventListener('click', () => openAuthModal('login'));
+  document.getElementById('guestSignupBtn')?.addEventListener('click', () => openAuthModal('signup'));
   // Phase D-1: clicking the dot specifically marks all traces as read
   // (without opening the Settings modal — stop propagation).
   document.getElementById('userTracesBadge')?.addEventListener('click', (e) => {
