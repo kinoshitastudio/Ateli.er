@@ -4348,9 +4348,9 @@
       <button class="trig" data-tab="traces">— comment<span class="num" id="trigTraceCount">(0)</span><span class="trig-incoming-badge" id="trigTracesIncoming" hidden>●</span></button>
       <button class="trig" data-tab="atelier">— upload</button>
     </nav>
-    <span id="guestButtons" hidden style="display:inline-flex;gap:8px;">
-      <button id="guestLoginBtn" type="button" style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;background:none;border:1px solid var(--ink);padding:5px 14px;cursor:pointer;color:var(--ink);">— log in</button>
-      <button id="guestSignupBtn" type="button" style="font-family:var(--mono);font-size:10.5px;letter-spacing:0.06em;background:var(--ink);border:1px solid var(--ink);padding:5px 14px;cursor:pointer;color:var(--paper);">— sign up</button>
+    <span id="guestButtons" style="display:none;gap:6px;align-items:center;white-space:nowrap;">
+      <button id="guestLoginBtn" type="button" style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;background:none;border:1px solid var(--ink);padding:4px 10px;cursor:pointer;color:var(--ink);white-space:nowrap;">— log in</button>
+      <button id="guestSignupBtn" type="button" style="font-family:var(--mono);font-size:9.5px;letter-spacing:0.06em;background:var(--ink);border:1px solid var(--ink);padding:4px 10px;cursor:pointer;color:var(--paper);white-space:nowrap;">— sign up</button>
     </span>
     <button id="userMenu" type="button" hidden class="account-pill" title="account & settings">
       <span id="userAvatar" class="account-pill-avatar is-empty" aria-hidden="true"></span>
@@ -13895,10 +13895,10 @@
     const _guestBtns = document.getElementById('guestButtons');
     if (!session?.user) {
       menu.hidden = true;
-      if (_guestBtns) _guestBtns.hidden = false;
+      if (_guestBtns) _guestBtns.style.display = 'inline-flex';
       return;
     }
-    if (_guestBtns) _guestBtns.hidden = true;
+    if (_guestBtns) _guestBtns.style.display = 'none';
 
     // Fast path: derive from user_metadata + email so the pill paints
     // immediately even before the profiles row is fetched.
