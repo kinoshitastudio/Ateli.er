@@ -21,9 +21,11 @@
 :root {
   --bg:        #DCDBD5;
   --ink:       #1600A2;
-  --ink-dim:   rgba(22,0,162,.62);
-  --ink-faint: rgba(22,0,162,.32);
-  --ink-soft:  rgba(22,0,162,.14);
+  --gray:      rgba(22,0,162,.62);
+  --gray-2:    rgba(22,0,162,.42);
+  --gray-3:    rgba(22,0,162,.22);
+  --line:      rgba(22,0,162,.32);
+  --line-soft: rgba(22,0,162,.14);
   --ink-xsoft: rgba(22,0,162,.07);
   --sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -32,119 +34,187 @@
 html, body { background: var(--bg); color: var(--ink); }
 body { font-family: var(--sans); min-height: 100vh; padding-bottom: 60px; }
 
-/* ── HEADER ── */
-#hd {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 28px 18px;
-  border-bottom: 1px solid var(--ink-soft);
+/* ── TOPBAR (mirrors app .topbar exactly) ── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 22px 36px 18px;
+  pointer-events: none;
+  background: var(--bg);
 }
-#hd-logo {
-  font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
-  color: var(--ink); text-decoration: none; text-transform: uppercase;
+.topbar > * { pointer-events: auto; }
+.brand {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
 }
-#hd-logo span { color: var(--ink-dim); }
-#hd-nav { display: flex; gap: 20px; }
-#hd-nav a {
-  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
-  color: var(--ink-dim); text-decoration: none; text-transform: uppercase; transition: color .15s;
-}
-#hd-nav a:hover { color: var(--ink); }
+.brand:hover { opacity: 0.55; }
 
-/* ── INNER WRAP (matches app modal pane padding) ── */
-#wrap { padding: 0 28px; }
-
-/* ── SECTION HEAD ── */
-.section-head {
-  margin: 18px 0 6px;
+/* triggers (mirrors app .triggers) */
+.triggers {
+  display: flex; gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.trig {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--ink);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  padding: 2px 0;
+  cursor: pointer;
+  text-decoration: none;
+  background: none; border: none;
+  transition: opacity 0.2s;
+  position: relative;
+}
+.trig:hover { opacity: 0.55; }
+.trig.is-active {
+  border-bottom: 1px solid var(--ink);
+  opacity: 1;
+}
+.trig.close-btn { color: var(--gray); }
+.trig.close-btn:hover { color: var(--ink); opacity: 1; }
+
+/* ── MAIN CONTENT (padded to clear fixed topbar) ── */
+#main {
+  padding: 90px 36px 0;
 }
 
-/* ── NOTE TEXT (mirrors Traces/Explore bottom note) ── */
+/* pane head (mirrors .pane-head style) */
+.pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.pane-head h3 {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--ink);
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+.pane-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--gray);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+}
+
+/* note text */
 .section-note {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--ink-dim);
+  color: var(--gray);
   letter-spacing: 0.06em;
   line-height: 1.85;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--ink-soft);
-  padding-bottom: 14px;
 }
 .section-note a {
   color: var(--ink); text-decoration: none;
-  border-bottom: 1px solid var(--ink-faint);
+  border-bottom: 1px solid var(--line-soft);
 }
 .section-note a:hover { border-color: var(--ink); }
 
-/* ── LIST (mirrors recent-posts ul) ── */
+/* ── AUDIO LIST (recent-posts style) ── */
 #audio-list {
   list-style: none; padding: 0; margin: 0;
   font-family: var(--mono); font-size: 10.5px;
 }
 #audio-list li {
   padding: 6px 0;
-  border-bottom: 1px dashed var(--ink-xsoft);
+  border-bottom: 1px dashed var(--gray-3);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  transition: background .1s;
+  transition: opacity .1s;
 }
-#audio-list li:hover { background: var(--ink-xsoft); margin: 0 -4px; padding-left: 4px; padding-right: 4px; }
+#audio-list li:hover { opacity: 0.65; }
 
 .row-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  color: var(--ink);
+  display: flex; align-items: center;
+  gap: 8px; flex: 1; min-width: 0; color: var(--ink);
 }
-.row-bar5 {
+.row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-icon  { flex-shrink: 0; color: var(--gray); }
+.row-right {
+  font-size: 10px; color: var(--gray-2);
+  flex-shrink: 0; white-space: nowrap; text-align: right;
+}
+
+/* ── 5-bar stepped (chipmusic.org style) ── */
+.bar5 {
   display: flex;
   align-items: flex-end;
   gap: 2px;
   flex-shrink: 0;
 }
-.row-bar5 .seg { width: 3px; height: 8px; background: var(--ink-xsoft); }
-.row-bar5 .seg.on { background: var(--ink-faint); }
-li:hover .row-bar5 .seg.on { background: var(--ink); }
-.row-icon { flex-shrink: 0; color: var(--ink-dim); }
-.row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.row-right {
-  font-size: 10px;
-  color: var(--ink-faint);
-  flex-shrink: 0;
-  white-space: nowrap;
-  text-align: right;
+.bar5 .seg {
+  width: 3px;
+  background: var(--line-soft);
 }
-.row-right .r-handle { color: var(--ink-dim); }
+.bar5 .seg:nth-child(1) { height: 4px; }
+.bar5 .seg:nth-child(2) { height: 6px; }
+.bar5 .seg:nth-child(3) { height: 8px; }
+.bar5 .seg:nth-child(4) { height: 10px; }
+.bar5 .seg:nth-child(5) { height: 12px; }
+.bar5 .seg.on { background: var(--gray); }
+li:hover .bar5 .seg.on { background: var(--ink); }
 
 /* ── STATUS ── */
 #status {
   padding: 32px 0;
   font-family: var(--mono); font-size: 11px;
-  letter-spacing: .14em; color: var(--ink-faint); text-transform: uppercase;
+  letter-spacing: .14em; color: var(--gray-2); text-transform: uppercase;
+}
+
+@media (max-width: 560px) {
+  .topbar { padding: 18px 20px 14px; }
+  .triggers { gap: 14px; }
+  .trig { font-size: 10px; }
+  #main { padding: 80px 20px 0; }
+  .trig.trig-hide-mobile { display: none; }
 }
 </style>
 </head>
 <body>
 
-<header id="hd">
-  <a id="hd-logo" href="https://atelistudio.com/">Ateli.er <span>— courtyard</span></a>
-  <nav id="hd-nav">
-    <a href="https://atelistudio.com/player.html">Player</a>
-    <a href="https://atelistudio.com/">Open app →</a>
+<!-- TOPBAR — mirrors app header exactly -->
+<header class="topbar">
+  <a class="brand" href="https://atelistudio.com/">Ateli.er</a>
+  <nav class="triggers">
+    <a class="trig trig-hide-mobile" href="https://atelistudio.com/">— my channel</a>
+    <a class="trig trig-hide-mobile" href="https://atelistudio.com/">— feed</a>
+    <a class="trig trig-hide-mobile" href="https://atelistudio.com/">— explore</a>
+    <a class="trig trig-hide-mobile" href="https://atelistudio.com/">— comment</a>
+    <a class="trig trig-hide-mobile" href="https://atelistudio.com/">— upload</a>
+    <a class="trig is-active" href="/courtyard.html">— courtyard</a>
+    <a class="trig close-btn" href="https://atelistudio.com/">— close</a>
   </nav>
 </header>
 
-<div id="wrap">
-  <h4 class="section-head">— audio</h4>
+<!-- MAIN -->
+<main id="main">
+  <div class="pane-head">
+    <h3><em>Courtyard</em></h3>
+    <span class="pane-meta">— audio from the courtyard</span>
+  </div>
+
   <p class="section-note">
     未完成のまま、そっと置いておく音たち。 all public audio · newest on top.<br>
     <a href="https://atelistudio.com/player.html">↗ atelier player — ambient mode</a>
@@ -153,7 +223,7 @@ li:hover .row-bar5 .seg.on { background: var(--ink); }
 
   <ul id="audio-list"></ul>
   <p id="status">Loading…</p>
-</div>
+</main>
 
 <script>
 (function () {
@@ -174,9 +244,11 @@ li:hover .row-bar5 .seg.on { background: var(--ink); }
     const d = new Date(Number(ts));
     return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
   }
-  function bar5(plays, maxPlays) {
+  function bar5html(plays, maxPlays) {
     const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
-    return `<span class="row-bar5">${Array.from({length:5},(_,i)=>`<span class="seg${i<filled?' on':''}"></span>`).join('')}</span>`;
+    return `<span class="bar5">${[1,2,3,4,5].map(i =>
+      `<span class="seg${i <= filled ? ' on' : ''}"></span>`
+    ).join('')}</span>`;
   }
 
   async function fetchAudio() {
@@ -203,13 +275,12 @@ li:hover .row-bar5 .seg.on { background: var(--ink); }
       const ch     = t.channel_label || '';
       const date   = fmtDate(t.ts);
       const plays  = t.play_count ?? 0;
-
       const right  = [handle, ch, date].filter(Boolean).join(' · ');
 
       const li = document.createElement('li');
       li.innerHTML = `
         <span class="row-left">
-          ${bar5(plays, maxPlays)}
+          ${bar5html(plays, maxPlays)}
           <span class="row-icon">♪</span>
           <span class="row-title">${esc(title)}</span>
         </span>
