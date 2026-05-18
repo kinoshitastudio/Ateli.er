@@ -142,47 +142,35 @@ body {
 /* ── left bar cell ── */
 .td-bar {
   padding: 0 !important;
-  width: 72px;
+  width: 64px;
   vertical-align: middle;
 }
 .bar-wrap {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 38px;         /* matches row height */
-  padding: 0 10px 0 0;
-  gap: 3px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px 0 28px;
+  height: 100%;
 }
-.bar-track {
-  width: 100%;
-  height: 3px;
+/* 5-segment vertical bar (chipmusic.org style) */
+.bar5 {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.bar5-seg {
+  width: 4px;
+  height: 10px;
   background: var(--ink-xsoft);
-  position: relative;
-  overflow: hidden;
+  transition: background .2s;
 }
-.bar-fill {
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  background: var(--ink-faint);
-  transition: width .4s ease, background .2s;
-  min-width: 1px;
-}
-tr.playing .bar-fill { background: var(--ink); }
-.bar-num {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--ink-faint);
-  text-align: right;
-  line-height: 1;
-  transition: color .2s;
-  white-space: nowrap;
-}
-tr.playing .bar-num { color: var(--ink); }
+.bar5-seg.on            { background: var(--ink-faint); }
+tr.playing .bar5-seg.on { background: var(--ink); }
+/* playing icon replaces bars */
 .bar-icon {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--ink);
-  text-align: right;
-  line-height: 1;
+  display: none;
 }
 
 .td-title {
@@ -446,27 +434,19 @@ tr.playing .bar-num { color: var(--ink); }
   const npTime         = document.getElementById('np-time');
   const npClose        = document.getElementById('np-close');
 
-  function getBarEl(rowEl) { return rowEl.querySelector('.bar-wrap'); }
-  function getBarNum(rowEl) { return rowEl.querySelector('.bar-num'); }
-  function getBarIcon(rowEl){ return rowEl.querySelector('.bar-icon'); }
-
   function showPlayingIcon(rowEl) {
-    const num  = getBarNum(rowEl);
-    const icon = getBarIcon(rowEl);
-    if (num)  num.style.display  = 'none';
-    if (icon) icon.style.display = '';
+    rowEl.querySelector('.bar5').style.display  = 'none';
+    rowEl.querySelector('.bar-icon').style.display = '';
     rowEl.classList.add('playing');
   }
-  function restoreBar(rowEl, track) {
-    const num  = getBarNum(rowEl);
-    const icon = getBarIcon(rowEl);
-    if (num)  { num.textContent = track.play_count ?? 0; num.style.display = ''; }
-    if (icon) icon.style.display = 'none';
+  function restoreBar(rowEl) {
+    rowEl.querySelector('.bar5').style.display  = '';
+    rowEl.querySelector('.bar-icon').style.display = 'none';
     rowEl.classList.remove('playing');
   }
 
   function playTrack(track, rowEl) {
-    if (currentRow) restoreBar(currentRow, currentTrack);
+    if (currentRow) restoreBar(currentRow);
 
     currentRow   = rowEl;
     currentTrack = track;
@@ -482,14 +462,11 @@ tr.playing .bar-num { color: var(--ink); }
         counted = true;
         track.play_count = (track.play_count ?? 0) + 1;
         incrementPlayCount(track.id);
-        // update bar fill after increment
-        const fill = rowEl.querySelector('.bar-fill');
-        if (fill) fill.dataset.count = track.play_count;
       }
     });
     audio.addEventListener('ended', () => {
       npPlayBtn.textContent = '▶';
-      restoreBar(rowEl, track);
+      restoreBar(rowEl);
       currentRow = null;
     });
 
@@ -516,8 +493,8 @@ tr.playing .bar-num { color: var(--ink); }
     } else {
       audio.pause();
       npPlayBtn.textContent = '▶';
-      restoreBar(currentRow, currentTrack);
-      currentRow.classList.add('playing'); // keep row highlight while paused
+      restoreBar(currentRow);
+      currentRow.classList.add('playing');
     }
   });
 
@@ -530,7 +507,7 @@ tr.playing .bar-num { color: var(--ink); }
     audio.pause();
     audio.currentTime = 0;
     npBar.classList.remove('visible');
-    if (currentRow) { restoreBar(currentRow, currentTrack); currentRow = null; }
+    if (currentRow) { restoreBar(currentRow); currentRow = null; }
     npPlayBtn.textContent = '▶';
   });
 
@@ -542,7 +519,13 @@ tr.playing .bar-num { color: var(--ink); }
 
     if (!tracks.length) { status.textContent = 'No audio yet.'; return; }
 
-    const maxPlays = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
+    const maxPlays  = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
+    const segs = (plays) => {
+      const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
+      return Array.from({ length: 5 }, (_, i) =>
+        `<div class="bar5-seg${i < filled ? ' on' : ''}"></div>`
+      ).join('');
+    };
 
     status.style.display = 'none';
     section.style.display = '';
@@ -554,7 +537,6 @@ tr.playing .bar-num { color: var(--ink); }
       const channel  = t.channel_label || '';
       const date     = fmtDate(t.ts);
       const plays    = t.play_count ?? 0;
-      const pct      = Math.max(2, Math.round((plays / maxPlays) * 100));
       const hasAudio = !!p.audioUrl;
 
       const tr = document.createElement('tr');
@@ -563,8 +545,7 @@ tr.playing .bar-num { color: var(--ink); }
       tr.innerHTML = `
         <td class="td-bar">
           <div class="bar-wrap">
-            <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-            <div class="bar-num">${plays}</div>
+            <div class="bar5">${segs(plays)}</div>
             <div class="bar-icon" style="display:none">▶</div>
           </div>
         </td>
@@ -581,11 +562,10 @@ tr.playing .bar-num { color: var(--ink); }
               audio.play().catch(() => {});
               npPlayBtn.textContent = '❚❚';
               showPlayingIcon(tr);
-              tr.classList.add('playing');
             } else {
               audio.pause();
               npPlayBtn.textContent = '▶';
-              restoreBar(tr, t);
+              restoreBar(tr);
               tr.classList.add('playing');
             }
           } else {
