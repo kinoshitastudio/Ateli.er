@@ -4693,6 +4693,7 @@
                   <span class="sp-k is-required">image url</span>
                   <input class="uf-input" type="url" id="iUrl" placeholder="https://… (drive / dropbox / direct image url)">
                   <p id="iUrlWarn" hidden style="font-family:var(--mono);font-size:10.5px;color:#b85c00;margin-top:4px;line-height:1.5;">X / Twitter のメディアURL（pbs.twimg.com）はSNSシェア時にサムネイルが表示されません。画像をファイルで直接アップロードすることをお勧めします。</p>
+                  <p style="font-family:var(--mono);font-size:10px;color:var(--gray-2);margin-top:4px;line-height:1.6;">⚠ google drive / dropbox 以外の外部 URL は、SNS シェア時にプレビューカードが表示されない場合があります。</p>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">source</span>
@@ -11622,7 +11623,25 @@
           </span>
           <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${right}</span>
         `;
-        li.addEventListener('click', () => openExternalFromCache(t.id));
+        li.addEventListener('click', () => {
+          // Populate explore cache so openExternalBlock can resolve the block,
+          // then restore Courtyard as the active pane (openExternalBlock would
+          // otherwise switch the parent modal to Explore via _markVisitorContextOnTabs).
+          _explorePublicCache[t.id] = t;
+          const ext = {
+            ...(t.payload || {}),
+            id: t.id, kind: t.kind,
+            channelId: undefined, _external: true,
+            _ownerHandle: t.owner_handle || '', _ownerId: t.owner_id || '',
+            _externalChannelLabel: t.channel_label || '',
+            _externalHostChannelId: t.channel_id || '',
+          };
+          if (t.owner_id && currentUser?.id && t.owner_id === currentUser.id) {
+            const own = typeof _resolveBlockOrTrack === 'function' ? _resolveBlockOrTrack(t.id) : null;
+            if (own && !own.external) { openPieceModal(own.obj); return; }
+          }
+          openPieceModal(ext);
+        });
         list.appendChild(li);
       });
     } catch (e) {
@@ -12681,9 +12700,16 @@
       _doCloseOverlay(popped);
     }
     _syncBodyOverlay();
-    _navIgnorePopstate = true;
-    for (let i = 0; i < toPop; i++) history.back();
-    setTimeout(() => { _navIgnorePopstate = false; }, 0);
+    if (navStack.length === 0) {
+      // Last overlay closed — replace the overlay history entry in-place
+      // so we stay on atelistudio.com instead of navigating back to wherever
+      // the browser came from (iOS Safari exits the site otherwise).
+      history.replaceState(null, '');
+    } else {
+      _navIgnorePopstate = true;
+      for (let i = 0; i < toPop; i++) history.back();
+      setTimeout(() => { _navIgnorePopstate = false; }, 0);
+    }
   }
 
   // Browser back / swipe-back path: history already moved; just close the
