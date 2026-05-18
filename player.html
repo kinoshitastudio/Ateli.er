@@ -558,6 +558,15 @@
     return Math.max(lo, Math.min(hi, n));
   }
 
+  function incrementPlayCount(blockId) {
+    if (!blockId) return;
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_play_count`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_PUB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ block_id: blockId }),
+    }).catch(() => {});
+  }
+
   // ─── State ──────────────────────────────────────────────────────────
   let blocks = [];
   let imgs = [], audios = [], texts = [];
@@ -709,6 +718,7 @@
       hideLayer.classList.remove('show');
       activeImg = activeImg === 'a' ? 'b' : 'a';
       document.body.classList.add('has-image');
+      incrementPlayCount(b.id);
     };
     probe.onerror = () => {
       if (settled) return;
@@ -828,11 +838,8 @@
     _clearAudioWatchdog();
     _clearDeferredNextAudio();
     _audioConsecutiveFails = 0;
-    // Belt-and-suspenders: also reset the 20-min cap flag here in case
-    // `loadedmetadata` didn't fire for some reason (cached resource,
-    // browser quirk). Without this, the flag could stay sticky and the
-    // cap would never trigger again on subsequent tracks.
     _advancedAtCap = false;
+    incrementPlayCount(audios[audioIdx]?.id);
   });
   $audio.addEventListener('ended', () => { nextAudio(); });
   $audio.addEventListener('error', () => {
@@ -864,6 +871,7 @@
       escapeHtml(body);
     $text.classList.add('show');
     setTimeout(() => $text.classList.remove('show'), 9500);
+    incrementPlayCount(t.id);
   }
 
   // ─── Empty-feed notice ──────────────────────────────────────────────
