@@ -4689,6 +4689,7 @@
                 <label class="uf-row">
                   <span class="sp-k is-required">image url</span>
                   <input class="uf-input" type="url" id="iUrl" placeholder="https://… (drive / dropbox / direct image url)">
+                  <p id="iUrlWarn" hidden style="font-family:var(--mono);font-size:10.5px;color:#b85c00;margin-top:4px;line-height:1.5;">X / Twitter のメディアURL（pbs.twimg.com）はSNSシェア時にサムネイルが表示されません。画像をファイルで直接アップロードすることをお勧めします。</p>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">source</span>
@@ -13997,6 +13998,11 @@
   function closeSettingsModal() {
     document.getElementById('settingsModal')?.classList.remove('is-open');
   }
+  document.getElementById('iUrl')?.addEventListener('input', function() {
+    const warn = document.getElementById('iUrlWarn');
+    if (!warn) return;
+    warn.hidden = !/pbs\.twimg\.com|x\.com\/.*\/photo|twitter\.com\/.*\/photo/i.test(this.value);
+  });
   document.getElementById('userMenu')?.addEventListener('click', openSettingsModal);
   document.getElementById('guestLoginBtn')?.addEventListener('click', () => openAuthModal('login'));
   document.getElementById('guestSignupBtn')?.addEventListener('click', () => openAuthModal('signup'));
