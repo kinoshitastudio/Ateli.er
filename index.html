@@ -4792,6 +4792,21 @@
         </p>
       </div>
 
+      <!-- COURTYARD -->
+      <div class="modal-pane pane-courtyard" data-pane="courtyard">
+        <div class="pane-head">
+          <h3><em>Courtyard</em></h3>
+          <span class="pane-meta" id="paneCourtyardMeta">— audio from the courtyard</span>
+        </div>
+        <p style="font-family: var(--mono); font-size: 10px; color: var(--gray); letter-spacing: 0.06em; line-height: 1.85; margin-bottom: 20px;">
+          未完成のまま、そっと置いておく音たち。 all public audio · newest on top.<br>
+          <a href="/player.html" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ atelier player</a>
+          &ensp;<a href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ chrome extension</a>
+        </p>
+        <ul id="courtyardList" style="list-style:none;padding:0;margin:0;font-family:var(--mono);font-size:10.5px;"></ul>
+        <p id="courtyardStatus" style="padding:20px 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--gray-2);text-transform:uppercase;display:none;"></p>
+      </div>
+
     </div>
   </div>
 </div>
@@ -11330,6 +11345,7 @@
     });
     if (name === 'feed') renderFeed();
     if (name === 'explore') renderExplore();
+    if (name === 'courtyard') renderCourtyard();
     if (name === 'traces') {
       renderIncomingTraces();
       // Opening the Comment tab counts as "seen" — mark all incoming comments
@@ -11548,6 +11564,60 @@
   // ──────────────── EXPLORE — cross-user profiles ────────────────
   // Uses raw REST instead of supabaseClient.from() — the JS SDK's query
   // builder hangs in this environment (same pattern as profiles.update).
+  let _courtyardLoaded = false;
+  async function renderCourtyard() {
+    const list   = document.getElementById('courtyardList');
+    const status = document.getElementById('courtyardStatus');
+    if (!list || _courtyardLoaded) return;
+    _courtyardLoaded = true;
+    status.textContent = 'loading…';
+    status.style.display = '';
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/public_blocks?kind=eq.audio&select=id,ts,payload,owner_handle,channel_label,play_count&order=ts.desc`,
+        { headers: { apikey: SUPABASE_PUB_KEY } }
+      );
+      if (!res.ok) throw new Error(res.status);
+      const tracks = await res.json();
+      status.style.display = 'none';
+      if (!tracks.length) { status.textContent = 'No audio yet.'; status.style.display = ''; return; }
+      const maxPlays = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
+      const fmtDate = ts => {
+        const d = new Date(Number(ts));
+        return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+      };
+      const bar5 = (plays) => {
+        const filled = plays === 0 ? 0 : Math.max(1, Math.round((plays / maxPlays) * 5));
+        return `<span style="display:inline-flex;align-items:flex-end;gap:2px;flex-shrink:0;">${[4,6,8,10,12].map((h,i) =>
+          `<span style="display:inline-block;width:3px;height:${h}px;background:${i < filled ? 'var(--ink)' : 'var(--line-soft)'};"></span>`
+        ).join('')}</span>`;
+      };
+      tracks.forEach(t => {
+        const p      = t.payload || {};
+        const title  = escapeHtml(p.title || p.caption || '(untitled)');
+        const handle = t.owner_handle ? `@${escapeHtml(t.owner_handle)}` : '';
+        const ch     = t.channel_label ? escapeHtml(t.channel_label) : '';
+        const date   = fmtDate(t.ts);
+        const right  = [handle, ch, date].filter(Boolean).join(' · ');
+        const li = document.createElement('li');
+        li.style.cssText = 'padding:6px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;';
+        li.innerHTML = `
+          <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:var(--ink);">
+            ${bar5(t.play_count ?? 0)}
+            <span style="flex-shrink:0;color:var(--gray);">♪</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
+          </span>
+          <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${right}</span>
+        `;
+        li.addEventListener('click', () => openExternalFromCache(t.id));
+        list.appendChild(li);
+      });
+    } catch (e) {
+      status.textContent = 'Could not load tracks.';
+      status.style.display = '';
+    }
+  }
+
   async function renderExplore() {
     const list = document.getElementById('exploreList');
     if (!list) return;
