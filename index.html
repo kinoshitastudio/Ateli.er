@@ -1639,6 +1639,7 @@
   .ag-cell[data-level="2"] { background: #7080d4; }
   .ag-cell[data-level="3"] { background: #3a50c0; }
   .ag-cell[data-level="4"] { background: var(--ink); }
+  #agTooltip { position:fixed; z-index:9999; background:var(--ink); color:#fff; font-family:var(--mono); font-size:10px; letter-spacing:.08em; padding:4px 8px; border-radius:2px; pointer-events:none; white-space:nowrap; display:none; }
   .ch-card-edit-actions button {
     background: rgba(250, 250, 247, 0.9);
     border: 1px solid var(--line);
@@ -4931,6 +4932,7 @@
 </div>
 
 <!-- CUSTOM CONFIRM (replaces native confirm; never suppressed by iOS) -->
+<div id="agTooltip"></div>
 <div id="confirmOverlay" style="display:none; position:fixed; inset:0; z-index:9000; align-items:center; justify-content:center; padding:24px;">
   <div id="confirmBg" style="position:absolute; inset:0; background:rgba(250,250,247,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);"></div>
   <div style="position:relative; max-width:440px; width:100%; padding:32px 28px; background:var(--paper); border:1px solid var(--line); box-shadow:0 4px 24px rgba(10,10,10,0.06);">
@@ -11455,11 +11457,30 @@
         if (d.comment) parts.push(`${d.comment} comment${d.comment > 1 ? 's' : ''}`);
         tip += ': ' + parts.join(' · ');
       }
-      cells += `<div class="ag-cell" data-level="${level}" title="${tip}"></div>`;
+      cells += `<div class="ag-cell" data-level="${level}" title="${escapeHtml(tip)}"></div>`;
       cur.setDate(cur.getDate() + 1);
     }
     return { cells, total: rows.length };
   }
+
+  (function _initAgTooltip() {
+    const tip = document.getElementById('agTooltip');
+    if (!tip) return;
+    document.addEventListener('mouseover', e => {
+      const cell = e.target.closest?.('.ag-cell');
+      if (!cell || !cell.title) { tip.style.display = 'none'; return; }
+      tip.textContent = cell.title;
+      tip.style.display = 'block';
+    });
+    document.addEventListener('mousemove', e => {
+      if (tip.style.display === 'none') return;
+      tip.style.left = (e.clientX + 12) + 'px';
+      tip.style.top  = (e.clientY - 28) + 'px';
+    });
+    document.addEventListener('mouseout', e => {
+      if (e.target.closest?.('.ag-cell')) tip.style.display = 'none';
+    });
+  })();
 
   async function renderActivityGraph() {
     const container = document.getElementById('activityGraph');
