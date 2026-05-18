@@ -106,16 +106,10 @@ body {
 #intro .links a:hover { border-color: var(--ink); }
 
 /* ── TRACK LIST ── */
-#track-list {
-  width: 100%;
-}
-#track-list table {
-  width: 100%;
-  border-collapse: collapse;
-}
-#track-list thead tr {
-  border-bottom: 1px solid var(--ink-soft);
-}
+#track-list { width: 100%; }
+#track-list table { width: 100%; border-collapse: collapse; }
+
+#track-list thead tr { border-bottom: 1px solid var(--ink-soft); }
 #track-list thead th {
   font-family: var(--mono);
   font-size: 9px;
@@ -126,8 +120,9 @@ body {
   padding: 10px 12px;
   font-weight: 400;
 }
-#track-list thead th:first-child { padding-left: 28px; width: 32px; }
-#track-list thead th:last-child  { padding-right: 28px; }
+#track-list thead th.th-bar { padding-left: 0; width: 72px; }
+#track-list thead th:last-child { padding-right: 28px; }
+
 #track-list tbody tr {
   border-bottom: 1px solid var(--ink-xsoft);
   cursor: pointer;
@@ -135,29 +130,67 @@ body {
 }
 #track-list tbody tr:hover   { background: var(--ink-xsoft); }
 #track-list tbody tr.playing { background: var(--ink-soft); }
+
 #track-list tbody td {
-  padding: 11px 12px;
+  padding: 10px 12px;
   font-size: 12px;
   color: var(--ink);
   vertical-align: middle;
 }
-#track-list tbody td:first-child {
-  padding-left: 28px;
-  width: 32px;
-  font-family: var(--mono);
-  font-size: 13px;
-  color: var(--ink-faint);
-  user-select: none;
-}
-#track-list tbody tr.playing td:first-child { color: var(--ink); }
 #track-list tbody td:last-child { padding-right: 28px; }
+
+/* ── left bar cell ── */
+.td-bar {
+  padding: 0 !important;
+  width: 72px;
+  vertical-align: middle;
+}
+.bar-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 38px;         /* matches row height */
+  padding: 0 10px 0 0;
+  gap: 3px;
+}
+.bar-track {
+  width: 100%;
+  height: 3px;
+  background: var(--ink-xsoft);
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: var(--ink-faint);
+  transition: width .4s ease, background .2s;
+  min-width: 1px;
+}
+tr.playing .bar-fill { background: var(--ink); }
+.bar-num {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--ink-faint);
+  text-align: right;
+  line-height: 1;
+  transition: color .2s;
+  white-space: nowrap;
+}
+tr.playing .bar-num { color: var(--ink); }
+.bar-icon {
+  font-size: 11px;
+  color: var(--ink);
+  text-align: right;
+  line-height: 1;
+}
 
 .td-title {
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 400;
   color: var(--ink);
-  max-width: 260px;
+  max-width: 240px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -175,7 +208,7 @@ body {
   letter-spacing: .04em;
   color: var(--ink-faint);
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -186,10 +219,11 @@ body {
   white-space: nowrap;
 }
 
-/* hide channel col on small screens */
-@media (max-width: 520px) {
-  .col-channel { display: none; }
-  .td-channel  { display: none; }
+@media (max-width: 560px) {
+  .col-channel, .td-channel { display: none; }
+}
+@media (max-width: 380px) {
+  .col-date, .td-date { display: none; }
 }
 
 /* ── LOADING / EMPTY ── */
@@ -259,7 +293,6 @@ body {
   text-overflow: ellipsis;
   text-transform: uppercase;
 }
-
 #np-progress-wrap {
   flex: 1;
   max-width: 280px;
@@ -288,7 +321,6 @@ body {
   letter-spacing: .08em;
   text-align: right;
 }
-
 #np-close {
   background: none;
   border: none;
@@ -301,10 +333,7 @@ body {
   flex-shrink: 0;
 }
 #np-close:hover { color: #fff; }
-
-@media (max-width: 480px) {
-  #np-progress-wrap { display: none; }
-}
+@media (max-width: 480px) { #np-progress-wrap { display: none; } }
 </style>
 </head>
 <body>
@@ -323,7 +352,7 @@ body {
   <p>未完成のまま、そっと置いておく音たち。<br>All public audio from Ateli.er — listed quietly, in order of arrival.</p>
   <div class="links">
     <a href="https://atelistudio.com/player.html">↗ Atelier Player — ambient mode</a>
-    <a id="bmbrowser-link" href="https://apps.html" style="display:none">↗ Atelier Player — Chrome extension</a>
+    <a id="bmbrowser-link" href="#" style="display:none">↗ Atelier Player — Chrome extension</a>
   </div>
 </section>
 
@@ -332,11 +361,11 @@ body {
   <table>
     <thead>
       <tr>
-        <th></th>
+        <th class="th-bar"></th>
         <th>Title</th>
         <th>Artist</th>
         <th class="col-channel">Channel</th>
-        <th>Date</th>
+        <th class="col-date">Date</th>
       </tr>
     </thead>
     <tbody id="track-tbody"></tbody>
@@ -367,17 +396,29 @@ body {
   const ANON_KEY     = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
   const CWS_URL      = 'https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb';
 
-  // ── BMBrowser link (show only when CWS URL is known) ──
   if (CWS_URL) {
     const a = document.getElementById('bmbrowser-link');
     a.href = CWS_URL;
     a.style.display = '';
   }
 
-  // ── Fetch audio blocks ──
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function incrementPlayCount(blockId) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_play_count`, {
+        method: 'POST',
+        headers: { apikey: ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block_id: blockId }),
+      });
+    } catch (e) {}
+  }
+
   async function fetchAudio() {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/public_blocks?kind=eq.audio&select=id,ts,payload,owner_handle,channel_label&order=ts.desc`,
+      `${SUPABASE_URL}/rest/v1/public_blocks?kind=eq.audio&select=id,ts,payload,owner_handle,channel_label,play_count&order=ts.desc`,
       { headers: { apikey: ANON_KEY } }
     );
     if (!res.ok) throw new Error(res.status);
@@ -386,94 +427,110 @@ body {
 
   function fmtDate(ts) {
     const d = new Date(Number(ts));
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}.${m}.${day}`;
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
   }
-
   function fmtTime(sec) {
-    if (!isFinite(sec) || sec < 0) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = String(Math.floor(sec % 60)).padStart(2, '0');
-    return `${m}:${s}`;
+    if (!isFinite(sec)||sec<0) return '0:00';
+    return `${Math.floor(sec/60)}:${String(Math.floor(sec%60)).padStart(2,'0')}`;
   }
 
   // ── Audio engine ──
-  let audio = new Audio();
-  audio.preload = 'metadata';
-  let currentRow   = null;
-  let currentTrack = null;
+  let audio = new Audio(), currentRow = null, currentTrack = null;
 
-  const npBar         = document.getElementById('np-bar');
-  const npPlayBtn     = document.getElementById('np-play-btn');
-  const npTitle       = document.getElementById('np-title');
-  const npArtist      = document.getElementById('np-artist');
-  const npProgressBg  = document.getElementById('np-progress-bg');
-  const npProgressFill= document.getElementById('np-progress-fill');
-  const npTime        = document.getElementById('np-time');
-  const npClose       = document.getElementById('np-close');
+  const npBar          = document.getElementById('np-bar');
+  const npPlayBtn      = document.getElementById('np-play-btn');
+  const npTitle        = document.getElementById('np-title');
+  const npArtist       = document.getElementById('np-artist');
+  const npProgressBg   = document.getElementById('np-progress-bg');
+  const npProgressFill = document.getElementById('np-progress-fill');
+  const npTime         = document.getElementById('np-time');
+  const npClose        = document.getElementById('np-close');
+
+  function getBarEl(rowEl) { return rowEl.querySelector('.bar-wrap'); }
+  function getBarNum(rowEl) { return rowEl.querySelector('.bar-num'); }
+  function getBarIcon(rowEl){ return rowEl.querySelector('.bar-icon'); }
+
+  function showPlayingIcon(rowEl) {
+    const num  = getBarNum(rowEl);
+    const icon = getBarIcon(rowEl);
+    if (num)  num.style.display  = 'none';
+    if (icon) icon.style.display = '';
+    rowEl.classList.add('playing');
+  }
+  function restoreBar(rowEl, track) {
+    const num  = getBarNum(rowEl);
+    const icon = getBarIcon(rowEl);
+    if (num)  { num.textContent = track.play_count ?? 0; num.style.display = ''; }
+    if (icon) icon.style.display = 'none';
+    rowEl.classList.remove('playing');
+  }
 
   function playTrack(track, rowEl) {
-    if (currentRow) currentRow.classList.remove('playing');
+    if (currentRow) restoreBar(currentRow, currentTrack);
+
     currentRow   = rowEl;
     currentTrack = track;
-    rowEl.classList.add('playing');
-    rowEl.querySelector('td').textContent = '▶';
+    showPlayingIcon(rowEl);
 
-    const url = track.payload?.audioUrl || '';
     audio.pause();
-    audio = new Audio(url);
-    audio.play().catch(() => {});
+    audio = new Audio(track.payload?.audioUrl || '');
 
+    let counted = false;
+    audio.addEventListener('timeupdate', () => {
+      updateProgress();
+      if (!counted && audio.currentTime >= 10) {
+        counted = true;
+        track.play_count = (track.play_count ?? 0) + 1;
+        incrementPlayCount(track.id);
+        // update bar fill after increment
+        const fill = rowEl.querySelector('.bar-fill');
+        if (fill) fill.dataset.count = track.play_count;
+      }
+    });
+    audio.addEventListener('ended', () => {
+      npPlayBtn.textContent = '▶';
+      restoreBar(rowEl, track);
+      currentRow = null;
+    });
+
+    audio.play().catch(() => {});
     npTitle.textContent  = track.payload?.title || track.payload?.caption || '—';
     npArtist.textContent = (track.owner_handle ? `@${track.owner_handle}` : '') +
                            (track.channel_label ? ` · ${track.channel_label}` : '');
     npBar.classList.add('visible');
     npPlayBtn.textContent = '❚❚';
-
-    audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', () => {
-      npPlayBtn.textContent = '▶';
-      rowEl.querySelector('td').textContent = '♪';
-    });
   }
 
   function updateProgress() {
-    const dur = audio.duration || 0;
-    const cur = audio.currentTime || 0;
-    const pct = dur ? (cur / dur) * 100 : 0;
-    npProgressFill.style.width = pct + '%';
+    const dur = audio.duration || 0, cur = audio.currentTime || 0;
+    npProgressFill.style.width = (dur ? (cur/dur)*100 : 0) + '%';
     npTime.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
   }
 
   npPlayBtn.addEventListener('click', () => {
+    if (!currentRow) return;
     if (audio.paused) {
       audio.play().catch(() => {});
       npPlayBtn.textContent = '❚❚';
-      if (currentRow) currentRow.querySelector('td').textContent = '▶';
+      showPlayingIcon(currentRow);
     } else {
       audio.pause();
       npPlayBtn.textContent = '▶';
-      if (currentRow) currentRow.querySelector('td').textContent = '♪';
+      restoreBar(currentRow, currentTrack);
+      currentRow.classList.add('playing'); // keep row highlight while paused
     }
   });
 
   npProgressBg.addEventListener('click', (e) => {
-    const rect = npProgressBg.getBoundingClientRect();
-    const pct  = (e.clientX - rect.left) / rect.width;
-    if (audio.duration) audio.currentTime = pct * audio.duration;
+    const r = npProgressBg.getBoundingClientRect();
+    if (audio.duration) audio.currentTime = (e.clientX-r.left)/r.width * audio.duration;
   });
 
   npClose.addEventListener('click', () => {
     audio.pause();
     audio.currentTime = 0;
     npBar.classList.remove('visible');
-    if (currentRow) {
-      currentRow.classList.remove('playing');
-      currentRow.querySelector('td').textContent = '♪';
-      currentRow = null;
-    }
+    if (currentRow) { restoreBar(currentRow, currentTrack); currentRow = null; }
     npPlayBtn.textContent = '▶';
   });
 
@@ -483,10 +540,9 @@ body {
     const section = document.getElementById('track-list');
     const status  = document.getElementById('status');
 
-    if (!tracks.length) {
-      status.textContent = 'No audio yet.';
-      return;
-    }
+    if (!tracks.length) { status.textContent = 'No audio yet.'; return; }
+
+    const maxPlays = Math.max(1, ...tracks.map(t => t.play_count ?? 0));
 
     status.style.display = 'none';
     section.style.display = '';
@@ -497,29 +553,41 @@ body {
       const artist   = t.owner_handle ? `@${t.owner_handle}` : '—';
       const channel  = t.channel_label || '';
       const date     = fmtDate(t.ts);
+      const plays    = t.play_count ?? 0;
+      const pct      = Math.max(2, Math.round((plays / maxPlays) * 100));
       const hasAudio = !!p.audioUrl;
 
       const tr = document.createElement('tr');
       if (!hasAudio) tr.style.opacity = '.35';
 
       tr.innerHTML = `
-        <td>♪</td>
+        <td class="td-bar">
+          <div class="bar-wrap">
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+            <div class="bar-num">${plays}</div>
+            <div class="bar-icon" style="display:none">▶</div>
+          </div>
+        </td>
         <td><div class="td-title">${esc(title)}</div></td>
         <td><div class="td-artist">${esc(artist)}</div></td>
         <td class="td-channel col-channel">${esc(channel)}</td>
-        <td class="td-date">${date}</td>
+        <td class="td-date col-date">${date}</td>
       `;
 
       if (hasAudio) {
         tr.addEventListener('click', () => {
-          if (currentTrack === t && !audio.paused) {
-            audio.pause();
-            npPlayBtn.textContent = '▶';
-            tr.querySelector('td').textContent = '♪';
-          } else if (currentTrack === t && audio.paused) {
-            audio.play().catch(() => {});
-            npPlayBtn.textContent = '❚❚';
-            tr.querySelector('td').textContent = '▶';
+          if (currentTrack === t) {
+            if (audio.paused) {
+              audio.play().catch(() => {});
+              npPlayBtn.textContent = '❚❚';
+              showPlayingIcon(tr);
+              tr.classList.add('playing');
+            } else {
+              audio.pause();
+              npPlayBtn.textContent = '▶';
+              restoreBar(tr, t);
+              tr.classList.add('playing');
+            }
           } else {
             playTrack(t, tr);
           }
@@ -530,15 +598,6 @@ body {
     });
   }
 
-  function esc(s) {
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  // ── Init ──
   fetchAudio()
     .then(render)
     .catch((err) => {
