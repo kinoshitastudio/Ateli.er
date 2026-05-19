@@ -14681,12 +14681,8 @@
     history.replaceState(null, '', location.pathname + location.hash);
 
     const fill = () => {
-      // Open modal
-      if (typeof openModal === 'function') openModal('pieces');
-
-      // Switch to Upload pane
-      const uploadTab = document.querySelector('.modal-tabs .tab[data-pane="atelier"]');
-      if (uploadTab) uploadTab.click();
+      // Open Upload pane directly
+      if (typeof openModal === 'function') openModal('atelier');
 
       // Switch to url kind tab
       const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
