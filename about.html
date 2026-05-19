@@ -117,7 +117,7 @@ body.is-en .lang-en { display: block; }
 }
 
 /* ──────────────── CONTAINER ──────────────── */
-.wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 28px; }
 
 /* ──────────────── HERO ──────────────── */
 .hero {
@@ -125,15 +125,9 @@ body.is-en .lang-en { display: block; }
   position: relative;
 }
 .hero-inner {
-  max-width: 1080px;
+  max-width: 760px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 36px;
-  align-items: center;
-}
-@media (min-width: 880px) {
-  .hero-inner { grid-template-columns: 1.15fr 1fr; gap: 48px; }
+  text-align: center;
 }
 .hero-eyebrow {
   display: inline-flex;
@@ -173,25 +167,29 @@ body.is-en .lang-en { display: block; }
   transform: rotate(-1.5deg);
 }
 .hero-sub {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.85;
   color: var(--gray);
-  margin-bottom: 32px;
+  margin-bottom: 0;
   max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .hero-cta {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  justify-content: center;
+  margin-top: 28px;
 }
 
 /* hero illustration slot — user adds artwork here */
 .hero-art {
   position: relative;
   aspect-ratio: 1 / 1;
-  max-width: 220px;
-  margin: 0 auto;
+  max-width: 200px;
+  margin: 36px auto 0;
   border-radius: 20px;
   background: var(--paper-3);
   border: 1px dashed var(--line-soft);
@@ -251,9 +249,9 @@ body.is-en .lang-en { display: block; }
 
 /* ──────────────── SECTION SCAFFOLD ──────────────── */
 section.block {
-  padding: 80px 28px;
+  padding: 64px 28px;
 }
-.block-inner { max-width: 1080px; margin: 0 auto; }
+.block-inner { max-width: 760px; margin: 0 auto; }
 .block-num {
   font-family: var(--mono);
   font-size: 11px;
@@ -294,7 +292,7 @@ section.block.is-alt {
   background: var(--paper-3);
   border-radius: 32px;
   margin: 0 16px 24px;
-  padding: 80px 28px;
+  padding: 64px 28px;
 }
 @media (min-width: 720px) {
   section.block.is-alt { margin: 0 32px 32px; }
@@ -303,21 +301,21 @@ section.block.is-alt {
 /* ──────────────── STAMP (big aphorism box) ──────────────── */
 .stamp {
   margin: 24px 16px;
-  padding: 56px 32px;
+  padding: 28px 32px;
   background: var(--ink);
   color: var(--paper);
-  border-radius: 32px;
+  border-radius: 20px;
   text-align: center;
   position: relative;
 }
 .stamp-quote {
   font-family: var(--sans);
   font-weight: 300;
-  font-size: clamp(22px, 3.4vw, 36px);
-  line-height: 1.55;
-  letter-spacing: -0.015em;
+  font-size: clamp(14px, 2vw, 20px);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
   max-width: 720px;
-  margin: 0 auto 18px;
+  margin: 0 auto 10px;
 }
 .stamp-mark {
   font-family: var(--mono);
@@ -327,7 +325,7 @@ section.block.is-alt {
   color: rgba(220,219,213,0.6);
 }
 @media (min-width: 720px) {
-  .stamp { margin: 24px 32px; padding: 80px 40px; }
+  .stamp { margin: 24px 32px; padding: 32px 40px; }
 }
 
 /* ──────────────── UNITS GRID ──────────────── */
@@ -337,8 +335,7 @@ section.block.is-alt {
   gap: 16px;
   margin-top: 36px;
 }
-@media (min-width: 640px) { .units-grid { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 1000px) { .units-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 480px) { .units-grid { grid-template-columns: 1fr 1fr; } }
 
 .unit {
   background: var(--paper);
@@ -407,17 +404,21 @@ section.block.is-alt {
   list-style: none;
   margin-top: 28px;
   display: grid;
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 .principles li {
   display: grid;
-  grid-template-columns: 90px 1fr;
+  grid-template-columns: 72px 1fr;
   align-items: center;
-  gap: 18px;
-  padding: 18px 22px;
+  gap: 12px;
+  padding: 14px 16px;
   background: var(--paper);
   border: 1.5px solid var(--ink);
-  border-radius: 18px;
+  border-radius: 16px;
+}
+@media (max-width: 540px) {
+  .principles { grid-template-columns: 1fr; }
 }
 .p-mark {
   font-family: var(--mono);
@@ -500,15 +501,15 @@ section.block.is-alt {
 /* ──────────────── FINAL CTA ──────────────── */
 .final {
   margin: 24px 16px;
-  padding: 32px 24px;
+  padding: 20px 24px;
   background: var(--ink);
   color: var(--paper);
-  border-radius: 24px;
+  border-radius: 20px;
   text-align: center;
   position: relative;
 }
 @media (min-width: 720px) {
-  .final { margin: 24px 32px; padding: 40px 32px; }
+  .final { margin: 24px 32px; padding: 24px 40px; }
 }
 .final-eyebrow {
   display: inline-flex;
@@ -522,24 +523,24 @@ section.block.is-alt {
   background: rgba(220,219,213,0.08);
   padding: 5px 14px;
   border-radius: 999px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .final-title {
   font-family: var(--sans);
   font-weight: 500;
-  font-size: clamp(22px, 3.6vw, 36px);
+  font-size: clamp(16px, 2.2vw, 24px);
   line-height: 1.3;
   letter-spacing: -0.02em;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   max-width: 720px;
   margin-left: auto;
   margin-right: auto;
 }
 .final-sub {
-  font-size: 14px;
+  font-size: 13px;
   color: rgba(220,219,213,0.8);
-  line-height: 1.75;
-  margin-bottom: 20px;
+  line-height: 1.7;
+  margin-bottom: 16px;
   max-width: 520px;
   margin-left: auto;
   margin-right: auto;
@@ -597,7 +598,7 @@ section.block.is-alt {
    - 03 connect / 04 footprint: 中間 */
 @media (max-width: 999px) {
   .hero-art {
-    max-width: 140px;
+    max-width: 160px;
     border-radius: 14px;
   }
   .unit-art {
@@ -654,7 +655,7 @@ footer.foot {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 14px;
-  max-width: 1080px;
+  max-width: 760px;
   margin: 0 auto;
 }
 .foot a {
@@ -670,11 +671,11 @@ footer.foot {
   body { font-size: 14px; }
   .hero { padding: 56px 20px 40px; }
   .hero-eyebrow { margin-bottom: 18px; }
-  section.block { padding: 60px 20px; }
-  section.block.is-alt { padding: 60px 20px; margin: 0 12px 18px; border-radius: 24px; }
+  section.block { padding: 48px 20px; }
+  section.block.is-alt { padding: 48px 20px; margin: 0 12px 18px; border-radius: 24px; }
   .stamp { margin: 18px 12px; padding: 52px 24px; border-radius: 24px; }
-  .final { margin: 18px 12px; padding: 64px 24px; border-radius: 24px; }
-  .principles li { grid-template-columns: 70px 1fr; gap: 14px; padding: 14px 18px; }
+  .final { margin: 18px 12px; padding: 20px 24px; border-radius: 20px; }
+  .principles li { grid-template-columns: 60px 1fr; gap: 10px; padding: 12px 14px; }
 }
 </style>
 </head>
@@ -698,25 +699,23 @@ footer.foot {
 <!-- ──────── HERO ──────── -->
 <section class="hero">
   <div class="hero-inner">
-    <div>
-      <span class="hero-eyebrow">
-        <span class="lang-ja">招待制</span><span class="lang-en">invite only</span>
-      </span>
-      <h1 class="hero-title">
-        <span class="lang-ja">未完成のまま、<br>そっと <span class="accent">置いておく</span> 場所。</span>
-        <span class="lang-en">A place to <span class="accent">leave</span> things,<br>still unfinished.</span>
-      </h1>
-      <p class="hero-sub">
-        <span class="lang-ja">アルゴリズムも、ランキングも、いいね数もない。 静かな対話のための小さな中庭です。</span>
-        <span class="lang-en">No algorithms, no rankings, no like counts. A small courtyard for quiet exchange.</span>
-      </p>
-      <div class="hero-cta">
-        <a class="btn btn-primary" href="/"><span class="lang-ja">Atelier を開く →</span><span class="lang-en">open Atelier →</span></a>
-        <a class="btn btn-soft" href="#section-01"><span class="lang-ja">読む ↓</span><span class="lang-en">read ↓</span></a>
-      </div>
-    </div>
+    <span class="hero-eyebrow">
+      <span class="lang-ja">誰でも参加できます</span><span class="lang-en">open to all</span>
+    </span>
+    <h1 class="hero-title">
+      <span class="lang-ja">未完成のまま、<br>そっと <span class="accent">置いておく</span> 場所。</span>
+      <span class="lang-en">A place to <span class="accent">leave</span> things,<br>still unfinished.</span>
+    </h1>
+    <p class="hero-sub">
+      <span class="lang-ja">アルゴリズムも、ランキングも、いいね数もない。<br>静かな対話のための小さな中庭です。</span>
+      <span class="lang-en">No algorithms, no rankings, no like counts. A small courtyard for quiet exchange.</span>
+    </p>
     <div class="hero-art" data-art-slot="hero">
       <img src="img/flower.png" alt="" loading="eager" decoding="async">
+    </div>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="/"><span class="lang-ja">Atelier を開く →</span><span class="lang-en">open Atelier →</span></a>
+      <a class="btn btn-soft" href="#section-01"><span class="lang-ja">読む ↓</span><span class="lang-en">read ↓</span></a>
     </div>
   </div>
 </section>
@@ -726,7 +725,7 @@ footer.foot {
   <div class="block-inner">
     <span class="block-num">01 — <span class="lang-ja">なぜつくったのか</span><span class="lang-en">why this exists</span></span>
     <h2 class="block-head">
-      <span class="lang-ja">完成と拡散の <span class="pill">外</span> で、もっと静かに考える場所が要った。</span>
+      <span class="lang-ja">完成と拡散の <span class="pill">外</span> で、<br>もっと静かに考える場所が要った。</span>
       <span class="lang-en">A quieter spot, <span class="pill">outside</span> "finished" and "shared."</span>
     </h2>
     <div class="block-body">
@@ -817,8 +816,8 @@ footer.foot {
 <!-- ──────── STAMP 1 ──────── -->
 <div class="stamp">
   <p class="stamp-quote">
-    <span class="lang-ja">速さの外側にある、<br>静かな積み重ねを支えるための器。</span>
-    <span class="lang-en">A vessel for the quiet accumulation<br>that lives outside of speed.</span>
+    <span class="lang-ja">速さの外側にある、静かな積み重ねを支えるための器。</span>
+    <span class="lang-en">A vessel for the quiet accumulation that lives outside of speed.</span>
   </p>
   <p class="stamp-mark">— atelier philosophy</p>
 </div>
@@ -850,7 +849,7 @@ footer.foot {
       </li>
       <li>
         <span class="p-mark is-yes">— yes</span>
-        <span class="p-key">invite-only <small><span class="lang-ja">数より空気。慎重に、ゆっくり広げる</span><span class="lang-en">atmosphere over scale, careful and slow</span></small></span>
+        <span class="p-key">open <small><span class="lang-ja">誰でも、無料で。文化の密度は緩めない</span><span class="lang-en">free and open — the cultural density stays</span></small></span>
       </li>
     </ul>
   </div>
@@ -887,8 +886,8 @@ footer.foot {
 <!-- ──────── STAMP 2 ──────── -->
 <div class="stamp">
   <p class="stamp-quote">
-    <span class="lang-ja">余白は、<br>空白ではなく余韻のためにある。</span>
-    <span class="lang-en">White space exists<br>not for emptiness — but for resonance.</span>
+    <span class="lang-ja">余白は、空白ではなく余韻のためにある。</span>
+    <span class="lang-en">White space exists not for emptiness — but for resonance.</span>
   </p>
   <p class="stamp-mark">— biwako silence</p>
 </div>
@@ -914,13 +913,16 @@ footer.foot {
 <section class="block is-alt" id="section-06">
   <div class="block-inner">
     <span class="block-num">06 — <span class="lang-ja">新タブを、中庭に</span><span class="lang-en">a new-tab courtyard</span></span>
+    <span style="display:inline-block;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:10px;letter-spacing:0.14em;padding:4px 12px;border-radius:999px;margin-left:8px;vertical-align:middle;">Chrome 拡張</span>
     <h2 class="block-head">
       <span class="lang-ja">Ateli.er Player —<br>Chrome 拡張で、中庭を持ち歩く。</span>
       <span class="lang-en">Ateli.er Player —<br>a Chrome extension that carries the courtyard with you.</span>
     </h2>
-    <!-- preview mock — visual mini-player representation
-         (replace inner with a real screenshot when one exists) -->
-    <div style="max-width: 560px; margin: 32px auto 0;">
+    <div style="text-align:center; margin:32px 0 8px;">
+      <img src="img/player-logo.png" alt="Ateli.er Player" style="width:140px;height:140px;object-fit:contain;">
+    </div>
+    <!-- preview mock -->
+    <div style="max-width: 480px; margin: 24px auto 0;">
       <div style="position: relative; aspect-ratio: 16/10; background: var(--paper); border-radius: 14px; box-shadow: 0 6px 28px rgba(22,0,162,0.10); overflow: hidden; border: 1px solid var(--line-soft); display: flex; flex-direction: column;">
         <!-- top-left title (np-top mock) -->
         <div style="position: absolute; left: 16px; top: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: var(--ink); text-transform: uppercase; line-height: 1.5;">
@@ -966,16 +968,40 @@ footer.foot {
       <li><span class="lang-ja">ツールバーから、移動できる小窓モード</span><span class="lang-en">A floating window from the toolbar — drag it anywhere.</span></li>
       <li><span class="lang-ja">音だけ / 画像だけのモードも切り替え可能</span><span class="lang-en">Audio-only or visual-only modes, switchable.</span></li>
     </ul>
-    <div style="margin-top: 36px; display: flex; flex-direction: column; gap: 14px; align-items: flex-start;">
-      <a class="btn btn-soft" href="https://atelistudio.com/player.html" target="_blank" rel="noopener">
+    <div style="margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <a class="btn btn-primary" href="https://atelistudio.com/player.html" target="_blank" rel="noopener">
         <span class="lang-ja">ブラウザ版を試す →</span><span class="lang-en">try the browser version →</span>
       </a>
       <a class="btn btn-soft" href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" target="_blank" rel="noopener" data-cws-link>
         <span class="lang-ja">Chrome Web Store で追加 →</span><span class="lang-en">add from the Chrome Web Store →</span>
       </a>
-      <p class="lang-ja" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 4px;">2026-05-16 公開開始。Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</p>
-      <p class="lang-en" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 4px;">Live since 2026-05-16. Works on Chrome, Edge, Brave and other Chromium browsers.</p>
     </div>
+    <p class="lang-ja" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">2026-05-16 公開開始。Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</p>
+    <p class="lang-en" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">Live since 2026-05-16. Works on Chrome, Edge, Brave and other Chromium browsers.</p>
+  </div>
+</section>
+
+<!-- ──────── 07 — Ateli.er Clip ──────── -->
+<section class="block" id="section-07">
+  <div class="block-inner">
+    <span class="block-num">07 — <span class="lang-ja">ウェブを、中庭へ</span><span class="lang-en">from the web to the courtyard</span></span>
+    <span style="display:inline-block;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:10px;letter-spacing:0.14em;padding:4px 12px;border-radius:999px;margin-left:8px;vertical-align:middle;">Chrome 拡張</span>
+    <h2 class="block-head">
+      <span class="lang-ja">Ateli.er Clip —<br>見つけたものを、そのまま置く。</span>
+      <span class="lang-en">Ateli.er Clip —<br>clip what you find, right into the courtyard.</span>
+    </h2>
+    <div style="text-align:center; margin:32px 0 24px;">
+      <img src="img/clip-logo.png" alt="Ateli.er Clip" style="width:140px;height:140px;object-fit:contain;border-radius:28px;">
+    </div>
+    <div class="block-body">
+      <p class="lang-ja">ウェブで見つけた記事、Dropbox の音源、Google Drive の画像。ブラウザのツールバーから一クリックで、今開いているページの OGP 情報を取得し Atelier のチャンネルに送ります。</p>
+      <p class="lang-en">An article you found, an audio file on Dropbox, an image on Google Drive. One click from the toolbar grabs the OGP info of the current page and sends it straight into your Atelier channel.</p>
+    </div>
+    <ul class="audience" style="margin-top:20px;">
+      <li><span class="lang-ja">URL・画像・音源を自動判別して Atelier に送る</span><span class="lang-en">Auto-detects URL, image, or audio and routes it to Atelier.</span></li>
+      <li><span class="lang-ja">Dropbox / Google Drive リンクにも対応</span><span class="lang-en">Works with Dropbox and Google Drive links too.</span></li>
+      <li><span class="lang-ja">収集したリンクをブラウザ内にアーカイブ</span><span class="lang-en">Archives collected links right in your browser.</span></li>
+    </ul>
   </div>
 </section>
 
@@ -983,17 +1009,14 @@ footer.foot {
 <div class="final">
   <span class="final-eyebrow">— join</span>
   <h3 class="final-title">
-    <span class="lang-ja">静かな器に、<br>参加しませんか。</span>
-    <span class="lang-en">Will you join<br>this quiet vessel?</span>
+    <span class="lang-ja">静かな器に、参加しませんか。</span>
+    <span class="lang-en">Will you join this quiet vessel?</span>
   </h3>
   <p class="final-sub">
-    <span class="lang-ja">招待制で運営しています。コードがあれば、どなたでも。<br>ない方は、運営者に直接お問い合わせください。</span>
-    <span class="lang-en">We're invite-only. With a code, anyone is welcome.<br>Without one, please reach out to the operator.</span>
+    <span class="lang-ja">無料で、誰でも参加できます。<br>サービスを開いて、アカウントを作るだけ。</span>
+    <span class="lang-en">Free and open to everyone.<br>Just open the service and create an account.</span>
   </p>
   <a class="btn btn-invert" href="/"><span class="lang-ja">サービスを開く →</span><span class="lang-en">open the service →</span></a>
-  <div class="final-art" data-art-slot="final">
-    <img src="img/bird.png" alt="" loading="lazy" decoding="async">
-  </div>
 </div>
 
 <!-- ──────── FOOTER ──────── -->
