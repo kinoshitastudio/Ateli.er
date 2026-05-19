@@ -14669,6 +14669,54 @@
   ['touchstart','click','scroll'].forEach(ev => {
     window.addEventListener(ev, ensureMarqueesPlaying, { once: true, passive: true });
   });
+
+  // ── OGP Collector integration ─────────────────────────────────────────────
+  // ?add=url&url=...&title=...&source=...&description=...&channel=...
+  // Opens the Upload pane pre-filled so the user can review and save.
+  (function handleOGPImport() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('add') !== 'url' || !p.get('url')) return;
+
+    // Clean params from URL immediately
+    history.replaceState(null, '', location.pathname + location.hash);
+
+    const fill = () => {
+      // Open modal
+      if (typeof openModal === 'function') openModal('pieces');
+
+      // Switch to Upload pane
+      const uploadTab = document.querySelector('.modal-tabs .tab[data-pane="atelier"]');
+      if (uploadTab) uploadTab.click();
+
+      // Switch to url kind tab
+      const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
+      if (urlTab) urlTab.click();
+
+      // Fill fields
+      const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+      set('uUrl',         p.get('url'));
+      set('uTitleOnly',   p.get('title'));
+      set('uSource',      p.get('source'));
+      set('uDescription', p.get('description'));
+
+      // Select channel
+      const ch = p.get('channel');
+      if (ch) {
+        const sel = document.getElementById('bChannel');
+        if (sel) {
+          const opt = Array.from(sel.options).find(o => o.value === ch || o.text === ch);
+          if (opt) sel.value = opt.value;
+        }
+      }
+
+      // Scroll form into view
+      const form = document.getElementById('blockForm');
+      if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    // Small delay to let the modal/pane JS initialize
+    setTimeout(fill, 400);
+  })();
 </script>
 
 <!-- Image zoom modal -->
