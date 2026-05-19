@@ -14689,11 +14689,15 @@
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
 
       if (kind === 'audio') {
-        // Switch to audio tab and fill bAudioUrl
         const audioTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="audio"]');
         if (audioTab) audioTab.click();
         set('bAudioUrl', p.get('url'));
         set('bTitle',    p.get('title'));
+      } else if (kind === 'image') {
+        const imageTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="image"]');
+        if (imageTab) imageTab.click();
+        set('iUrl',    p.get('url'));
+        try { set('iSource', p.get('source') || new URL(p.get('url')).hostname.replace(/^www\./, '')); } catch(e) {}
       } else {
         // Switch to url kind tab
         const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
