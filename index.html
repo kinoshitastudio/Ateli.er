@@ -14680,28 +14680,38 @@
     // Clean params from URL immediately
     history.replaceState(null, '', location.pathname + location.hash);
 
+    const kind = p.get('kind'); // 'audio' or null → url
+
     const fill = () => {
       // Open Upload pane directly
       if (typeof openModal === 'function') openModal('atelier');
 
-      // Switch to url kind tab
-      const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
-      if (urlTab) urlTab.click();
-
-      // Fill fields
       const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-      set('uUrl',         p.get('url'));
-      set('uTitleOnly',   p.get('title'));
-      set('uSource',      p.get('source'));
-      set('uDescription', p.get('description'));
 
-      // Select channel
-      const ch = p.get('channel');
-      if (ch) {
-        const sel = document.getElementById('bChannel');
-        if (sel) {
-          const opt = Array.from(sel.options).find(o => o.value === ch || o.text === ch);
-          if (opt) sel.value = opt.value;
+      if (kind === 'audio') {
+        // Switch to audio tab and fill bAudioUrl
+        const audioTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="audio"]');
+        if (audioTab) audioTab.click();
+        set('bAudioUrl', p.get('url'));
+        set('bTitle',    p.get('title'));
+      } else {
+        // Switch to url kind tab
+        const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
+        if (urlTab) urlTab.click();
+
+        set('uUrl',         p.get('url'));
+        set('uTitleOnly',   p.get('title'));
+        set('uSource',      p.get('source'));
+        set('uDescription', p.get('description'));
+
+        // Select channel
+        const ch = p.get('channel');
+        if (ch) {
+          const sel = document.getElementById('bChannel');
+          if (sel) {
+            const opt = Array.from(sel.options).find(o => o.value === ch || o.text === ch);
+            if (opt) sel.value = opt.value;
+          }
         }
       }
 
