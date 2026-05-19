@@ -14691,13 +14691,18 @@
       if (kind === 'audio') {
         const audioTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="audio"]');
         if (audioTab) audioTab.click();
-        set('bAudioUrl', p.get('url'));
-        set('bTitle',    p.get('title'));
+        // Wait for tab switch to complete before filling fields
+        setTimeout(() => {
+          set('bAudioUrl', p.get('url'));
+          set('bTitle',    p.get('title'));
+        }, 80);
       } else if (kind === 'image') {
         const imageTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="image"]');
         if (imageTab) imageTab.click();
-        set('iUrl',    p.get('url'));
-        try { set('iSource', p.get('source') || new URL(p.get('url')).hostname.replace(/^www\./, '')); } catch(e) {}
+        setTimeout(() => {
+          set('iUrl',    p.get('url'));
+          try { set('iSource', p.get('source') || new URL(p.get('url')).hostname.replace(/^www\./, '')); } catch(e) {}
+        }, 80);
       } else {
         // Switch to url kind tab
         const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
