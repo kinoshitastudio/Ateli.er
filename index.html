@@ -9871,6 +9871,8 @@
       // Fallback: cross-user blocks may land in cache without ogImage if the
       // spread missed it; _explorePublicCache always holds the raw Supabase row.
       const _ogImage = b.ogImage || (typeof _explorePublicCache !== 'undefined' && _explorePublicCache[b.id]?.payload?.ogImage) || '';
+      // [DEBUG] — remove after diagnosis
+      try { if (!_ogImage) console.warn('[feedThumb url]', b.id, { bOgImage: b.ogImage, cacheEntry: typeof _explorePublicCache !== 'undefined' ? _explorePublicCache[b.id]?.payload?.ogImage : 'NO_CACHE' }); } catch(_) {}
       if (_ogImage) {
         return `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper-2);">
           <img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">
