@@ -12600,9 +12600,12 @@
               let domain = '';
               try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
               if (!domain) domain = 'link';
+              const _urlThumb = p.ogImage
+                ? `<img src="${escapeHtml(p.ogImage)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+                : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
               return `<li data-kind="url" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb"><span class="ix-thumb-url">${escapeHtml(domain)}</span></span>
+                <span class="ix-thumb">${_urlThumb}</span>
                 <span class="ix-mid">
                   <span class="ix-title">${_connBadge}${escapeHtml(p.title || p.url || '(url)')}</span>
                   <span class="ix-phrase">— ${escapeHtml(p.source || '')} —</span>
@@ -14711,6 +14714,24 @@
 
     const kind = p.get('kind'); // 'audio' or null → url
 
+    // Pre-register Clip-created channels into atelier_user_channels_v1 NOW,
+    // before auth/init runs — so applyUserChannels() and populateChannelSelect()
+    // automatically include them regardless of timing.
+    if (!kind) {
+      const _ch = p.get('channel'), _cl = p.get('channelLabel');
+      if (_ch && _cl) {
+        try {
+          const _key = 'atelier_user_channels_v1';
+          const _list = JSON.parse(localStorage.getItem(_key) || '[]');
+          if (!_list.some(x => x.id === _ch)) {
+            const _now = Date.now();
+            _list.push({ id: _ch, label: _cl.trim(), mainPhrase: '', lang: 'mixed', meta: '', isPublic: true, userCreated: true, createdAt: _now, updatedAt: _now });
+            localStorage.setItem(_key, JSON.stringify(_list));
+          }
+        } catch(_) {}
+      }
+    }
+
     const fill = () => {
       // Open Upload pane directly
       if (typeof openModal === 'function') openModal('atelier');
@@ -14743,12 +14764,25 @@
         set('uDescription', p.get('description'));
         set('uOgImage',     p.get('image'));
 
-        // Select channel
+        // Select channel — create it on-the-fly if sent from Clip and not yet in Atelier
         const ch = p.get('channel');
+        const clabel = p.get('channelLabel');
         if (ch) {
           const sel = document.getElementById('bChannel');
           if (sel) {
-            const opt = Array.from(sel.options).find(o => o.value === ch || o.text === ch);
+            let opt = Array.from(sel.options).find(o => o.value === ch);
+            if (!opt && clabel) {
+              // Channel came from Clip's "new channel" form — register it in Atelier
+              const now = Date.now();
+              const newCh = { id: ch, label: clabel.trim(), mainPhrase: '', lang: 'mixed', meta: '', isPublic: true, userCreated: true, createdAt: now, updatedAt: now };
+              if (!CHANNELS.some(x => x.id === ch)) CHANNELS.push(newCh);
+              if (typeof loadUserChannels === 'function' && typeof saveUserChannels === 'function') {
+                const ucList = loadUserChannels();
+                if (!ucList.some(x => x.id === ch)) { ucList.push(newCh); saveUserChannels(ucList); }
+              }
+              if (typeof populateChannelSelect === 'function') populateChannelSelect();
+              opt = Array.from(sel.options).find(o => o.value === ch);
+            }
             if (opt) sel.value = opt.value;
           }
         }
