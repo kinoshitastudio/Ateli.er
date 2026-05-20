@@ -11846,6 +11846,10 @@
           if (t.owner_id && currentUser?.id && t.owner_id === currentUser.id) {
             const own = typeof _resolveBlockOrTrack === 'function' ? _resolveBlockOrTrack(t.id) : null;
             if (own && !own.external) { openPieceModal(own.obj); return; }
+            // DB channel_label が null の場合、ローカルから補完する
+            if (!ext._externalChannelLabel && ext._externalHostChannelId) {
+              ext._externalChannelLabel = (typeof _resolveChannelLabel === 'function' ? _resolveChannelLabel(ext._externalHostChannelId) : null) || '';
+            }
           }
           openPieceModal(ext);
         });
