@@ -9870,7 +9870,10 @@
       const source = b.source && b.source !== domain ? b.source : '';
       // Fallback: cross-user blocks may land in cache without ogImage if the
       // spread missed it; _explorePublicCache always holds the raw Supabase row.
-      const _ogImage = b.ogImage || (typeof _explorePublicCache !== 'undefined' && _explorePublicCache[b.id]?.payload?.ogImage) || '';
+      const _cachePayload = (typeof _explorePublicCache !== 'undefined') ? _explorePublicCache[b.id]?.payload : undefined;
+      const _cacheOg = typeof _cachePayload === 'string' ? JSON.parse(_cachePayload).ogImage : _cachePayload?.ogImage;
+      const _ogImage = b.ogImage || _cacheOg || '';
+      console.log('[feed-url]', b.id, {bOg: b.ogImage, cacheOg: _cacheOg, cachePayloadType: typeof _cachePayload, final: _ogImage});
       if (_ogImage) {
         return `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper-2);">
           <img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">
@@ -14041,7 +14044,6 @@
         .filter(r => r && r.owner_id !== currentUser?.id)
         .map(r => {
           const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {});
-          if (r.kind === 'url') console.log('[og]', r.id, typeof r.payload, payload.ogImage ? payload.ogImage.slice(0,40) : '(EMPTY)');
           return {
             ...payload,
             id: r.id,
