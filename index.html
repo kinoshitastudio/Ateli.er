@@ -4821,7 +4821,7 @@
           <span class="pane-meta" id="paneCourtyardMeta">— audio from the courtyard</span>
         </div>
         <p style="font-family: var(--mono); font-size: 10px; color: var(--gray); letter-spacing: 0.06em; line-height: 1.85; margin-bottom: 20px;">
-          未完成のまま、そっと置いておく音たち。 all public audio · newest on top.<br>
+          <span data-i18n="courtyardIntro">sounds set down quietly, unfinished. all public audio · newest on top.</span><br>
           <a href="/player.html" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ atelier player</a>
           &ensp;<a href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line-soft);">↗ chrome extension</a>
         </p>
@@ -5304,6 +5304,7 @@
       toastSaved:             '✓ saved',
       toastWelcome:           'welcome,',
       audioBrokenBanner:      '⚠ source error — the audio link could not be loaded. the sharing settings on Dropbox / Drive may have changed, or the file may have been deleted. the owner can update the link from edit.',
+      courtyardIntro:         'sounds set down quietly, unfinished. all public audio · newest on top.',
     },
     ja: {
       brandSub: '— atelier × er.  場所を慈しむ者。',
@@ -5530,6 +5531,7 @@
       toastSaved:             '✓ 保存しました',
       toastWelcome:           'ようこそ、',
       audioBrokenBanner:      '⚠ source error — 音源リンクが読み込めません。Dropbox / Drive の共有設定が変わったか、ファイルが削除された可能性があります。投稿者は edit からリンクを更新してください。',
+      courtyardIntro:         '未完成のまま、そっと置いておく音たち。 all public audio · newest on top.',
     },
   };
   const LANG_KEY = 'atelier_lang_v1';
@@ -5718,6 +5720,11 @@
     // follows the active language (chips themselves are language-neutral
     // but the helper text is t('tagSuggestLabel')).
     if (typeof refreshUploadTagSuggest === 'function') refreshUploadTagSuggest();
+    // Generic data-i18n handler — any element with data-i18n="key" gets textContent updated.
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const val = t(el.dataset.i18n);
+      if (val && val !== el.dataset.i18n) el.textContent = val;
+    });
   }
 
   // ──────────────── CUSTOM CONFIRM (DOM-based, always shows) ────────────────
