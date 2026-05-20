@@ -8730,13 +8730,21 @@
       // Channel instead of bouncing back to the visitor portfolio.
       const inVisitorCtx = document.querySelector('#modal .modal-tabs .tab.is-active')?.dataset.pane === 'explore';
       if (isCrossUser && typeof openUserPortfolio === 'function') {
-        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
-          closePieceModal();
+        // Keep #pieceModal open — just replace its content in-place.
+        // Previously called closePieceModal() here, which triggered
+        // history.back() when navStack had > 1 entry (e.g. ['modal','pieceModal']).
+        // On iOS the popstate from that back() fired after setTimeout(0) cleared
+        // _navIgnorePopstate, so the freshly-re-opened portfolio was immediately
+        // closed again — visible as "the browser closes" to visitors.
+        if ($('#pieceModal').classList.contains('is-open')) {
+          currentBlockModalId = null; currentBlockModalKind = null;
+          try { history.replaceState({ atelierNav: 'pieceModal' }, ''); } catch (_) {}
         }
         openUserPortfolio({ id: targetUid, handle: targetHandle });
       } else if (inVisitorCtx && typeof openUserPortfolio === 'function' && currentUser?.id) {
-        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
-          closePieceModal();
+        if ($('#pieceModal').classList.contains('is-open')) {
+          currentBlockModalId = null; currentBlockModalKind = null;
+          try { history.replaceState({ atelierNav: 'pieceModal' }, ''); } catch (_) {}
         }
         openUserPortfolio({ id: currentUser.id, handle: targetHandle || _currentHandle() });
       } else {
@@ -8771,12 +8779,11 @@
       const targetClabel = bc.dataset.clabel;
       const isCrossUser = targetUid && (typeof currentUser === 'undefined' || targetUid !== currentUser?.id);
       if (isCrossUser && typeof openUserChannel === 'function') {
-        if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
-          closePieceModal();
+        if ($('#pieceModal').classList.contains('is-open')) {
+          currentBlockModalId = null; currentBlockModalKind = null;
+          try { history.replaceState({ atelierNav: 'pieceModal' }, ''); } catch (_) {}
         }
-        setTimeout(() => {
-          openUserChannel({ ownerId: targetUid, handle: targetHandle, channelId: cid, channelLabel: targetClabel });
-        }, 30);
+        openUserChannel({ ownerId: targetUid, handle: targetHandle, channelId: cid, channelLabel: targetClabel });
         return;
       }
       if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
@@ -13146,10 +13153,11 @@
         if (cross) obj = cross;
       }
     }
-    closePieceModal();
     if (obj && obj._external && obj._ownerId) {
       const cid = obj.channelId || obj._externalHostChannelId || obj._hostChannelId;
       if (cid && typeof openUserChannel === 'function') {
+        currentBlockModalId = null; currentBlockModalKind = null;
+        try { history.replaceState({ atelierNav: 'pieceModal' }, ''); } catch (_) {}
         openUserChannel({
           ownerId: obj._ownerId,
           handle: obj._ownerHandle || '',
@@ -13159,6 +13167,7 @@
       }
       return;
     }
+    closePieceModal();
     const cid = obj?.channelId;
     if (cid) {
       // Own block: drill-in to the viewer's own channel detail.
