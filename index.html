@@ -7505,10 +7505,13 @@
             let domain = '';
             try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
             if (!domain) domain = 'link';
+            const _ownUrlThumb = b.ogImage
+              ? `<img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+              : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
             return `<li class="${ownClass}" data-kind="url" data-bid="${escapeHtml(b.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb"><span class="ix-thumb-url">${escapeHtml(domain)}</span></span>
+              <span class="ix-thumb">${_ownUrlThumb}</span>
               <span class="ix-mid">
                 <span class="ix-title">${connectBadge}${escapeHtml(b.title || b.url || '(url)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.source || '')} —</span>
