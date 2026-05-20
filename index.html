@@ -14041,6 +14041,7 @@
         .filter(r => r && r.owner_id !== currentUser?.id)
         .map(r => {
           const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {});
+          if (r.kind === 'url') console.log('[og]', r.id, typeof r.payload, payload.ogImage ? payload.ogImage.slice(0,40) : '(EMPTY)');
           return {
             ...payload,
             id: r.id,
