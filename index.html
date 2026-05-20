@@ -3394,10 +3394,25 @@
     margin-left: auto;
   }
 
+  .brand-manual-link {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 8.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gray);
+    text-decoration: none;
+    border-bottom: 1px solid var(--gray-2);
+    line-height: 1;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .brand-manual-link:hover { color: var(--ink); border-color: var(--ink); }
+
   /* ──────────────── RESPONSIVE ──────────────── */
   @media (max-width: 720px) {
     .topbar { padding: 12px 16px; gap: 10px; }
     .brand-sub { display: none; }
+    .brand-manual-link { display: none; }
     .triggers { gap: 10px 12px; font-size: 9.5px; }
     .triggers .trig { font-size: 9.5px; letter-spacing: 0.08em; }
     /* Explore lives in the modal tab row on mobile (the topbar nav is already
@@ -4292,8 +4307,8 @@
       <span>— sign up</span>
       <button type="button" class="auth-form-cancel" data-act="auth-close">— close</button>
     </div>
-    <h2 class="auth-modal-title">中庭に入る</h2>
-    <p class="auth-modal-sub">email を入力してください。マジックリンクで入室確認を行います。</p>
+    <h2 class="auth-modal-title" data-i18n="authSignupTitle">join the courtyard</h2>
+    <p class="auth-modal-sub" data-i18n="authSignupSub">enter your email to receive a magic link.</p>
     <form class="auth-form" id="signupForm" autocomplete="off">
       <div class="auth-form-row">
         <label for="suEmail" class="is-required">email</label>
@@ -4301,14 +4316,12 @@
       </div>
       <div class="auth-form-row">
         <label for="suHandle" class="is-required">handle</label>
-        <input type="text" id="suHandle" placeholder="あなたの呼び名（英数 / 日本語可）" autocomplete="off" required>
-        <span class="auth-form-hint">Ateli.er 内での表示名。後から変更可能。</span>
+        <input type="text" id="suHandle" data-i18n-ph="authHandlePh" placeholder="your handle (letters / numbers)" autocomplete="off" required>
+        <span class="auth-form-hint" data-i18n="authHandleHint">your display name in Ateli.er. can be changed later.</span>
       </div>
       <label class="auth-form-tos">
         <input type="checkbox" id="suTos" required>
-        <span>
-          <a href="/terms.html" target="_blank" rel="noopener">利用規約</a>・<a href="/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a>・<a href="/community.html" target="_blank" rel="noopener">コミュニティガイドライン</a>を読み、同意します。
-        </span>
+        <span id="suTosText"></span>
       </label>
       <div class="auth-form-status" id="signupStatus"></div>
       <div class="auth-form-actions">
@@ -4326,8 +4339,8 @@
       <span>— log in</span>
       <button type="button" class="auth-form-cancel" data-act="auth-close">— close</button>
     </div>
-    <h2 class="auth-modal-title">おかえり。</h2>
-    <p class="auth-modal-sub">email を入力すると、マジックリンクが届きます。リンクから入室してください。</p>
+    <h2 class="auth-modal-title" data-i18n="authLoginTitle">welcome back.</h2>
+    <p class="auth-modal-sub" data-i18n="authLoginSub">enter your email — a magic link will arrive. use it to sign in.</p>
     <form class="auth-form" id="loginForm" autocomplete="off">
       <div class="auth-form-row">
         <label for="liEmail" class="is-required">email</label>
@@ -4348,7 +4361,10 @@
 <!-- TOPBAR -->
 <header class="topbar">
   <div class="brand-block" style="display:inline-flex; align-items:center; gap:18px; flex-wrap:wrap;">
-    <div class="brand" id="brandTrigger">Ateli<span style="color:var(--ink);">.</span>er</div>
+    <div style="display:flex; flex-direction:column; gap:3px;">
+      <div class="brand" id="brandTrigger">Ateli<span style="color:var(--ink);">.</span>er</div>
+      <a href="/howto.html" class="brand-manual-link">manual</a>
+    </div>
     <button id="searchTrigger" aria-label="search" style="display:inline-flex; align-items:center; gap:8px; line-height:1; padding:2px 0; background:none; border:none; cursor:pointer; font-family:var(--mono); font-size:9.5px; color:var(--gray); letter-spacing:0.16em; text-transform:uppercase;">
       <svg width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="0.9" style="vertical-align:-1px; flex-shrink:0;"><circle cx="4.5" cy="4.5" r="3.2"/><line x1="6.8" y1="6.8" x2="9.7" y2="9.7" stroke-linecap="round"/></svg>
       <span id="searchTriggerLabel" style="border-bottom:1px solid currentColor; padding-bottom:1px;">search Atelier</span>
@@ -4389,44 +4405,44 @@
       <span>— settings</span>
       <button type="button" class="settings-modal-close-btn" data-act="settings-close">— close</button>
     </div>
-    <h2 class="settings-modal-title">アカウント</h2>
+    <h2 class="settings-modal-title" data-i18n="settingsTitle">account</h2>
 
     <!-- Avatar (URL-based, like other Atelier image fields) -->
     <div class="settings-row settings-avatar-row">
       <label class="settings-label" for="settingsAvatar">avatar</label>
       <div class="settings-avatar-block">
         <span class="settings-avatar-preview" id="settingsAvatarPreview" aria-hidden="true"></span>
-        <input type="url" id="settingsAvatar" class="settings-input" placeholder="画像 URL(Drive / Dropbox / 直リンク)">
+        <input type="url" id="settingsAvatar" class="settings-input" data-i18n-ph="settingsAvatarPh" placeholder="image URL (Drive / Dropbox / direct link)">
       </div>
-      <span class="settings-hint">URL を貼ると丸いアバターに自動クロップされます(縦横どんな画像でも OK)。<br>※ Google Drive の場合は <strong>「リンクを知っている全員が閲覧可」</strong>に共有設定してください。プライベート設定だと画像が表示されません。</span>
+      <span class="settings-hint" data-i18n="settingsAvatarHint">paste any image URL (Drive / Dropbox / direct link). it will be auto-cropped to a circle. for Google Drive: set sharing to "anyone with the link can view".</span>
     </div>
 
     <!-- Handle -->
     <div class="settings-row">
       <label class="settings-label is-required" for="settingsHandle">handle</label>
-      <input type="text" id="settingsHandle" class="settings-input" placeholder="あなたの呼び名(英数 / 日本語可)">
-      <span class="settings-hint">Ateli.er 内での表示名。後から変更可能。</span>
+      <input type="text" id="settingsHandle" class="settings-input" data-i18n-ph="authHandlePh" placeholder="your handle (letters / numbers)">
+      <span class="settings-hint" data-i18n="authHandleHint">your display name in Ateli.er. can be changed later.</span>
     </div>
 
     <!-- Email (read-only) -->
     <div class="settings-row">
       <label class="settings-label">email</label>
       <span id="settingsEmail" class="settings-readonly"></span>
-      <span class="settings-hint">マジックリンクの送信先。現状は変更不可(backend での確認メール往復が必要なため)。</span>
+      <span class="settings-hint" data-i18n="settingsEmailHint">your magic link address. cannot be changed after registration.</span>
     </div>
 
     <!-- About (Phase E-prep) -->
     <div class="settings-row">
       <label class="settings-label" for="settingsAbout">about</label>
-      <textarea id="settingsAbout" class="settings-input" rows="3" placeholder="自己紹介・近況・関心など(任意)" style="resize:vertical; min-height:60px;"></textarea>
-      <span class="settings-hint">portfolio のページに表示されます(他ユーザーからも見える)。空欄でも可。</span>
+      <textarea id="settingsAbout" class="settings-input" rows="3" data-i18n-ph="settingsAboutPh" placeholder="bio, current focus, interests (optional)" style="resize:vertical; min-height:60px;"></textarea>
+      <span class="settings-hint" data-i18n="settingsAboutHint">shown on your portfolio page (visible to other users). can be left empty.</span>
     </div>
 
     <!-- SNS / personal URL (Phase E-prep) -->
     <div class="settings-row">
       <label class="settings-label" for="settingsSns">sns / link</label>
-      <input type="url" id="settingsSns" class="settings-input" placeholder="https://...(twitter / instagram / 個人サイト等、URL 1 つ)">
-      <span class="settings-hint">portfolio に clickable link として表示。1 つだけ(優先 SNS / 自分のサイト等)。</span>
+      <input type="url" id="settingsSns" class="settings-input" data-i18n-ph="settingsSnsPh" placeholder="https://... (twitter / instagram / personal site — one URL)">
+      <span class="settings-hint" data-i18n="settingsSnsHint">shown as a clickable link on your portfolio. one link only.</span>
     </div>
     <div class="settings-status" id="settingsStatus"></div>
     <div class="settings-actions">
@@ -5305,6 +5321,24 @@
       toastWelcome:           'welcome,',
       audioBrokenBanner:      '⚠ source error — the audio link could not be loaded. the sharing settings on Dropbox / Drive may have changed, or the file may have been deleted. the owner can update the link from edit.',
       courtyardIntro:         'sounds set down quietly, unfinished. all public audio · newest on top.',
+      authSignupTitle:        'join the courtyard',
+      authSignupSub:          'enter your email to receive a magic link.',
+      authLoginTitle:         'welcome back.',
+      authLoginSub:           'enter your email — a magic link will arrive. use it to sign in.',
+      authHandlePh:           'your handle (letters / numbers)',
+      authHandleHint:         'your display name in Ateli.er. can be changed later.',
+      authTosTxt:             'I have read and agree to the',
+      authTosTerms:           'terms of service',
+      authTosPrivacy:         'privacy policy',
+      authTosCommunity:       'community guidelines',
+      settingsTitle:          'account',
+      settingsAvatarHint:     'paste any image URL (Drive / Dropbox / direct link). it will be auto-cropped to a circle. for Google Drive: set sharing to "anyone with the link can view".',
+      settingsEmailHint:      'your magic link address. cannot be changed after registration.',
+      settingsAboutPh:        'bio, current focus, interests (optional)',
+      settingsAboutHint:      'shown on your portfolio page (visible to other users). can be left empty.',
+      settingsSnsPh:          'https://... (twitter / instagram / personal site — one URL)',
+      settingsSnsHint:        'shown as a clickable link on your portfolio. one link only.',
+      settingsAvatarPh:       'image URL (Drive / Dropbox / direct link)',
     },
     ja: {
       brandSub: '— atelier × er.  場所を慈しむ者。',
@@ -5532,6 +5566,24 @@
       toastWelcome:           'ようこそ、',
       audioBrokenBanner:      '⚠ source error — 音源リンクが読み込めません。Dropbox / Drive の共有設定が変わったか、ファイルが削除された可能性があります。投稿者は edit からリンクを更新してください。',
       courtyardIntro:         '未完成のまま、そっと置いておく音たち。 all public audio · newest on top.',
+      authSignupTitle:        '中庭に入る',
+      authSignupSub:          'email を入力してください。マジックリンクで入室確認を行います。',
+      authLoginTitle:         'おかえり。',
+      authLoginSub:           'email を入力するとマジックリンクが届きます。リンクから入室してください。',
+      authHandlePh:           'あなたの呼び名（英数 / 日本語可）',
+      authHandleHint:         'Ateli.er 内での表示名。後から変更可能。',
+      authTosTxt:             'を読み、同意します。',
+      authTosTerms:           '利用規約',
+      authTosPrivacy:         'プライバシーポリシー',
+      authTosCommunity:       'コミュニティガイドライン',
+      settingsTitle:          'アカウント',
+      settingsAvatarHint:     'URL を貼ると丸いアバターに自動クロップされます。Google Drive の場合は「リンクを知っている全員が閲覧可」に共有設定してください。',
+      settingsEmailHint:      'マジックリンクの送信先。登録後は変更不可。',
+      settingsAboutPh:        '自己紹介・近況・関心など（任意）',
+      settingsAboutHint:      'portfolio のページに表示されます（他ユーザーからも見える）。空欄でも可。',
+      settingsSnsPh:          'https://...（twitter / instagram / 個人サイト等、URL 1 つ）',
+      settingsSnsHint:        'portfolio に clickable link として表示。1 つだけ。',
+      settingsAvatarPh:       '画像 URL（Drive / Dropbox / 直リンク）',
     },
   };
   const LANG_KEY = 'atelier_lang_v1';
@@ -5725,6 +5777,20 @@
       const val = t(el.dataset.i18n);
       if (val && val !== el.dataset.i18n) el.textContent = val;
     });
+    // data-i18n-ph — update placeholder attribute for inputs/textareas.
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      const val = t(el.dataset.i18nPh);
+      if (val && val !== el.dataset.i18nPh) el.placeholder = val;
+    });
+    // TOS checkbox text — rendered as HTML to preserve anchor links.
+    const suTosText = document.getElementById('suTosText');
+    if (suTosText) {
+      if (CURRENT_LANG === 'ja') {
+        suTosText.innerHTML = `<a href="/terms.html" target="_blank" rel="noopener">${t('authTosTerms')}</a>・<a href="/privacy.html" target="_blank" rel="noopener">${t('authTosPrivacy')}</a>・<a href="/community.html" target="_blank" rel="noopener">${t('authTosCommunity')}</a>${t('authTosTxt')}`;
+      } else {
+        suTosText.innerHTML = `${t('authTosTxt')} <a href="/terms.html" target="_blank" rel="noopener">${t('authTosTerms')}</a>, <a href="/privacy.html" target="_blank" rel="noopener">${t('authTosPrivacy')}</a>, and <a href="/community.html" target="_blank" rel="noopener">${t('authTosCommunity')}</a>.`;
+      }
+    }
   }
 
   // ──────────────── CUSTOM CONFIRM (DOM-based, always shows) ────────────────
@@ -9244,7 +9310,7 @@
         audioUrl: convertAudioUrl(b.audioUrl),
         sourceAudioUrl: b.audioUrl,
         texture: (b.texture && b.texture.length) ? b.texture.slice() : ['unreleased'],
-        process: (b.process && b.process.length) ? b.process.slice() : ['your atelier'],
+        process: (b.process && b.process.length) ? b.process.slice() : [],
         support: b.support || '',
         layers: [],
         ownLocal: true,
