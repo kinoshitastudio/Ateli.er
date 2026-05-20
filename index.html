@@ -14074,12 +14074,6 @@
       // a TOP-marquee deep link landed on an empty visitor channel detail.
       rows.forEach(r => { _explorePublicCache[r.id] = r; });
       _capExplorePublicCache();
-      // [DEBUG] log ogImage presence for URL blocks — remove after diagnosis
-      try {
-        const _urlDbg = crossUserBlocksCache.filter(b => b.kind === 'url');
-        console.log('[crossUser dbg] url blocks in cache:', _urlDbg.length,
-          _urlDbg.map(b => ({ id: b.id, ogImage: b.ogImage ? b.ogImage.slice(0,40) : '(EMPTY)' })));
-      } catch (_) {}
       // Re-render TOP and Feed with new data
       try { if (typeof renderMarquees === 'function') renderMarquees(); } catch (e) {}
       try { if (typeof renderFeed === 'function') renderFeed(); } catch (e) {}
