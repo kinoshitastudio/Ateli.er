@@ -7481,7 +7481,7 @@
           if (it.kind === 'text') {
             const b = it.block;
             const preview = (b.text || '').slice(0, 160);
-            const ixTitle = b.title || (preview + ((b.text || '').length > 160 ? '…' : ''));
+            const ixTitle = b.text ? (preview + ((b.text || '').length > 160 ? '…' : '')) : (b.title || '(text)');
             const thumbHtml = b.title
               ? escapeHtml(b.title)
               : escapeHtml((b.text || '').slice(0, 90)) + ((b.text || '').length > 90 ? '…' : '');
@@ -12582,7 +12582,7 @@
             }
             if (r.kind === 'text') {
               const preview = (p.text || '').slice(0, 160);
-              const ixTitle = p.title || (preview + ((p.text || '').length > 160 ? '…' : ''));
+              const ixTitle = p.text ? (preview + ((p.text || '').length > 160 ? '…' : '')) : (p.title || '(text)');
               const thumbHtml = p.title
                 ? escapeHtml(p.title)
                 : escapeHtml((p.text || '').slice(0, 90)) + ((p.text || '').length > 90 ? '…' : '');
