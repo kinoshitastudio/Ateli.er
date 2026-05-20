@@ -9873,7 +9873,7 @@
       const _cachePayload = (typeof _explorePublicCache !== 'undefined') ? _explorePublicCache[b.id]?.payload : undefined;
       const _cacheOg = typeof _cachePayload === 'string' ? JSON.parse(_cachePayload).ogImage : _cachePayload?.ogImage;
       const _ogImage = b.ogImage || _cacheOg || '';
-      console.log('[feed-url]', b.id, {bOg: b.ogImage, cacheOg: _cacheOg, cachePayloadType: typeof _cachePayload, final: _ogImage});
+      console.log('[feed-url]', b.id, '| bOg='+b.ogImage, '| cacheOg='+_cacheOg, '| payloadType='+typeof _cachePayload, '| inCache='+(b.id in (typeof _explorePublicCache!=='undefined'?_explorePublicCache:{})));
       if (_ogImage) {
         return `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper-2);">
           <img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">
