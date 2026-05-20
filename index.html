@@ -5285,6 +5285,22 @@
       supportArtist: '→ support',
       // misc
       now: 'now',
+      // toasts
+      toastAudioLoadErr:      'audio failed to load — check the URL',
+      toastChannelEmpty:      'no blocks in this channel',
+      toastImageLoadErr:      'image failed to load — check the link',
+      toastBlockDataMissing:  'block data not found',
+      toastChannelCreateFail: 'failed to create channel',
+      toastStorageFull:       'local storage full — some changes may not be saved',
+      toastConnectFail:       'connect failed',
+      toastUrlCopied:         'URL copied',
+      toastResidentNotFound:  'resident not found',
+      toastSessionExpiredSave:'session expired — please save again',
+      toastSessionExpired:    'session expired — please try again',
+      toastChannelNoName:     'channel has no name — it will appear as "(untitled channel)" in Explore',
+      toastMarkedRead:        'marked as read',
+      toastSaved:             '✓ saved',
+      toastWelcome:           'welcome,',
     },
     ja: {
       brandSub: '— atelier × er.  場所を慈しむ者。',
@@ -5493,6 +5509,22 @@
       silent: '— 沈黙。上の一節をクリック —',
       supportArtist: '→ 支援',
       now: '今',
+      // toasts
+      toastAudioLoadErr:      '音声を読み込めませんでした — URL を確認してください',
+      toastChannelEmpty:      'このチャンネルには block がありません',
+      toastImageLoadErr:      '画像 URL を読み込めませんでした — リンクを確認してください',
+      toastBlockDataMissing:  'block データが見つかりません',
+      toastChannelCreateFail: 'チャンネルを作成できませんでした',
+      toastStorageFull:       'ローカル保存容量不足 — 一部の変更が保存されません',
+      toastConnectFail:       'コネクトに失敗しました',
+      toastUrlCopied:         'URL をコピーしました',
+      toastResidentNotFound:  'その住民が見つかりませんでした',
+      toastSessionExpiredSave:'セッションが切れました — もう一度保存してください',
+      toastSessionExpired:    'セッションが切れました — もう一度操作してください',
+      toastChannelNoName:     'チャンネル名が未設定です — Explore では "(untitled channel)" として表示されます',
+      toastMarkedRead:        '既読にしました',
+      toastSaved:             '✓ 保存しました',
+      toastWelcome:           'ようこそ、',
     },
   };
   const LANG_KEY = 'atelier_lang_v1';
@@ -6440,7 +6472,7 @@
       try { renderYourBlocks(); } catch (e) {}
       try { renderFeed && renderFeed(); } catch (e) {}
       try { if (currentBlockModalId === track.id && typeof refreshCurrentBlockModal === 'function') refreshCurrentBlockModal(); } catch (e) {}
-      try { showToast('音声を読み込めませんでした — URL を確認してください'); } catch (e) {}
+      try { showToast(t('toastAudioLoadErr')); } catch (e) {}
       stopTrack();
     });
     el.addEventListener('ended', () => { if (audioEl === el) stopTrack(); });
@@ -8009,11 +8041,11 @@
             try { refreshCurrentBlockModal(); } catch (e) {}
           }
           const msg = promotedCount > 0
-            ? `${syncedCount} blocks を publish しました (${promotedCount} 個を draft → public)`
-            : `${syncedCount} blocks を再同期しました`;
+            ? (CURRENT_LANG === 'ja' ? `${syncedCount} blocks を publish しました (${promotedCount} 個を draft → public)` : `published ${syncedCount} blocks (${promotedCount} promoted to public)`)
+            : (CURRENT_LANG === 'ja' ? `${syncedCount} blocks を再同期しました` : `re-synced ${syncedCount} blocks`);
           showToast(msg);
         } else {
-          showToast('このチャンネルには block がありません');
+          showToast(t('toastChannelEmpty'));
         }
       });
     }
@@ -8436,7 +8468,7 @@
       // immediately if the URL they pasted doesn't return a valid image.
       if (newImageUrl) {
         _validateImageUrlAsync(convertImageUrl(newImageUrl)).then(ok => {
-          if (!ok) try { showToast('画像 URL を読み込めませんでした — リンクを確認してください'); } catch (e) {}
+          if (!ok) try { showToast(t('toastImageLoadErr')); } catch (e) {}
         });
       }
       const newSupport  = ($('#ef-support')?.value || '').trim();
@@ -8470,7 +8502,7 @@
       const convertedUrl = convertImageUrl(newImageUrl);
       if (convertedUrl) {
         _validateImageUrlAsync(convertedUrl).then(ok => {
-          if (!ok) try { showToast('画像 URL を読み込めませんでした — リンクを確認してください'); } catch (e) {}
+          if (!ok) try { showToast(t('toastImageLoadErr')); } catch (e) {}
         });
       }
       editBlock(id, {
@@ -8631,7 +8663,7 @@
         channelLabel: ext.snapshot.channelLabel || '',
       };
     }
-    if (!src) { showToast('block データが見つかりません'); return; }
+    if (!src) { showToast(t('toastBlockDataMissing')); return; }
     const channels = _userActiveChannels();
     const overlay = document.createElement('div');
     overlay.className = 'cc-overlay';
@@ -8681,7 +8713,7 @@
       const label = (newInput.value || '').trim();
       if (!label) { newInput.focus(); return; }
       const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: '' });
-      if (!newId) { showToast('チャンネルを作成できませんでした'); return; }
+      if (!newId) { showToast(t('toastChannelCreateFail')); return; }
       _connectTo(newId);
     };
     overlay.addEventListener('click', (e) => {
@@ -9100,7 +9132,7 @@
         const now = Date.now();
         if (now - _quotaWarnedAt > 15000) {  // throttle to one toast per 15s
           _quotaWarnedAt = now;
-          try { showToast('ローカル保存容量不足 — 一部の変更が保存されません'); } catch (_) {}
+          try { showToast(t('toastStorageFull')); } catch (_) {}
         }
       }
       return false;
@@ -9951,7 +9983,7 @@
       const r = (typeof _resolveBlockOrTrack === 'function') ? _resolveBlockOrTrack(id) : null;
       if (!r) {
         _returnToFeed = false;
-        if (typeof showToast === 'function') showToast(`block ${id} は見つかりません`);
+        if (typeof showToast === 'function') showToast(`block ${id} ${CURRENT_LANG === 'ja' ? 'は見つかりません' : 'not found'}`);
         return;
       }
       closeModal();
@@ -10288,7 +10320,7 @@
         if (!bid) return;
         const r = _resolveBlockOrTrack(bid);
         if (!r) {
-          showToast(`block ${bid} は削除されたようです`);
+          showToast(`block ${bid} ${CURRENT_LANG === 'ja' ? 'は削除されたようです' : 'appears to have been deleted'}`);
           return;
         }
         closeModal();
@@ -10413,7 +10445,7 @@
     const openByTid = (tid, kindHint) => {
       const r = _resolveBlockOrTrack(tid);
       if (!r) {
-        showToast(`block ${tid} は削除されたようです`);
+        showToast(`block ${tid} ${CURRENT_LANG === 'ja' ? 'は削除されたようです' : 'appears to have been deleted'}`);
         return;
       }
       closeModal();
@@ -10852,9 +10884,9 @@
         if (ok) {
           const ch = CHANNELS.find(c => c.id === targetCid);
           const label = ch ? ch.label : targetCid;
-          showToast(`${label} にコネクト追加されました`);
+          showToast(CURRENT_LANG === 'ja' ? label + ' にコネクト追加されました' : 'added to ' + label);
         } else {
-          showToast(`コネクトに失敗しました`);
+          showToast(t('toastConnectFail'));
         }
       });
     });
@@ -10874,8 +10906,8 @@
           const ok = _tryConnect(id, newId);
           connectPickerOpen = false;
           refreshAllViews();
-          if (ok) showToast(`${label.trim()} を新規作成して接続しました`);
-          else showToast(`${label.trim()} は作成しましたが接続に失敗しました`);
+          if (ok) showToast(CURRENT_LANG === 'ja' ? label.trim() + ' を新規作成して接続しました' : label.trim() + ': created and connected');
+          else showToast(CURRENT_LANG === 'ja' ? label.trim() + ' は作成しましたが接続に失敗しました' : label.trim() + ': created but connect failed');
         }
       });
     }
@@ -10895,7 +10927,7 @@
           refreshAllViews();
           const ch = CHANNELS.find(c => c.id === targetCid);
           const label = ch ? ch.label : targetCid;
-          showToast(`${label} から切断しました`);
+          showToast(CURRENT_LANG === 'ja' ? label + ' から切断しました' : 'disconnected from ' + label);
         });
       });
     });
@@ -11437,7 +11469,7 @@
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
-        showToast('URL をコピーしました');
+        showToast(t('toastUrlCopied'));
       } else if (navigator.share) {
         await navigator.share({ title: fallbackTitle || 'Ateli.er', url: shareUrl });
       } else {
@@ -11617,7 +11649,7 @@
       // clear the unread badge cleared because of this action.
       const _hadUnread = !!(() => { const b = document.getElementById('tabTracesIncoming') || document.getElementById('trigTracesIncoming'); return b && !b.hidden; })();
       try { atelierTraces?.markAllRead?.(); } catch (e) {}
-      if (_hadUnread) { try { showToast(CURRENT_LANG === 'ja' ? 'コメントを既読にしました' : 'all comments marked as read'); } catch (e) {} }
+      if (_hadUnread) { try { showToast(t('toastMarkedRead')); } catch (e) {} }
     }
   }
 
@@ -13384,7 +13416,7 @@
           { headers: { apikey: SUPABASE_PUB_KEY } }
         ).then(r => r.ok ? r.json() : []);
         const pr = rows && rows[0];
-        if (!pr) { try { showToast('その住民が見つかりませんでした'); } catch (e) {} return; }
+        if (!pr) { try { showToast(t('toastResidentNotFound')); } catch (e) {} return; }
         if (typeof _exploreProfilesCache !== 'undefined') _exploreProfilesCache[pr.id] = pr;
         openModal('explore');
         openUserPortfolio({
@@ -13597,7 +13629,7 @@
           // succeed with the refreshed token.
           if (res.status === 401) {
             try { await supabaseClient?.auth?.refreshSession?.(); } catch (_) {}
-            try { showToast('セッションが切れました — もう一度保存してください'); } catch (_) {}
+            try { showToast(t('toastSessionExpiredSave')); } catch (_) {}
           }
           throw new Error(`HTTP ${res.status}: ${text}`);
         }
@@ -13754,7 +13786,7 @@
           // refresh on 401 so the next operation has a valid token.
           if (res.status === 401) {
             try { await supabaseClient?.auth?.refreshSession?.(); } catch (_) {}
-            try { showToast('セッションが切れました — もう一度操作してください'); } catch (_) {}
+            try { showToast(t('toastSessionExpired')); } catch (_) {}
           }
           throw new Error(`HTTP ${res.status}: ${txt}`);
         }
@@ -13796,7 +13828,7 @@
         // Warn once per session when publishing to a channel with no label.
         if (block.channelId && !_channelLabel(block.channelId) && !_warnedUnnamedChannels.has(block.channelId)) {
           _warnedUnnamedChannels.add(block.channelId);
-          try { showToast('チャンネル名が未設定です。Explore では "(untitled channel)" として表示されます。名前を設定することをお勧めします。'); } catch (e) {}
+          try { showToast(t('toastChannelNoName')); } catch (e) {}
         }
         return await upsert(block);
       }
@@ -14386,7 +14418,7 @@
     e.stopPropagation();
     e.preventDefault();
     atelierTraces.markAllRead();
-    showToast('既読にしました');
+    showToast(t('toastMarkedRead'));
   });
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-act="settings-close"]')) closeSettingsModal();
@@ -14476,8 +14508,8 @@
         console.warn('[settings] auth.updateUser skipped:', metaErr.message);
       }
 
-      setStatus('✓ 保存しました。', 'ok');
-      showToast('✓ 保存しました');
+      setStatus(t('toastSaved') + '。', 'ok');
+      showToast(t('toastSaved'));
       // Refresh local profiles cache so the new avatar/handle appears
       // immediately in the user's own comment list rendering.
       try { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); } catch (e) {}
@@ -14556,7 +14588,7 @@
         closeAuthModals();
         hideLanding();
         const greeting = chosenHandle || user.email?.split('@')[0] || 'visitor';
-        showToast(`ようこそ、${greeting} さん`);
+        showToast(CURRENT_LANG === 'ja' ? t('toastWelcome') + greeting + ' さん' : t('toastWelcome') + ' ' + greeting);
         // Pull the user's saved state from Supabase, then re-render.
         // currentUser is set by updateUserMenu above so atelierSync has identity.
         try {
