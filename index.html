@@ -8828,8 +8828,14 @@
         openUserChannel({ ownerId: targetUid, handle: targetHandle, channelId: cid, channelLabel: targetClabel });
         return;
       }
-      if (typeof closePieceModal === 'function' && $('#pieceModal').classList.contains('is-open')) {
-        closePieceModal();
+      // Close piece modal directly without history.back() — in-app browsers
+      // (e.g. X/Twitter WKWebView) treat history.back() as "exit WebView"
+      // when the SPA's pushState entry is the first in the stack.
+      if ($('#pieceModal').classList.contains('is-open')) {
+        if (typeof closePieceModalInner === 'function') closePieceModalInner();
+        const _pmIdx = navStack.lastIndexOf('pieceModal');
+        if (_pmIdx >= 0) navStack.splice(_pmIdx, 1);
+        if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
       }
       if (typeof openModal === 'function') openModal('pieces');
       setTimeout(() => {
