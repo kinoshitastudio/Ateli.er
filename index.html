@@ -8251,8 +8251,8 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
-            <label class="uf-row"><span class="sp-k">title</span><input class="uf-input" id="ef-title" placeholder="optional · a short label that appears above the text" maxlength="80" value="${escapeHtml(obj.title || '')}"></label>
-            <label class="uf-row"><span class="sp-k">text</span><textarea class="uf-input" id="ef-text" rows="5">${escapeHtml(obj.text || '')}</textarea></label>
+            <label class="uf-row"><span class="sp-k">${t('tFldTitle')}</span><input class="uf-input" id="ef-title" placeholder="optional · a short label that appears above the text" maxlength="80" value="${escapeHtml(obj.title || '')}"></label>
+            <label class="uf-row"><span class="sp-k">${t('fldText')}</span><textarea class="uf-input" id="ef-text" rows="5">${escapeHtml(obj.text || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">style</span><select class="uf-input" id="ef-style">
               <option value="lyric"${obj.style === 'lyric' ? ' selected' : ''}>lyric — drifts in the phrase lane</option>
               <option value="prose"${obj.style === 'prose' ? ' selected' : ''}>prose — visible in channel only</option>
