@@ -9871,8 +9871,6 @@
       // Fallback: cross-user blocks may land in cache without ogImage if the
       // spread missed it; _explorePublicCache always holds the raw Supabase row.
       const _ogImage = b.ogImage || (typeof _explorePublicCache !== 'undefined' && _explorePublicCache[b.id]?.payload?.ogImage) || '';
-      // [DEBUG] — remove after diagnosis
-      try { if (!_ogImage) console.warn('[feedThumb url]', b.id, { bOgImage: b.ogImage, cacheEntry: typeof _explorePublicCache !== 'undefined' ? _explorePublicCache[b.id]?.payload?.ogImage : 'NO_CACHE' }); } catch(_) {}
       if (_ogImage) {
         return `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper-2);">
           <img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">
@@ -14042,11 +14040,12 @@
       crossUserBlocksCache = rows
         .filter(r => r && r.owner_id !== currentUser?.id)
         .map(r => {
-          const payload = r.payload || {};
+          const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {});
           return {
             ...payload,
             id: r.id,
             kind: r.kind,
+            ogImage: payload.ogImage || '',
             channelId: r.channel_id || payload.channelId,
             channelLabel: r.channel_label || payload.channelLabel,
             ts: r.ts || 0,
