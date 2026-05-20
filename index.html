@@ -11119,6 +11119,7 @@
           <h4>${t('fldDescription')}</h4>
           <p style="white-space: pre-wrap;">${escapeHtml(block.description)}</p>
         </section>` : '' }
+      ${ (() => { const tags = tagsForBlock(block); if (!tags.length) return ''; return `<section class="piece-context"><h4>${t('pmContextHead')}</h4><div class="tag-chips">${tags.map(tag => `<button type="button" class="tag-chip" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join('')}</div></section>`; })() }
       <section class="piece-comments" id="pieceCommentsImage"></section>
       ${ renderConnectWidget(block.id) }
     `;
@@ -11157,6 +11158,7 @@
           <h4>${t('fldDescription')}</h4>
           <p style="white-space: pre-wrap;">${escapeHtml(block.description)}</p>
         </section>` : '' }
+      ${ (() => { const tags = tagsForBlock(block); if (!tags.length) return ''; return `<section class="piece-context"><h4>${t('pmContextHead')}</h4><div class="tag-chips">${tags.map(tag => `<button type="button" class="tag-chip" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join('')}</div></section>`; })() }
       ${ block.url ? `
         <p class="block-meta-line" style="margin-top: 8px;">
           <a href="${escapeHtml(block.url)}" target="_blank" rel="noopener" style="color: var(--gray); border-bottom: 1px solid var(--line-soft); padding-bottom: 1px; word-break: break-all;">${escapeHtml(block.url)}</a>
@@ -11191,6 +11193,7 @@
           <h4>${t('fldDescription')}</h4>
           <p style="white-space: pre-wrap;">${escapeHtml(block.description)}</p>
         </section>` : '' }
+      ${ (() => { const tags = tagsForBlock(block); if (!tags.length) return ''; return `<section class="piece-context"><h4>${t('pmContextHead')}</h4><div class="tag-chips">${tags.map(tag => `<button type="button" class="tag-chip" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join('')}</div></section>`; })() }
       <section class="piece-comments" id="pieceCommentsText"></section>
       ${ renderConnectWidget(block.id) }
     `;
