@@ -7056,6 +7056,41 @@
       });
     } catch (e) { /* silent — table missing or transient */ }
   }
+  // Backfill null channel_label values in channel_connections for the current
+  // user. Runs after syncChannelConnectionsToProfile on sign-in. For each
+  // channel_id that has a resolvable label in localStorage, PATCHes all rows
+  // with channel_label IS NULL for that channel.
+  async function _backfillChannelLabelsInConnections() {
+    if (!currentUser?.id) return;
+    const headers = _supabaseHeaders();
+    if (!headers) return;
+    // Fetch own rows with null channel_label
+    let rows = [];
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(currentUser.id)}&channel_label=is.null&select=channel_id`,
+        { headers: { 'apikey': SUPABASE_PUB_KEY, 'Authorization': headers['Authorization'] } }
+      );
+      if (r.ok) rows = await r.json();
+    } catch (e) { return; }
+    if (!rows.length) return;
+    // Collect unique channel_ids that have a resolvable label
+    const seen = new Set();
+    for (const row of rows) {
+      if (row.channel_id && !seen.has(row.channel_id)) seen.add(row.channel_id);
+    }
+    const patchHeaders = { ...headers, 'Prefer': 'return=minimal' };
+    for (const cid of seen) {
+      const label = _resolveChannelLabel(cid);
+      if (!label) continue;
+      try {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(currentUser.id)}&channel_id=eq.${encodeURIComponent(cid)}&channel_label=is.null`,
+          { method: 'PATCH', headers: patchHeaders, body: JSON.stringify({ channel_label: label }) }
+        );
+      } catch (e) { /* silent */ }
+    }
+  }
   function moveBlockInChannel(cid, blockId, direction) {
     // direction: -1 = up, +1 = down
     const items = _itemsInChannel(cid);
@@ -14554,6 +14589,9 @@
         // channel_connections so visitors viewing this owner's portfolio
         // see CONNECT'd items in the right channels.
         try { syncChannelConnectionsToProfile().catch(() => {}); } catch (e) {}
+        // Backfill null channel_labels for Clip-imported blocks whose channel
+        // was registered in chrome.storage.local rather than atelier_user_channels_v1.
+        try { _backfillChannelLabelsInConnections().catch(() => {}); } catch (e) {}
       } else if (event === 'SIGNED_OUT') {
         // Phase A-refactor: wipe in-memory state so the next sign-in starts
         // from a clean slate even before pull replays from server.
@@ -14634,6 +14672,8 @@
     // One-shot mirror of local CONNECTed block list to channel_connections
     // so visitors see curated items in the right channel via Explore.
     try { syncChannelConnectionsToProfile().catch(() => {}); } catch (e) {}
+    // Backfill null channel_labels for Clip-imported blocks.
+    try { _backfillChannelLabelsInConnections().catch(() => {}); } catch (e) {}
     // Phase D-1: refresh the unread-traces badge once per app load.
     atelierTraces.refreshUnreadBadge();
     // Periodic refresh while the tab is open so notifications appear without
