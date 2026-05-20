@@ -12647,9 +12647,10 @@
     // owner+channel — the underlying block lives under another user's
     // owner_id, so the strict filter below would drop it). External rows
     // are tagged _isConnected so the renderer shows a CONNECT badge.
+    const _isSelfChannel = !!(currentUser?.id && ownerId === currentUser.id);
     let _ownRows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId);
-    if (_isSelfPortfolio) {
+    if (_isSelfChannel) {
       const _localBlocks = loadBlocks();
       const _localById = new Map(_localBlocks.map(b => [b.id, b]));
       _ownRows = _ownRows.map(r => {
@@ -12694,7 +12695,7 @@
     // personal channels (Taka's seed channels) must not leak their metadata
     // (mainPhrase, meta) into other users' channel detail views.
     const _channelDef = (typeof CHANNELS !== 'undefined') ? CHANNELS.find(c => c.id === channelId) : null;
-    const channel = (_channelDef?.personal && !_isSelfPortfolio) ? null : _channelDef;
+    const channel = (_channelDef?.personal && !_isSelfChannel) ? null : _channelDef;
     let createdTs, editedTs;
     if (channel) {
       createdTs = channel.createdAt || 0;
