@@ -4697,9 +4697,10 @@
                   <input class="uf-input" type="url" id="bImageUrl" placeholder="optional · monochrome, a texture, a smudge">
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k">support</span>
-                  <input class="uf-input" type="url" id="bSupport" placeholder="paypal.me / buymeacoffee.com (optional)">
+                  <span class="sp-k" data-i18n="fldSupport">support</span>
+                  <input class="uf-input" type="url" id="bSupport" data-i18n-placeholder="supportPh" placeholder="paypal.me / buymeacoffee.com (optional)">
                 </label>
+                <p class="uf-hint" data-i18n="supportHint">if you'd like to receive support from listeners, paste your paypal.me or buymeacoffee.com link here.</p>
               </div>
 
               <!-- IMAGE fields -->
@@ -5163,6 +5164,7 @@
       titlePh: 'a quiet name…',
       artistPh: 'your alias',
       supportPh: 'paypal.me / buymeacoffee.com (optional)',
+      supportHint: 'if you\'d like to receive support from listeners, paste your paypal.me or buymeacoffee.com link here.',
       audioUrlPh: 'paste Drive / Dropbox / direct mp3 url',
       imageUrlPh: 'https://… (drive / dropbox / direct image url)',
       iCaptionPh: 'berlin, march · wet pavement',
@@ -5398,6 +5400,7 @@
       titlePh: '静かな名前を…',
       artistPh: 'あなたの alias',
       supportPh: 'paypal.me / buymeacoffee.com（任意）',
+      supportHint: 'リスナーからのサポートを受け取りたい場合は、paypal.me または buymeacoffee.com のリンクをここに貼り付けてください。',
       audioUrlPh: 'Drive / Dropbox / 直 mp3 の URL を貼る',
       imageUrlPh: 'https://… (drive / dropbox / 直画像 URL)',
       iCaptionPh: 'ベルリン、3月 · 濡れた舗道',
@@ -8282,7 +8285,8 @@
             <label class="uf-row"><span class="sp-k">${t('pmProcessHead').replace(/^—\s*/, '')}</span><textarea class="uf-input" id="ef-process" rows="3" placeholder="${escapeHtml(t('processPh'))}">${escapeHtml((obj.process || []).join('\n'))}</textarea></label>
             <label class="uf-row"><span class="sp-k">audio url</span><input class="uf-input" type="url" id="ef-audioUrl" placeholder=".mp3 — Drive / Dropbox / direct url" value="${escapeHtml(obj.sourceAudioUrl || obj.audioUrl || '')}"><span class="uf-hint">.mp3 only. blocks without an audio url are not playable.</span></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" placeholder="https://…" value="${escapeHtml(obj.imageUrl || '')}"></label>
-            <label class="uf-row"><span class="sp-k">support</span><input class="uf-input" type="url" id="ef-support" value="${escapeHtml(obj.support || '')}"></label>
+            <label class="uf-row"><span class="sp-k">${t('fldSupport')}</span><input class="uf-input" type="url" id="ef-support" placeholder="${escapeHtml(t('supportPh'))}" value="${escapeHtml(obj.support || '')}"></label>
+            <p class="uf-hint">${t('supportHint')}</p>
             ${_editChannelSelectHtml(obj.channelId)}
             ${_publicToggleHtml(r)}
           </div>
