@@ -4982,19 +4982,19 @@
   // mainPhrase is the headline that drifts in the top marquee row.
   const CHANNELS = [
     { id:'-01', label:'Archive −01', meta:'archived · weathered',   lang:'mixed',
-      mainPhrase:'these have weathered.' },
+      mainPhrase:'these have weathered.', personal: true },
     { id:'00',  label:'Archive 00',  meta:'now playing',            lang:'mixed',
-      mainPhrase:'a courtyard, before anyone wakes.' },
+      mainPhrase:'a courtyard, before anyone wakes.', personal: true },
     { id:'01',  label:'Archive 01',  meta:'drafting · spring 2026', lang:'mixed',
-      mainPhrase:'drafting — see you in spring.' },
+      mainPhrase:'drafting — see you in spring.', personal: true },
 
     // Artist / curator channels
     { id:'ch-yoake',  label:'夜更けの中庭',  meta:'curated by 仮田 涼',                   lang:'ja',
-      mainPhrase:'夜更け、誰もいない中庭に置いておく。' },
+      mainPhrase:'夜更け、誰もいない中庭に置いておく。', personal: true },
     { id:'ch-studio', label:'Studio Notes', meta:'kinoshita studio · process notes',     lang:'mixed',
-      mainPhrase:'制作の余白、思考の断片。' },
+      mainPhrase:'制作の余白、思考の断片。', personal: true },
     { id:'ch-tape',   label:'Tape Letters', meta:'by lin · TASCAM portable, side B',     lang:'en',
-      mainPhrase:'whispered into magnetic tape, kept as-is.' },
+      mainPhrase:'whispered into magnetic tape, kept as-is.', personal: true },
   ];
     // Alias retained for any legacy references; not exposed in UI
   const ISSUES = CHANNELS;
@@ -12431,9 +12431,37 @@
       grid.innerHTML = '';
       return;
     }
+    // For self-portfolio, supplement ogImage on URL blocks that Supabase
+    // stored without it (e.g. blocks posted via Clip before the fix).
+    // Also fire a background re-sync so the fixed ogImage reaches Supabase
+    // and becomes visible to other users viewing this portfolio.
+    let _enrichedRows = rows;
+    if (_isSelfPortfolio) {
+      const _localBlocks = loadBlocks();
+      const _localById = new Map(_localBlocks.map(b => [b.id, b]));
+      const _staleIds = [];
+      _enrichedRows = rows.map(r => {
+        if (r.kind === 'url' && !(r.payload?.ogImage)) {
+          const local = _localById.get(r.id);
+          if (local?.ogImage) {
+            _staleIds.push(r.id);
+            return { ...r, payload: { ...(r.payload || {}), ogImage: local.ogImage } };
+          }
+        }
+        return r;
+      });
+      if (_staleIds.length > 0 && atelierPublic?.sync) {
+        (async () => {
+          for (const id of _staleIds) {
+            const b = _localById.get(id);
+            if (b) { try { await atelierPublic.sync(b); } catch (e) { /* silent */ } }
+          }
+        })();
+      }
+    }
     // Group blocks by channel_id.
     const byChannel = new Map();
-    rows.forEach(r => {
+    _enrichedRows.forEach(r => {
       const cid = r.channel_id || '_unkn';
       if (!byChannel.has(cid)) {
         // A channel that holds only CONNECT'd blocks (no own posts) has no
@@ -12619,8 +12647,19 @@
     // owner+channel — the underlying block lives under another user's
     // owner_id, so the strict filter below would drop it). External rows
     // are tagged _isConnected so the renderer shows a CONNECT badge.
-    const _ownRows = Object.values(_explorePublicCache)
+    let _ownRows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId);
+    if (_isSelfPortfolio) {
+      const _localBlocks = loadBlocks();
+      const _localById = new Map(_localBlocks.map(b => [b.id, b]));
+      _ownRows = _ownRows.map(r => {
+        if (r.kind === 'url' && !(r.payload?.ogImage)) {
+          const local = _localById.get(r.id);
+          if (local?.ogImage) return { ...r, payload: { ...(r.payload || {}), ogImage: local.ogImage } };
+        }
+        return r;
+      });
+    }
     const _connectedIds = (_userConnectionsCache[ownerId]?.[channelId]) || [];
     const _connectedRows = _connectedIds
       .map(bid => _explorePublicCache[bid])
@@ -12652,7 +12691,10 @@
     // the visitor sees identical createdAt / updatedAt / mainPhrase / meta
     // values. Falls back to block-derived ts only for user-created channels
     // that aren't in the seed (we have no other source for those).
-    const channel = (typeof CHANNELS !== 'undefined') ? CHANNELS.find(c => c.id === channelId) : null;
+    // personal channels (Taka's seed channels) must not leak their metadata
+    // (mainPhrase, meta) into other users' channel detail views.
+    const _channelDef = (typeof CHANNELS !== 'undefined') ? CHANNELS.find(c => c.id === channelId) : null;
+    const channel = (_channelDef?.personal && !_isSelfPortfolio) ? null : _channelDef;
     let createdTs, editedTs;
     if (channel) {
       createdTs = channel.createdAt || 0;
