@@ -5303,6 +5303,7 @@
       toastMarkedRead:        'marked as read',
       toastSaved:             '✓ saved',
       toastWelcome:           'welcome,',
+      audioBrokenBanner:      '⚠ source error — the audio link could not be loaded. the sharing settings on Dropbox / Drive may have changed, or the file may have been deleted. the owner can update the link from edit.',
     },
     ja: {
       brandSub: '— atelier × er.  場所を慈しむ者。',
@@ -5528,6 +5529,7 @@
       toastMarkedRead:        '既読にしました',
       toastSaved:             '✓ 保存しました',
       toastWelcome:           'ようこそ、',
+      audioBrokenBanner:      '⚠ source error — 音源リンクが読み込めません。Dropbox / Drive の共有設定が変わったか、ファイルが削除された可能性があります。投稿者は edit からリンクを更新してください。',
     },
   };
   const LANG_KEY = 'atelier_lang_v1';
@@ -10609,7 +10611,7 @@
       ${_blockMetaHtml(track)}
       ${ isAudioBroken(track.id) ? `
         <div class="audio-broken-banner">
-          <b>⚠ source error</b> — 音源リンクが読み込めません。Dropbox / Drive の共有設定が変わったか、ファイルが削除された可能性があります。投稿者は edit からリンクを更新してください。
+          ${t('audioBrokenBanner')}
         </div>` : '' }
       <div class="piece-modal-image">${buildPieceImage(track, 720, 540, /*mono=*/false)}</div>
 
