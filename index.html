@@ -15025,7 +15025,15 @@
   if (document.readyState === 'complete') ensureMarqueesPlaying();
   window.addEventListener('load', ensureMarqueesPlaying);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) ensureMarqueesPlaying();
+    if (!document.hidden) {
+      ensureMarqueesPlaying();
+    } else {
+      // Tab hidden / iOS background: flush pending edits immediately so the
+      // debounce timer doesn't get killed before it fires (common on iOS Safari).
+      if (typeof atelierSync !== 'undefined' && currentUser) {
+        try { atelierSync.push(true); } catch (e) {}
+      }
+    }
   });
   window.addEventListener('pageshow', ensureMarqueesPlaying);
   // Single-shot on first interaction (iOS battery-saver wakeup)
