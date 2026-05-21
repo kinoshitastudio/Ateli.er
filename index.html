@@ -12245,7 +12245,11 @@
       } else if (r.kind === 'url') {
         let domain = '';
         try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
-        thumbHtml = `<span class="explore-block-thumb">${escapeHtml(domain || 'url')}</span>`;
+        if (p.ogImage) {
+          thumbHtml = `<span class="explore-block-thumb" style="background-image:url('${escapeHtml(p.ogImage)}');"></span>`;
+        } else {
+          thumbHtml = `<span class="explore-block-thumb">${escapeHtml(domain || 'url')}</span>`;
+        }
         title = p.title || p.url || '(untitled)';
       } else if (r.kind === 'audio') {
         thumbHtml = `<span class="explore-block-thumb">audio · ${fmtDur(p.sec || 0)}</span>`;
