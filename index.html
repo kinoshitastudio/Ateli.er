@@ -12259,7 +12259,21 @@
       list.innerHTML = '<li class="explore-empty">他のユーザーの公開 block はまだありません。</li>';
       return;
     }
-    list.innerHTML = rows.map(r => {
+    // Deduplicate: same owner + kind + primary content key → keep newest (rows are ts.desc).
+    const _seenContentKey = new Set();
+    const _deduped = rows.filter(r => {
+      const p = r.payload || {};
+      const ck = (r.owner_id || '') + ':' + r.kind + ':' + (
+        r.kind === 'url'   ? (p.url || '') :
+        r.kind === 'text'  ? ((p.title || '') + (p.text  || '').slice(0, 60)) :
+        r.kind === 'audio' ? (p.externalUrl || p.url || p.title || '') :
+        r.kind === 'image' ? (p.imageUrl || p.caption || '') : r.id
+      );
+      if (_seenContentKey.has(ck)) return false;
+      _seenContentKey.add(ck);
+      return true;
+    });
+    list.innerHTML = _deduped.map(r => {
       const p = r.payload || {};
       const handle = (r.owner_handle || 'visitor').replace(/^@+/, '');
       const ago = r.ts ? ageString(r.ts) : '';
