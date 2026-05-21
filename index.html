@@ -14824,6 +14824,12 @@
         showToast(CURRENT_LANG === 'ja' ? t('toastWelcome') + greeting + ' さん' : t('toastWelcome') + ' ' + greeting);
         // Pull the user's saved state from Supabase, then re-render.
         // currentUser is set by updateUserMenu above so atelierSync has identity.
+        // Pre-pull push: flush any pending local edits so pull doesn't overwrite
+        // them with stale server data (push timer may have been cancelled by nav).
+        // Skip for user-switch — that path already wiped localStorage above.
+        if (!_prevUserId || _prevUserId === user.id) {
+          try { await atelierSync.push(true); } catch (e) {}
+        }
         try {
           const ok = await atelierSync.pull();
           if (ok) {
@@ -14919,6 +14925,9 @@
       return;
     }
     // Existing session on reload: pull latest state from DB before rendering.
+    // Pre-pull push: flush any local edits whose debounce timer was cancelled
+    // before navigation, so pull doesn't restore stale server data.
+    try { await atelierSync.push(true); } catch (e) {}
     try {
       const ok = await atelierSync.pull();
       if (ok) {
