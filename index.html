@@ -10241,6 +10241,18 @@
     if (!id || _brokenAudioSet.has(id)) return;
     _brokenAudioSet.add(id);
     _saveBrokenAudio();
+    // Persist isBroken to public_blocks so other users/devices see the badge.
+    if (currentUser) {
+      try {
+        const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+        const b = blocks.find(x => x.id === id);
+        if (b && b.isPublic && !b.isBroken) {
+          b.isBroken = true;
+          if (typeof saveBlocks === 'function') saveBlocks(blocks);
+          if (atelierPublic?.sync) atelierPublic.sync(b).catch(() => {});
+        }
+      } catch (e) {}
+    }
     // Update Courtyard row immediately if it's already rendered
     const row = document.querySelector(`#courtyardList [data-track-id="${CSS.escape(id)}"]`);
     if (row && !row.querySelector('.cy-broken-badge')) {
@@ -10258,6 +10270,17 @@
     if (!id || !_brokenAudioSet.has(id)) return;
     _brokenAudioSet.delete(id);
     _saveBrokenAudio();
+    if (currentUser) {
+      try {
+        const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+        const b = blocks.find(x => x.id === id);
+        if (b && b.isBroken) {
+          delete b.isBroken;
+          if (typeof saveBlocks === 'function') saveBlocks(blocks);
+          if (b.isPublic && atelierPublic?.sync) atelierPublic.sync(b).catch(() => {});
+        }
+      } catch (e) {}
+    }
   }
   function isAudioBroken(id) { return !!(id && _brokenAudioSet.has(id)); }
 
@@ -12018,7 +12041,7 @@
         const li = document.createElement('li');
         li.style.cssText = 'padding:6px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;';
         li.dataset.trackId = t.id;
-        const _brokenBadge = isAudioBroken(t.id)
+        const _brokenBadge = (isAudioBroken(t.id) || p.isBroken)
           ? `<span class="cy-broken-badge" title="source unreachable">⚠<span class="cy-broken-text"> source</span></span>` : '';
         li.innerHTML = `
           <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:var(--ink);">
@@ -12281,7 +12304,7 @@
       let title = '';
       if (r.kind === 'image' || (r.kind === 'audio' && p.imageUrl)) {
         const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
-        const _epBrokenBadge = (r.kind === 'audio' && isAudioBroken(r.id))
+        const _epBrokenBadge = (r.kind === 'audio' && (isAudioBroken(r.id) || p.isBroken))
           ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
         thumbHtml = src
           ? `<span class="explore-block-thumb" style="background-image:url('${src}');">${_epBrokenBadge}</span>`
@@ -12304,7 +12327,7 @@
         }
         title = p.title || p.url || '(untitled)';
       } else if (r.kind === 'audio') {
-        const _epBrokenBadge2 = isAudioBroken(r.id)
+        const _epBrokenBadge2 = (isAudioBroken(r.id) || p.isBroken)
           ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
         thumbHtml = `<span class="explore-block-thumb">${_epBrokenBadge2}audio · ${fmtDur(p.sec || 0)}</span>`;
         title = p.title || '(untitled)';
@@ -14122,7 +14145,26 @@
         const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
         const targets = blocks.filter(b => b.isPublic);
         if (targets.length === 0) return true;
+        // Fetch server-side ts for own blocks in one request, then skip
+        // rows that are already current (local ts <= server ts).
+        // Falls back to full upsert if the prefetch fails.
+        let serverTs = {};
+        try {
+          const token = _accessToken();
+          if (token) {
+            const url = `${SUPABASE_URL}/rest/v1/public_blocks?owner_id=eq.${encodeURIComponent(currentUser.id)}&select=id,ts`;
+            const res = await Promise.race([
+              fetch(url, { headers: { 'apikey': SUPABASE_PUB_KEY, 'Authorization': `Bearer ${token}` } }),
+              new Promise((_, rej) => setTimeout(() => rej(new Error('backfill prefetch timeout')), 10000)),
+            ]);
+            if (res.ok) {
+              const rows = await res.json();
+              if (Array.isArray(rows)) rows.forEach(r => { serverTs[r.id] = r.ts; });
+            }
+          }
+        } catch (e) { /* proceed with full backfill */ }
         for (const b of targets) {
+          if (serverTs[b.id] !== undefined && serverTs[b.id] >= (b.ts || 0)) continue;
           try { await upsert(b); } catch (e) { /* keep going */ }
         }
         return true;
