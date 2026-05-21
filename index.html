@@ -2767,6 +2767,7 @@
   }
   @media (max-width: 720px) {
     .cy-meta { display: none; }
+    .cy-broken-text { display: none; }
   }
   .audio-broken-banner {
     max-width: 480px;
@@ -10248,7 +10249,7 @@
         const badge = document.createElement('span');
         badge.className = 'cy-broken-badge';
         badge.title = 'source unreachable';
-        badge.textContent = '⚠ source';
+        badge.innerHTML = '⚠<span class="cy-broken-text"> source</span>';
         titleSpan.insertAdjacentElement('afterend', badge);
       }
     }
@@ -12010,20 +12011,25 @@
         const handle = t.owner_handle ? `@${escapeHtml(t.owner_handle)}` : '';
         const ch     = t.channel_label ? escapeHtml(t.channel_label) : '';
         const date   = fmtDate(t.ts);
-        const right  = [handle, ch, date].filter(Boolean).join(' · ');
+        const _chDate = [ch, date].filter(Boolean).join(' · ');
+        const rightHtml = handle
+          ? `${handle}${_chDate ? `<span class="cy-meta"> · ${_chDate}</span>` : ''}`
+          : _chDate ? `<span class="cy-meta">${_chDate}</span>` : '';
         const li = document.createElement('li');
         li.style.cssText = 'padding:6px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;';
         li.dataset.trackId = t.id;
         const _brokenBadge = isAudioBroken(t.id)
-          ? `<span class="cy-broken-badge" title="source unreachable">⚠ source</span>` : '';
+          ? `<span class="cy-broken-badge" title="source unreachable">⚠<span class="cy-broken-text"> source</span></span>` : '';
         li.innerHTML = `
           <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:var(--ink);">
             ${bar5(t.play_count ?? 0)}
             <span style="flex-shrink:0;color:var(--gray);">♪</span>
-            <span class="cy-title" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
-            ${_brokenBadge}
+            <span style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;">
+              <span class="cy-title" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
+              ${_brokenBadge}
+            </span>
           </span>
-          <span class="cy-meta" style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${right}</span>
+          <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${rightHtml}</span>
         `;
         li.addEventListener('click', () => {
           // Populate explore cache so openExternalBlock can resolve the block,
