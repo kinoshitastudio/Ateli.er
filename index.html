@@ -6499,6 +6499,15 @@
     if (currentVoice) currentVoice.stop();
     stopAudioEl();
     currentTrack = track;
+    // Increment play_count in public_blocks for this track. Fire-and-forget;
+    // private tracks have no public_blocks row so the RPC is a no-op.
+    if (track.id && SUPABASE_URL && SUPABASE_PUB_KEY) {
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_play_count`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_PUB_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block_id: track.id }),
+      }).catch(() => {});
+    }
     // Re-convert at playback time too: covers blocks whose stored URL is still a
     // raw share link (e.g. a Dropbox ?dl=0 that serves an HTML preview, not the
     // file) — and re-fixes legacy dl.dropboxusercontent.com/scl/fi/ URLs. Idempotent.
