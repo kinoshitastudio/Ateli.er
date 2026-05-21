@@ -13842,13 +13842,15 @@
           // Clear keys not present on the server too, so a re-login on a
           // dirty browser ends up with exactly what the server knows.
           const state = rows[0].state || {};
+          let _pullWriteFailed = false;
           SYNC_KEYS.forEach(k => {
             if (Object.prototype.hasOwnProperty.call(state, k)) {
-              localStorage.setItem(k, state[k]);
+              if (!_safeSetItem(k, state[k])) _pullWriteFailed = true;
             } else {
               localStorage.removeItem(k);
             }
           });
+          if (_pullWriteFailed) console.warn('[atelierSync] pull: some keys failed to write (storage full?)');
           // Phase A-refactor: same reset for the existing-user path. CHANNELS
           // and TRACKS still hold the previous session's in-memory state at
           // this point — replay from the freshly-pulled localStorage.
