@@ -12492,12 +12492,27 @@
       const _localById = new Map(_localBlocks.map(b => [b.id, b]));
       const _staleIds = [];
       _enrichedRows = rows.map(r => {
-        if (r.kind === 'url' && !(r.payload?.ogImage)) {
-          const local = _localById.get(r.id);
-          if (local?.ogImage) {
-            _staleIds.push(r.id);
-            return { ...r, payload: { ...(r.payload || {}), ogImage: local.ogImage } };
-          }
+        const local = _localById.get(r.id);
+        if (!local) return r;
+        const p = r.payload || {};
+        if (r.kind === 'url' && !p.ogImage && local.ogImage) {
+          _staleIds.push(r.id);
+          return { ...r, payload: { ...p, ogImage: local.ogImage } };
+        }
+        if (r.kind === 'text' && (
+          (local.title || '') !== (p.title || '') ||
+          (local.text  || '') !== (p.text  || '')
+        )) {
+          _staleIds.push(r.id);
+          return { ...r, payload: { ...p, title: local.title || '', text: local.text || '', style: local.style || p.style || '' } };
+        }
+        if (r.kind === 'audio' && (local.title || '') !== (p.title || '')) {
+          _staleIds.push(r.id);
+          return { ...r, payload: { ...p, title: local.title || '' } };
+        }
+        if (r.kind === 'image' && (local.caption || '') !== (p.caption || '')) {
+          _staleIds.push(r.id);
+          return { ...r, payload: { ...p, caption: local.caption || '' } };
         }
         return r;
       });
@@ -12704,13 +12719,40 @@
     if (_isSelfChannel) {
       const _localBlocks = loadBlocks();
       const _localById = new Map(_localBlocks.map(b => [b.id, b]));
+      const _chStaleIds = [];
       _ownRows = _ownRows.map(r => {
-        if (r.kind === 'url' && !(r.payload?.ogImage)) {
-          const local = _localById.get(r.id);
-          if (local?.ogImage) return { ...r, payload: { ...(r.payload || {}), ogImage: local.ogImage } };
+        const local = _localById.get(r.id);
+        if (!local) return r;
+        const p = r.payload || {};
+        if (r.kind === 'url' && !p.ogImage && local.ogImage) {
+          _chStaleIds.push(r.id);
+          return { ...r, payload: { ...p, ogImage: local.ogImage } };
+        }
+        if (r.kind === 'text' && (
+          (local.title || '') !== (p.title || '') ||
+          (local.text  || '') !== (p.text  || '')
+        )) {
+          _chStaleIds.push(r.id);
+          return { ...r, payload: { ...p, title: local.title || '', text: local.text || '', style: local.style || p.style || '' } };
+        }
+        if (r.kind === 'audio' && (local.title || '') !== (p.title || '')) {
+          _chStaleIds.push(r.id);
+          return { ...r, payload: { ...p, title: local.title || '' } };
+        }
+        if (r.kind === 'image' && (local.caption || '') !== (p.caption || '')) {
+          _chStaleIds.push(r.id);
+          return { ...r, payload: { ...p, caption: local.caption || '' } };
         }
         return r;
       });
+      if (_chStaleIds.length > 0 && atelierPublic?.sync) {
+        (async () => {
+          for (const id of _chStaleIds) {
+            const b = _localById.get(id);
+            if (b) { try { await atelierPublic.sync(b); } catch (e) { /* silent */ } }
+          }
+        })();
+      }
     }
     const _connectedIds = (_userConnectionsCache[ownerId]?.[channelId]) || [];
     const _connectedRows = _connectedIds
