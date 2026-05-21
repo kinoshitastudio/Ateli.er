@@ -8335,7 +8335,7 @@
     const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    const writeable = CHANNELS.filter(c => _cwc.has(c.id) || _uci.has(c.id));
+    const writeable = CHANNELS.filter(c => (_cwc.has(c.id) || _uci.has(c.id)) && (!c.personal || _uci.has(c.id)));
     const options = writeable.map(c => {
       const lbl = escapeHtml(c.label);
       const m = (c.meta || '').trim();
@@ -9364,7 +9364,7 @@
     const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    const writeable = CHANNELS.filter(c => _cwc.has(c.id) || _uci.has(c.id));
+    const writeable = CHANNELS.filter(c => (_cwc.has(c.id) || _uci.has(c.id)) && (!c.personal || _uci.has(c.id)));
     // meta が空のチャンネルで "label — " と空ダッシュが出るバグ対策:
     // meta が truthy なときだけ "— meta" を付ける
     sel.innerHTML = writeable.map(c => {
