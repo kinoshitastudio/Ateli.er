@@ -2754,6 +2754,16 @@
     text-transform: uppercase;
     pointer-events: none;
   }
+  .cy-broken-badge {
+    flex-shrink: 0;
+    font-family: var(--mono), monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #c92d2d;
+    border: 1px solid rgba(201, 45, 45, 0.45);
+    padding: 1px 5px;
+    text-transform: uppercase;
+  }
   .audio-broken-banner {
     max-width: 480px;
     margin: 0 auto 24px;
@@ -10226,6 +10236,18 @@
     if (!id || _brokenAudioSet.has(id)) return;
     _brokenAudioSet.add(id);
     _saveBrokenAudio();
+    // Update Courtyard row immediately if it's already rendered
+    const row = document.querySelector(`#courtyardList [data-track-id="${CSS.escape(id)}"]`);
+    if (row && !row.querySelector('.cy-broken-badge')) {
+      const titleSpan = row.querySelector('.cy-title');
+      if (titleSpan) {
+        const badge = document.createElement('span');
+        badge.className = 'cy-broken-badge';
+        badge.title = 'source unreachable';
+        badge.textContent = '⚠ source';
+        titleSpan.insertAdjacentElement('afterend', badge);
+      }
+    }
   }
   function _unmarkAudioBroken(id) {
     if (!id || !_brokenAudioSet.has(id)) return;
@@ -11987,11 +12009,15 @@
         const right  = [handle, ch, date].filter(Boolean).join(' · ');
         const li = document.createElement('li');
         li.style.cssText = 'padding:6px 0;border-bottom:1px dashed var(--gray-3);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;';
+        li.dataset.trackId = t.id;
+        const _brokenBadge = isAudioBroken(t.id)
+          ? `<span class="cy-broken-badge" title="source unreachable">⚠ source</span>` : '';
         li.innerHTML = `
           <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:var(--ink);">
             ${bar5(t.play_count ?? 0)}
             <span style="flex-shrink:0;color:var(--gray);">♪</span>
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
+            <span class="cy-title" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
+            ${_brokenBadge}
           </span>
           <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${right}</span>
         `;
