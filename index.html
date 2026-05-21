@@ -13934,6 +13934,9 @@
       _storageRehydrateScheduled = false;
       try { if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage(); } catch (e) {}
       try { if (typeof refreshAllViews === 'function') refreshAllViews(); } catch (e) {}
+      // After merging another tab's writes into in-memory state, push the
+      // combined snapshot so the server always gets the merged result.
+      if (currentUser) try { atelierSync.pushDebounced(); } catch (e) {}
     }, 80);
   });
 
