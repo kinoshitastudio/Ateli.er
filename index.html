@@ -7973,6 +7973,7 @@
       // If the currently-open block modal targets a deleted id, close it
       if (currentBlockModalId && ids.includes(currentBlockModalId)) closePieceModal();
       refreshAllViews();
+      try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
     });
   }
 
@@ -8253,6 +8254,7 @@
     _chPendingOrderIds = null;
     editingChannelId = null;
     refreshAllViews();
+    try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
   }
 
   // ──────────────── DELETE PROMPTS ────────────────
@@ -8292,6 +8294,7 @@
       deleteChannel(id);
       backToChannelGrid();
       refreshAllViews();
+      try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
     });
   }
 
@@ -8641,6 +8644,7 @@
     }
     refreshAllViews();  // re-renders modal back to viewing state
     logActivity('edit');
+    try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
   }
 
   function promptEditBlock(id) {
@@ -8722,6 +8726,7 @@
         currentBlockModalId = null;
       }
       refreshAllViews();
+      try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
       // Navigate up to the channel detail (or grid if the channel has no
       // content left).
       if (_hostChannelId && typeof openModal === 'function') {
@@ -9732,6 +9737,7 @@
       status.className = 'uf-status ok';
       submit.disabled = false;
       logActivity('upload');
+      try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
     });
   }
 
