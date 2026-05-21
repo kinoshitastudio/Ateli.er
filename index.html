@@ -8338,7 +8338,8 @@
     const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    const writeable = CHANNELS.filter(c => (_cwc.has(c.id) || _uci.has(c.id)) && (!c.personal || _uci.has(c.id)));
+    // personal channels appear if they have content (_cwc) OR are user-created (_uci)
+    const writeable = CHANNELS.filter(c => (_cwc.has(c.id) || _uci.has(c.id)) && (!c.personal || _uci.has(c.id) || _cwc.has(c.id)));
     const options = writeable.map(c => {
       const lbl = escapeHtml(c.label);
       const m = (c.meta || '').trim();
@@ -8520,6 +8521,7 @@
         opt.textContent = label.trim();
         this.insertBefore(opt, this.querySelector('option[value="__new__"]'));
         this.value = newId;
+        try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
       });
     }
     // save / cancel buttons handled by delegated listener on #pieceModalInner
@@ -8823,6 +8825,7 @@
       if (!label) { newInput.focus(); return; }
       const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: '' });
       if (!newId) { showToast(t('toastChannelCreateFail')); return; }
+      try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
       _connectTo(newId);
     };
     overlay.addEventListener('click', (e) => {
@@ -9369,7 +9372,7 @@
     const _cwc = new Set(_ub.map(b => b.channelId).filter(Boolean));
     TRACKS.forEach(t => { if (t.channelId) _cwc.add(t.channelId); });
     const _uci = new Set(((typeof loadUserChannels === 'function') ? loadUserChannels() : []).map(c => c.id));
-    const writeable = CHANNELS.filter(c => (_cwc.has(c.id) || _uci.has(c.id)) && (!c.personal || _uci.has(c.id)));
+    const writeable = CHANNELS.filter(c => (_cwc.has(c.id) || _uci.has(c.id)) && (!c.personal || _uci.has(c.id) || _cwc.has(c.id)));
     // meta が空のチャンネルで "label — " と空ダッシュが出るバグ対策:
     // meta が truthy なときだけ "— meta" を付ける
     sel.innerHTML = writeable.map(c => {
@@ -9432,6 +9435,7 @@
     try {
       // Mainphrase / lang / meta default — owner can refine via channel EDIT.
       const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: '' });
+      try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
       refreshAllViews();
       const sel = document.getElementById('bChannel');
       if (sel && newId) sel.value = newId;
