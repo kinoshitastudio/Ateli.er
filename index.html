@@ -753,6 +753,7 @@
     letter-spacing: 0.18em;
     text-transform: uppercase;
     overflow: hidden;
+    position: relative;
   }
   .explore-block-thumb.is-text {
     aspect-ratio: 4/3;
@@ -12257,9 +12258,11 @@
       let title = '';
       if (r.kind === 'image' || (r.kind === 'audio' && p.imageUrl)) {
         const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
+        const _epBrokenBadge = (r.kind === 'audio' && isAudioBroken(r.id))
+          ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
         thumbHtml = src
-          ? `<span class="explore-block-thumb" style="background-image:url('${src}');"></span>`
-          : `<span class="explore-block-thumb">${r.kind}</span>`;
+          ? `<span class="explore-block-thumb" style="background-image:url('${src}');">${_epBrokenBadge}</span>`
+          : `<span class="explore-block-thumb">${_epBrokenBadge || r.kind}</span>`;
         title = (r.kind === 'audio' ? p.title : p.caption) || '(untitled)';
       } else if (r.kind === 'text') {
         const txt = (p.text || '').slice(0, 80);
@@ -12278,7 +12281,9 @@
         }
         title = p.title || p.url || '(untitled)';
       } else if (r.kind === 'audio') {
-        thumbHtml = `<span class="explore-block-thumb">audio · ${fmtDur(p.sec || 0)}</span>`;
+        const _epBrokenBadge2 = isAudioBroken(r.id)
+          ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
+        thumbHtml = `<span class="explore-block-thumb">${_epBrokenBadge2}audio · ${fmtDur(p.sec || 0)}</span>`;
         title = p.title || '(untitled)';
       }
       const _shareIcon = `<svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1v8M7 1l-2.6 2.6M7 1l2.6 2.6"/><path d="M2.5 7.5v4.5h9V7.5"/></svg>`;
