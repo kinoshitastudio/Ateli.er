@@ -11876,8 +11876,7 @@
       : '';
     return exploreBadge
       + `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
-      + `<span class="bc-h4-sep">/</span>`
-      + channelPart
+      + (cLabel ? `<span class="bc-h4-sep">/</span>` + channelPart : '')
       + `<span class="bc-h4-sep">/</span>`
       + escapeHtml(label || '');
   }
@@ -14945,6 +14944,10 @@
         // again without a page reload.
         _appIntervalIds.forEach(id => { try { clearInterval(id); } catch (e) {} });
         _appIntervalIds.length = 0;
+        if (window._realtimeSyncChannel) {
+          try { supabaseClient.removeChannel(window._realtimeSyncChannel); } catch(e) {}
+          window._realtimeSyncChannel = null;
+        }
         // Clear cross-user caches so a different account signing in on
         // the same tab doesn't see leftover Explore data from the prior
         // user. Without this, _explorePublicCache / _userConnectionsCache
@@ -15032,6 +15035,28 @@
     // so TOP marquee and Feed reflect new public posts without reload.
     refreshCrossUserBlocks();
     window._appIntervalIds.push(setInterval(() => refreshCrossUserBlocks(), 300_000));
+
+    // Realtime: pull own user_state when another device saves a change.
+    // This ensures edits on mobile appear on PC (and vice-versa) without reload.
+    if (supabaseClient && currentUser) {
+      try {
+        if (window._realtimeSyncChannel) {
+          supabaseClient.removeChannel(window._realtimeSyncChannel);
+        }
+        window._realtimeSyncChannel = supabaseClient
+          .channel('user_state_sync_' + currentUser.id)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_state',
+            filter: 'user_id=eq.' + currentUser.id
+          }, async () => {
+            console.log('[realtime] user_state changed on another device → pulling');
+            try { await atelierSync.pull(); } catch(e) {}
+          })
+          .subscribe();
+      } catch(e) { console.warn('[realtime] subscribe failed', e); }
+    }
     // Same cadence for the profiles cache so updated avatars / handles
     // become visible to other viewers without a manual page refresh.
     if (typeof refreshProfilesCache === 'function') {
