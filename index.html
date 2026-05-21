@@ -6502,6 +6502,7 @@
     // Increment play_count in public_blocks for this track. Fire-and-forget;
     // private tracks have no public_blocks row so the RPC is a no-op.
     if (track.id && SUPABASE_URL && SUPABASE_PUB_KEY) {
+      console.log('[play] increment_play_count:', track.id, track.title || '');
       fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_play_count`, {
         method: 'POST',
         headers: { apikey: SUPABASE_PUB_KEY, 'Content-Type': 'application/json' },
@@ -10258,7 +10259,8 @@
         if (b && b.isPublic && !b.isBroken) {
           b.isBroken = true;
           if (typeof saveBlocks === 'function') saveBlocks(blocks);
-          if (atelierPublic?.sync) atelierPublic.sync(b).catch(() => {});
+          console.log('[broken] persisting isBroken=true to public_blocks:', id);
+          if (atelierPublic?.sync) atelierPublic.sync(b).catch(e => console.warn('[broken] sync failed:', e));
         }
       } catch (e) {}
     }
@@ -10286,7 +10288,8 @@
         if (b && b.isBroken) {
           delete b.isBroken;
           if (typeof saveBlocks === 'function') saveBlocks(blocks);
-          if (b.isPublic && atelierPublic?.sync) atelierPublic.sync(b).catch(() => {});
+          console.log('[broken] cleared isBroken from public_blocks:', id);
+          if (b.isPublic && atelierPublic?.sync) atelierPublic.sync(b).catch(e => console.warn('[broken] sync failed:', e));
         }
       } catch (e) {}
     }
@@ -12269,7 +12272,7 @@
     const list = document.getElementById('explorePublicList');
     if (!list) return;
     list.innerHTML = '<li class="explore-empty">読み込み中…</li>';
-    let rows = await atelierPublic.list(60);
+    let rows = await atelierPublic.list(200);
     if (rows == null) {
       list.innerHTML = '<li class="explore-empty">読み込みエラー</li>';
       return;
@@ -13968,7 +13971,10 @@
       try { if (typeof refreshAllViews === 'function') refreshAllViews(); } catch (e) {}
       // After merging another tab's writes into in-memory state, push the
       // combined snapshot so the server always gets the merged result.
-      if (currentUser) try { atelierSync.pushDebounced(); } catch (e) {}
+      if (currentUser) {
+        console.log('[sync] multi-tab merge → pushDebounced (key:', ev.key, ')');
+        try { atelierSync.pushDebounced(); } catch (e) {}
+      }
     }, 80);
   });
 
@@ -14171,11 +14177,13 @@
               if (Array.isArray(rows)) rows.forEach(r => { serverTs[r.id] = r.ts; });
             }
           }
-        } catch (e) { /* proceed with full backfill */ }
+        } catch (e) { console.warn('[backfill] prefetch failed, doing full upsert:', e); }
+        let skipped = 0, upserted = 0;
         for (const b of targets) {
-          if (serverTs[b.id] !== undefined && serverTs[b.id] >= (b.ts || 0)) continue;
-          try { await upsert(b); } catch (e) { /* keep going */ }
+          if (serverTs[b.id] !== undefined && serverTs[b.id] >= (b.ts || 0)) { skipped++; continue; }
+          try { await upsert(b); upserted++; } catch (e) { /* keep going */ }
         }
+        console.log(`[backfill] done — upserted:${upserted} skipped:${skipped} total:${targets.length}`);
         return true;
       })();
       try { return await _backfillInFlight; }
@@ -14193,7 +14201,7 @@
   async function refreshCrossUserBlocks() {
     const _wasEmpty = crossUserBlocksCache.length === 0;
     try {
-      const rows = await atelierPublic.list(60);
+      const rows = await atelierPublic.list(200);
       if (!Array.isArray(rows)) return;
       crossUserBlocksCache = rows
         .filter(r => r && r.owner_id !== currentUser?.id)
@@ -15081,6 +15089,12 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       ensureMarqueesPlaying();
+      // Re-fetch cross-user blocks so edits/additions by others are visible
+      // as soon as the user returns to the tab (don't wait for the 5-min timer).
+      if (currentUser) {
+        console.log('[cross-user] tab visible → refreshCrossUserBlocks');
+        try { refreshCrossUserBlocks(); } catch (e) {}
+      }
     } else {
       // Tab hidden / iOS background: flush pending edits immediately so the
       // debounce timer doesn't get killed before it fires (common on iOS Safari).
