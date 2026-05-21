@@ -2765,6 +2765,9 @@
     padding: 1px 5px;
     text-transform: uppercase;
   }
+  @media (max-width: 720px) {
+    .cy-meta { display: none; }
+  }
   .audio-broken-banner {
     max-width: 480px;
     margin: 0 auto 24px;
@@ -12020,7 +12023,7 @@
             <span class="cy-title" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
             ${_brokenBadge}
           </span>
-          <span style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${right}</span>
+          <span class="cy-meta" style="font-size:10px;color:var(--gray-2);flex-shrink:0;white-space:nowrap;">${right}</span>
         `;
         li.addEventListener('click', () => {
           // Populate explore cache so openExternalBlock can resolve the block,
