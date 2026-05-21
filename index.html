@@ -9873,14 +9873,15 @@
       const _cachePayload = (typeof _explorePublicCache !== 'undefined') ? _explorePublicCache[b.id]?.payload : undefined;
       const _cacheOg = typeof _cachePayload === 'string' ? JSON.parse(_cachePayload).ogImage : _cachePayload?.ogImage;
       const _ogImage = b.ogImage || _cacheOg || '';
-      console.log('[feed-url]', b.id, '| bOg='+b.ogImage, '| cacheOg='+_cacheOg, '| payloadType='+typeof _cachePayload, '| inCache='+(b.id in (typeof _explorePublicCache!=='undefined'?_explorePublicCache:{})));
       if (_ogImage) {
-        return `<div style="position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper-2);">
-          <img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onload="console.log('[feed-img-ok]',this.src.slice(-60))" onerror="console.log('[feed-img-err]',this.src.slice(-60));this.style.display='none'">
-          <div style="position:absolute;top:0;left:0;right:0;padding:6px 8px;background:rgba(220,219,213,0.82);">
-            <span style="font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${escapeHtml(domain)}</span>
-          </div>
-        </div>`;
+        // Return img as direct child — feed-group-card-thumb already has
+        // position:relative + overflow:hidden so the overlay can sit on top.
+        // A wrapper div with height:100% breaks rendering when the parent
+        // height is set via aspect-ratio (Chrome doesn't resolve it).
+        return `<img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">` +
+          `<div style="position:absolute;top:0;left:0;right:0;padding:6px 8px;background:rgba(220,219,213,0.82);pointer-events:none;">` +
+          `<span style="font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${escapeHtml(domain)}</span>` +
+          `</div>`;
       }
       return `<div class="feed-url-thumb">
         <div class="feed-url-thumb-domain">${escapeHtml(domain)}</div>
