@@ -7566,8 +7566,11 @@
   let selectedBlockIds = new Set();
 
   function openChannelDetail(cid) {
-    const c = CHANNELS.find(x => x.id === cid);
-    if (!c) return;
+    let c = CHANNELS.find(x => x.id === cid);
+    if (!c) {
+      const _label = (typeof _resolveChannelLabel === 'function' && _resolveChannelLabel(cid)) || cid;
+      c = { id: cid, label: _label, meta: '', mainPhrase: '', createdAt: 0, updatedAt: 0 };
+    }
     if ($('#channelDetailView').hidden) navOpen('channelDetail');
     if (currentChannelDetailId !== cid) {
       selectedBlockIds = new Set();
@@ -8980,14 +8983,17 @@
       }
     } else if (action === 'channel') {
       const cid = bc.dataset.cid;
-      if (!cid) return;
+      const targetUid = bc.dataset.uid;
+      const targetHandle = bc.dataset.handle;
+      const targetClabel = bc.dataset.clabel;
+      // Bail only if both channel-id AND owner-id are absent (completely unknown target).
+      // External blocks whose channel_id is NULL in public_blocks have empty data-cid
+      // but still carry data-uid, so we can still route via channel_label.
+      if (!cid && !targetUid) return;
       // Cross-user channel link (e.g., breadcrumb on an external block in
       // the visitor flow): route to openUserChannel so the visitor stays
       // inside the EXPLORE/portfolio view of the original owner instead
       // of jumping into their own My Channel detail with the same id.
-      const targetUid = bc.dataset.uid;
-      const targetHandle = bc.dataset.handle;
-      const targetClabel = bc.dataset.clabel;
       const isCrossUser = targetUid && (typeof currentUser === 'undefined' || targetUid !== currentUser?.id);
       if (isCrossUser && typeof openUserChannel === 'function') {
         if ($('#pieceModal').classList.contains('is-open')) {
@@ -9555,6 +9561,16 @@
     if (m && m.label) return m.label;
     const u = loadUserChannels().find(c => c.id === cid);
     return (u && u.label) || null;
+  }
+  // Resolve a channel object for a block, synthesizing a minimal stub when the
+  // channel is not in the in-memory CHANNELS array (e.g. after data loss).
+  function _channelForBlock(block) {
+    if (!block?.channelId) return undefined;
+    return CHANNELS.find(c => c.id === block.channelId)
+      || (() => {
+        const label = _resolveChannelLabel(block.channelId) || block.channelLabel || block.channelId;
+        return { id: block.channelId, label, meta: '', mainPhrase: '', createdAt: 0, updatedAt: 0 };
+      })();
   }
 
   // Probe duration of an external audio URL (best effort).
@@ -10778,7 +10794,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === track.channelId), kindLabel: t('modalLabelAudio'), label: track.title, block: track })}
+      ${_blockModalHeadHtml({ channel: _channelForBlock(track), kindLabel: t('modalLabelAudio'), label: track.title, block: track })}
       <div class="piece-modal-art">
         ${escapeHtml(track.artist)}<span class="dur">${fmtDur(track.sec)}</span>
         ${ trackIsPlayable(track)
@@ -11301,7 +11317,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: t('modalLabelImage'), label: block.caption || '(image)', block })}
+      ${_blockModalHeadHtml({ channel: _channelForBlock(block), kindLabel: t('modalLabelImage'), label: block.caption || '(image)', block })}
       ${ block.source ? `<div class="piece-modal-art">${escapeHtml(block.source)}</div>` : '' }
       ${_blockMetaHtml(block)}
       <div class="piece-modal-image" style="aspect-ratio: 4/3;">
@@ -11338,7 +11354,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: t('modalLabelUrl') || '— url', label: block.title || block.url || '(url)', block })}
+      ${_blockModalHeadHtml({ channel: _channelForBlock(block), kindLabel: t('modalLabelUrl') || '— url', label: block.title || block.url || '(url)', block })}
       ${ block.ogImage ? `<div class="piece-modal-image"><img src="${escapeHtml(block.ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.remove()"></div>` : '' }
       <div class="piece-modal-art" style="display:flex; flex-wrap:wrap; align-items:baseline; gap:12px 18px;">
         <span style="text-transform:uppercase; letter-spacing:0.18em;">${escapeHtml(domain)}</span>
@@ -11376,7 +11392,7 @@
       ${_blockTabsHtml()}
       ${_feedBackHtml()}
       ${_backBtnHtml()}
-      ${_blockModalHeadHtml({ channel: CHANNELS.find(c => c.id === block.channelId), kindLabel: styleLabel, label: block.title || ((block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : '')), block })}
+      ${_blockModalHeadHtml({ channel: _channelForBlock(block), kindLabel: styleLabel, label: block.title || ((block.text || '').slice(0, 40) + ((block.text || '').length > 40 ? '…' : '')), block })}
       <div class="piece-modal-art" style="font-size: clamp(20px, 3vw, 32px); line-height: 1.5; margin-bottom: 32px; color: var(--ink); letter-spacing: 0; text-transform: none;">
         ${ block.style === 'lyric' ? `<span style="font-style: normal;">${escapeHtml(block.text)}</span>` : escapeHtml(block.text).replace(/\n/g, '<br>') }
       </div>
@@ -12808,7 +12824,9 @@
     // are tagged _isConnected so the renderer shows a CONNECT badge.
     const _isSelfChannel = !!(currentUser?.id && ownerId === currentUser.id);
     let _ownRows = Object.values(_explorePublicCache)
-      .filter(r => r && r.owner_id === ownerId && (r.channel_id || '_unkn') === channelId);
+      .filter(r => r && r.owner_id === ownerId &&
+        (channelId ? (r.channel_id || '_unkn') === channelId
+                   : channelLabel ? (r.channel_label || '') === channelLabel : false));
     if (_isSelfChannel) {
       const _localBlocks = loadBlocks();
       const _localById = new Map(_localBlocks.map(b => [b.id, b]));
@@ -13773,7 +13791,18 @@
             // Own block not in localStorage (sync gap between devices).
             // Open in own-block mode with correct navStack.
             const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : (row.payload || {});
-            const b = { ...p, id: row.id, kind: row.kind };
+            const b = { ...p, id: row.id, kind: row.kind, channelLabel: p.channelLabel || row.channel_label || '' };
+            // Re-register channel in CHANNELS + localStorage if missing (e.g. after data loss)
+            if (row.channel_id && (row.channel_label || p.channelLabel) && !CHANNELS.some(c => c.id === row.channel_id)) {
+              const _chLabel = row.channel_label || p.channelLabel;
+              const _now = Date.now();
+              const _newCh = { id: row.channel_id, label: _chLabel, meta: '', mainPhrase: '', createdAt: _now, updatedAt: _now, userCreated: true };
+              CHANNELS.push(_newCh);
+              if (typeof loadUserChannels === 'function' && typeof saveUserChannels === 'function') {
+                const _ucList = loadUserChannels();
+                if (!_ucList.some(x => x.id === row.channel_id)) { _ucList.push(_newCh); saveUserChannels(_ucList); }
+              }
+            }
             openModal('pieces');
             if (b.kind === 'image')     openImageModal(b);
             else if (b.kind === 'text') openTextModal(b);
