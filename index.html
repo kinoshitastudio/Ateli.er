@@ -13883,6 +13883,9 @@
           if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
           lastPushedJson = JSON.stringify(_snapshot());
           localStorage.setItem(LAST_USER_KEY, currentUser.id);
+          // Fire-and-forget: remove any public_blocks rows that no longer
+          // exist locally (deleted blocks that failed to clean up remotely).
+          setTimeout(() => { try { atelierPublic?.reconcileOwnPublicBlocks(); } catch(e) {} }, 2000);
           return true;
         } catch (e) {
           console.warn('[atelierSync] pull error:', e);
@@ -14217,7 +14220,41 @@
       try { return await _backfillInFlight; }
       finally { _backfillInFlight = null; }
     }
-    return { upsert, remove, sync, list, syncChannelLabel, backfillOwnPublicBlocks };
+    // After a pull (or user-switch), fetch every public_blocks row owned by
+    // this user and delete any that no longer exist locally (deleted blocks,
+    // deleted channels, or blocks flipped to draft that never got cleaned up).
+    async function reconcileOwnPublicBlocks() {
+      if (!currentUser?.id) return false;
+      const token = _accessToken();
+      if (!token) return false;
+      try {
+        const res = await Promise.race([
+          fetch(
+            `${SUPABASE_URL}/rest/v1/public_blocks?owner_id=eq.${encodeURIComponent(currentUser.id)}&select=id`,
+            { headers: { 'apikey': SUPABASE_PUB_KEY, 'Authorization': `Bearer ${token}` } }
+          ),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('reconcile timeout')), 10000)),
+        ]);
+        if (!res.ok) return false;
+        const rows = await res.json();
+        if (!Array.isArray(rows) || rows.length === 0) return true;
+        const remoteIds = rows.map(r => r.id);
+        const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+        const shouldBePublic = new Set([
+          ...blocks.filter(b => b.isPublic).map(b => b.id),
+          ...(typeof TRACKS !== 'undefined' ? TRACKS.filter(t => t.ownLocal && t.isPublic !== false).map(t => t.id) : []),
+        ]);
+        const orphans = remoteIds.filter(id => !shouldBePublic.has(id));
+        if (orphans.length === 0) return true;
+        console.log(`[reconcile] removing ${orphans.length} orphaned public_blocks row(s):`, orphans);
+        await Promise.all(orphans.map(id => remove(id).catch(() => {})));
+        return true;
+      } catch (e) {
+        console.warn('[atelierPublic] reconcile error:', e);
+        return false;
+      }
+    }
+    return { upsert, remove, sync, list, syncChannelLabel, backfillOwnPublicBlocks, reconcileOwnPublicBlocks };
   })();
 
   // ──────────────── CROSS-USER BROADCAST (Phase E-prep, 2026-04-29) ────────────────
