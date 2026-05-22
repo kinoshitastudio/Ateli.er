@@ -14264,6 +14264,14 @@
       if (!currentUser?.id) return false;
       const token = _accessToken();
       if (!token) return false;
+      // Safety guard: if local blocks are empty, something went wrong with sync.
+      // Refuse to delete remote rows — a full wipe would be unrecoverable.
+      const localBlocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+      const localTracks = (typeof TRACKS !== 'undefined') ? TRACKS.filter(t => t.ownLocal) : [];
+      if (localBlocks.length === 0 && localTracks.length === 0) {
+        console.warn('[reconcile] skipped — local is empty, refusing to delete remote rows (sync gap protection)');
+        return false;
+      }
       try {
         const res = await Promise.race([
           fetch(
@@ -14276,12 +14284,17 @@
         const rows = await res.json();
         if (!Array.isArray(rows) || rows.length === 0) return true;
         const remoteIds = rows.map(r => r.id);
-        const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+        const blocks = localBlocks;
         const shouldBePublic = new Set([
           ...blocks.filter(b => b.isPublic).map(b => b.id),
-          ...(typeof TRACKS !== 'undefined' ? TRACKS.filter(t => t.ownLocal && t.isPublic !== false).map(t => t.id) : []),
+          ...localTracks.filter(t => t.isPublic !== false).map(t => t.id),
         ]);
         const orphans = remoteIds.filter(id => !shouldBePublic.has(id));
+        // Additional guard: never delete more than half of remote rows in one pass.
+        if (orphans.length > remoteIds.length / 2) {
+          console.warn(`[reconcile] skipped — would delete ${orphans.length}/${remoteIds.length} rows, too aggressive`);
+          return false;
+        }
         if (orphans.length === 0) return true;
         console.log(`[reconcile] removing ${orphans.length} orphaned public_blocks row(s):`, orphans);
         await Promise.all(orphans.map(id => remove(id).catch(() => {})));
