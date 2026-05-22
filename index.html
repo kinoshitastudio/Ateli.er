@@ -13905,6 +13905,19 @@
           // Clear keys not present on the server too, so a re-login on a
           // dirty browser ends up with exactly what the server knows.
           const state = rows[0].state || {};
+          // Safety guard: if the server state has no blocks but the local has blocks,
+          // the server is likely stale (another device pushed empty state due to a
+          // sync gap). Push local up instead of wiping — unrecoverable data loss otherwise.
+          const serverBlockCount = (() => { try { return JSON.parse(state.atelier_blocks_v1 || '[]').length; } catch(e) { return 0; } })();
+          const localBlockCount = (() => { try { return JSON.parse(localStorage.getItem('atelier_blocks_v1') || '[]').length; } catch(e) { return 0; } })();
+          if (serverBlockCount === 0 && localBlockCount > 0) {
+            console.warn(`[atelierSync] pull: server has 0 blocks but local has ${localBlockCount} — pushing local up instead of wiping`);
+            try { await push(true); } catch(e) {}
+            lastPushedJson = JSON.stringify(_snapshot());
+            localStorage.setItem(LAST_USER_KEY, currentUser.id);
+            isPulling = false;
+            return true;
+          }
           let _pullWriteFailed = false;
           SYNC_KEYS.forEach(k => {
             if (Object.prototype.hasOwnProperty.call(state, k)) {
