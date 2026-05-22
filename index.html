@@ -2319,13 +2319,18 @@
     padding: 6px 0;
     font: inherit;
     font-family: var(--sans-jp);
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink);
     outline: none;
     width: 100%;
-    resize: vertical;
+    resize: none;
+    overflow: hidden;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
   }
   .upload-form textarea.uf-input { font-family: var(--sans-jp); line-height: 1.6; }
+  .upload-form input.uf-input { white-space: nowrap; overflow: hidden; resize: none; }
   .upload-form .uf-input::placeholder { color: var(--gray-2); }
   .upload-form .uf-input:focus { border-bottom-color: var(--ink); }
   .upload-form .uf-file {
@@ -8068,9 +8073,9 @@
       </div>
       <div class="upload-form" style="margin-top: 32px;">
         <div class="uf-grid">
-          <label class="uf-row"><span class="sp-k">${t('fldLabelCh')}</span><input class="uf-input" id="ch-label" value="${escapeHtml(c.label || '')}"></label>
-          <label class="uf-row"><span class="sp-k">${t('fldMainPhrase')}</span><input class="uf-input" id="ch-phrase" value="${escapeHtml(c.mainPhrase || '')}"></label>
-          <label class="uf-row"><span class="sp-k">${t('fldMeta')}</span><input class="uf-input" id="ch-meta" placeholder="${escapeHtml(t('fldMetaPh'))}" value="${escapeHtml(c.meta || '')}"></label>
+          <label class="uf-row"><span class="sp-k">${t('fldLabelCh')}</span><textarea class="uf-input" id="ch-label" rows="1">${escapeHtml(c.label || '')}</textarea></label>
+          <label class="uf-row"><span class="sp-k">${t('fldMainPhrase')}</span><textarea class="uf-input" id="ch-phrase" rows="1">${escapeHtml(c.mainPhrase || '')}</textarea></label>
+          <label class="uf-row"><span class="sp-k">${t('fldMeta')}</span><textarea class="uf-input" id="ch-meta" rows="1" placeholder="${escapeHtml(t('fldMetaPh'))}">${escapeHtml(c.meta || '')}</textarea></label>
           <label class="uf-row"><span class="sp-k">${t('fldLangCh')}</span><select class="uf-input" id="ch-lang">
             <option value="mixed"${c.lang === 'mixed' ? ' selected' : ''}>${t('langMixed')}</option>
             <option value="ja"${c.lang === 'ja' ? ' selected' : ''}>JP</option>
@@ -8098,6 +8103,11 @@
       </div>
     `;
     if (isFreshEntry) document.querySelector('.modal-shell').scrollTop = 0;
+    detail.querySelectorAll('textarea.uf-input').forEach(ta => {
+      const resize = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+      resize();
+      ta.addEventListener('input', resize);
+    });
     // Phase E-prep: bottom save/cancel buttons trigger the same handlers as
     // the top-right pair (mobile UX — no scroll back to top to commit).
     detail.querySelector('#chSaveBtnBottom')?.addEventListener('click', () => {
@@ -8372,9 +8382,9 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
-            <label class="uf-row"><span class="sp-k">${t('fldTitle')}</span><input class="uf-input" id="ef-title" value="${escapeHtml(obj.title || '')}"></label>
-            <label class="uf-row"><span class="sp-k">${t('fldArtist')}</span><input class="uf-input" id="ef-artist" value="${escapeHtml(obj.artist || '')}"></label>
-            <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><input class="uf-input" id="ef-phrase" maxlength="200" value="${escapeHtml(phrase0)}"></label>
+            <label class="uf-row"><span class="sp-k">${t('fldTitle')}</span><textarea class="uf-input" id="ef-title" rows="1">${escapeHtml(obj.title || '')}</textarea></label>
+            <label class="uf-row"><span class="sp-k">${t('fldArtist')}</span><textarea class="uf-input" id="ef-artist" rows="1">${escapeHtml(obj.artist || '')}</textarea></label>
+            <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><textarea class="uf-input" id="ef-phrase" rows="1" maxlength="200">${escapeHtml(phrase0)}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldContext')}</span>
               <textarea class="uf-input" id="ef-context" rows="2" placeholder="${escapeHtml(t('contextPh'))}">${escapeHtml(obj.context || '')}</textarea>
               ${ getAllTags().length > 0 ? `
@@ -8400,9 +8410,9 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
-            <label class="uf-row"><span class="sp-k">title</span><input class="uf-input" id="ef-caption" value="${escapeHtml(obj.caption || '')}"></label>
+            <label class="uf-row"><span class="sp-k">title</span><textarea class="uf-input" id="ef-caption" rows="1">${escapeHtml(obj.caption || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" value="${escapeHtml(obj.imageUrl || '')}"></label>
-            <label class="uf-row"><span class="sp-k">source</span><input class="uf-input" id="ef-source" value="${escapeHtml(obj.source || '')}"></label>
+            <label class="uf-row"><span class="sp-k">source</span><textarea class="uf-input" id="ef-source" rows="1">${escapeHtml(obj.source || '')}</textarea></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
               <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="800">${escapeHtml(obj.description || '')}</textarea>
@@ -8428,7 +8438,7 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
-            <label class="uf-row"><span class="sp-k">${t('tFldTitle')}</span><input class="uf-input" id="ef-title" placeholder="optional · a short label that appears above the text" maxlength="80" value="${escapeHtml(obj.title || '')}"></label>
+            <label class="uf-row"><span class="sp-k">${t('tFldTitle')}</span><textarea class="uf-input" id="ef-title" rows="1" maxlength="80" placeholder="optional · a short label that appears above the text">${escapeHtml(obj.title || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldText')}</span><textarea class="uf-input" id="ef-text" rows="5">${escapeHtml(obj.text || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">style</span><select class="uf-input" id="ef-style">
               <option value="lyric"${obj.style === 'lyric' ? ' selected' : ''}>lyric — drifts in the phrase lane</option>
@@ -8459,9 +8469,9 @@
       body = `
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
-            <label class="uf-row"><span class="sp-k">title</span><input class="uf-input" id="ef-title" value="${escapeHtml(obj.title || '')}"></label>
+            <label class="uf-row"><span class="sp-k">title</span><textarea class="uf-input" id="ef-title" rows="1">${escapeHtml(obj.title || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">url</span><input class="uf-input" type="url" id="ef-url" value="${escapeHtml(obj.url || '')}"></label>
-            <label class="uf-row"><span class="sp-k">source</span><input class="uf-input" id="ef-source" value="${escapeHtml(obj.source || '')}"></label>
+            <label class="uf-row"><span class="sp-k">source</span><textarea class="uf-input" id="ef-source" rows="1">${escapeHtml(obj.source || '')}</textarea></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
               <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="800">${escapeHtml(obj.description || '')}</textarea>
@@ -8495,6 +8505,12 @@
       </div>
     `;
     inner.innerHTML = head + body + footerActions;
+    // Auto-resize all textarea.uf-input on open and on input
+    inner.querySelectorAll('textarea.uf-input').forEach(ta => {
+      const resize = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+      resize();
+      ta.addEventListener('input', resize);
+    });
     $('#pieceModal').classList.add('is-open');
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     // Mark tag-suggest chips that are already present in the textarea.
