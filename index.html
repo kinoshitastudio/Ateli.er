@@ -8482,6 +8482,7 @@
             <label class="uf-row"><span class="sp-k">title</span><textarea class="uf-input" id="ef-title" rows="1">${escapeHtml(obj.title || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">url</span><input class="uf-input" type="url" id="ef-url" value="${escapeHtml(obj.url || '')}"></label>
             <label class="uf-row"><span class="sp-k">source</span><textarea class="uf-input" id="ef-source" rows="1">${escapeHtml(obj.source || '')}</textarea></label>
+            <label class="uf-row"><span class="sp-k">og image url</span><input class="uf-input" type="url" id="ef-ogImage" value="${escapeHtml(obj.ogImage || '')}" placeholder="https://..."></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
               <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="800">${escapeHtml(obj.description || '')}</textarea>
@@ -8664,6 +8665,7 @@
         url:    ($('#ef-url')?.value || '').trim(),
         title:  ($('#ef-title')?.value || '').trim(),
         source: ($('#ef-source')?.value || '').trim(),
+        ogImage: ($('#ef-ogImage')?.value || '').trim(),
         context: ($('#ef-context')?.value || '').trim(),
         description: ($('#ef-description')?.value || '').trim(),
         ...channelPatch,
@@ -11203,7 +11205,7 @@
           }
           if (m.kind === 'text') {
             const preview = (b.text || '').slice(0, 160);
-            const ixTitle = b.title || (preview + ((b.text || '').length > 160 ? '…' : ''));
+            const ixTitle = b.text ? (preview + ((b.text || '').length > 160 ? '…' : '')) : (b.title || '(text)');
             const thumbHtml = b.title
               ? escapeHtml(b.title)
               : escapeHtml((b.text || '').slice(0, 90)) + ((b.text || '').length > 90 ? '…' : '');
