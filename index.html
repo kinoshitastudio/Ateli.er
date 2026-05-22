@@ -6133,6 +6133,8 @@
       `<span class="image-item" data-kind="phrase" data-tid="${t.id}">${buildPieceImage(t)}</span>`
     ));
     const broadcastForImage = _broadcastBlocks();
+    _marqueeBroadcastCache = {};
+    broadcastForImage.forEach(b => { if (b && b.id) _marqueeBroadcastCache[b.id] = b; });
     broadcastForImage.filter(b => b.kind === 'image').forEach(b => {
       _row4Pool.push(
         `<span class="image-item" data-kind="image" data-bid="${b.id}">
@@ -12263,6 +12265,10 @@
   // Cache of last-fetched public_blocks rows, keyed by id, so click on an
   // Explore card can read the full payload without a second network round-trip.
   let _explorePublicCache = {};
+  // Blocks rendered in the marquee at last renderMarquees() call, keyed by id.
+  // Guarantees _findBroadcastBlock can find any rendered block regardless of
+  // whether refreshCrossUserBlocks() has finished populating the other caches.
+  let _marqueeBroadcastCache = {};
   // Cache of CONNECT relationships from channel_connections, populated by
   // openUserPortfolio. Shape: { ownerId: { channelId: [block_id, ...] } }.
   // openUserChannel reads this to merge curated blocks into the channel
@@ -14467,6 +14473,8 @@
                _ownerId: r.owner_id, _ownerHandle: r.owner_handle,
                channelLabel: r.channel_label || p.channelLabel || '' };
     }
+    // Final fallback: whatever was in the marquee at render time is always findable.
+    if (_marqueeBroadcastCache[id]) return _marqueeBroadcastCache[id];
     return null;
   }
 
