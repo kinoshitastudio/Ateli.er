@@ -15333,11 +15333,14 @@
         const urlTab = document.querySelector('#blockKindTabs .bk-tab[data-kind="url"]');
         if (urlTab) urlTab.click();
 
-        set('uUrl',         p.get('url'));
-        set('uTitleOnly',   p.get('title'));
-        set('uSource',      p.get('source'));
-        set('uDescription', p.get('description'));
-        set('uOgImage',     p.get('image'));
+        // Delay matches audio/image tabs — tab click may reset form fields synchronously.
+        setTimeout(() => {
+          set('uUrl',         p.get('url'));
+          set('uTitleOnly',   p.get('title'));
+          set('uSource',      p.get('source'));
+          set('uDescription', p.get('description'));
+          set('uOgImage',     p.get('image'));
+        }, 80);
 
         // Select channel — create it on-the-fly if sent from Clip and not yet in Atelier
         const ch = p.get('channel');
