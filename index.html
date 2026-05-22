@@ -11065,22 +11065,29 @@
     const newChBtn = root.querySelector('#pccNewChannelBtn');
     if (newChBtn) {
       newChBtn.addEventListener('click', () => {
-        const label = prompt('new channel — label?', '');
-        if (!label || !label.trim()) return;
-        const phrase = prompt('main phrase? (one line, optional)', '') || '';
-        const newId = createChannel({
-          label: label.trim(),
-          mainPhrase: phrase.trim(),
-          lang: 'mixed',
-          meta: '',
-        });
-        if (newId) {
-          const ok = _tryConnect(id, newId);
-          connectPickerOpen = false;
-          refreshAllViews();
-          if (ok) showToast(CURRENT_LANG === 'ja' ? label.trim() + ' を新規作成して接続しました' : label.trim() + ': created and connected');
-          else showToast(CURRENT_LANG === 'ja' ? label.trim() + ' は作成しましたが接続に失敗しました' : label.trim() + ': created but connect failed');
-        }
+        // Replace with an inline input row — prompt() is silently blocked on iOS/PWA.
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; gap:6px; margin-top:4px;';
+        row.innerHTML = `<input type="text" maxlength="40" placeholder="channel name" autocomplete="off" style="flex:1; min-width:0; padding:5px 8px; background:transparent; border:none; border-bottom:1px solid var(--ink); font:inherit; font-size:12px; color:var(--ink); outline:none; letter-spacing:0.06em;"><button type="button" style="flex-shrink:0; padding:5px 10px; background:none; border:1px solid var(--ink); cursor:pointer; font:inherit; font-size:11px; color:var(--ink); letter-spacing:0.06em;">✓</button>`;
+        newChBtn.replaceWith(row);
+        const inp = row.querySelector('input');
+        const okBtn = row.querySelector('button');
+        inp.focus();
+        const _submit = () => {
+          const label = inp.value.trim();
+          if (!label) { inp.focus(); return; }
+          const newId = createChannel({ label, mainPhrase: '', lang: 'mixed', meta: '' });
+          if (newId) {
+            if (typeof atelierSync !== 'undefined') atelierSync.push().catch(() => {});
+            const ok = _tryConnect(id, newId);
+            connectPickerOpen = false;
+            refreshAllViews();
+            if (ok) showToast(CURRENT_LANG === 'ja' ? label + ' を新規作成して接続しました' : label + ': created and connected');
+            else showToast(CURRENT_LANG === 'ja' ? label + ' は作成しましたが接続に失敗しました' : label + ': created but connect failed');
+          }
+        };
+        okBtn.addEventListener('click', _submit);
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); _submit(); } });
       });
     }
     root.querySelectorAll('[data-disconnect]').forEach(btn => {
@@ -13726,10 +13733,17 @@
       const bid = decodeURIComponent(p.mBlock[1]);
       // Own audio block.
       const tr = TRACKS.find(t => t.id === bid);
-      if (tr) { openPieceModal(tr); return; }
+      if (tr) {
+        openModal('pieces');
+        openPieceModal(tr);
+        return;
+      }
       // Own non-audio block.
       const b = loadBlocks().find(x => x.id === bid);
       if (b) {
+        // Open parent #modal first so navStack = ['modal','pieceModal'], giving
+        // breadcrumb back-navigation the correct chain to work from.
+        openModal('pieces');
         if (b.kind === 'image')     openImageModal(b);
         else if (b.kind === 'text') openTextModal(b);
         else if (b.kind === 'url')  openUrlModal(b);
