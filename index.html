@@ -6154,6 +6154,13 @@
         </span>`
       );
     });
+    broadcastForImage.filter(b => b.kind === 'url' && b.ogImage).forEach(b => {
+      _row4Pool.push(
+        `<span class="image-item" data-kind="url" data-bid="${b.id}">
+          <img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+        </span>`
+      );
+    });
     // Repeat-pad sparse pools (same fix as Row 1 and Row 2).
     const _row4Repeat = Math.max(1, Math.ceil(6 / Math.max(1, _row4Pool.length)));
     // Row 4 items are pre-built HTML strings, so the cache key uses the
@@ -6228,6 +6235,9 @@
           openModal('pieces');
           const cid = el.dataset.cid;
           if (cid) openChannelDetail(cid);
+        } else if (kind === 'url') {
+          const blk = _findBroadcastBlock(el.dataset.bid);
+          if (blk) openUrlModal(blk);
         } else if (kind === 'image') {
           // Phase E-prep: lookup unified across own + cross-user broadcast.
           const blk = _findBroadcastBlock(el.dataset.bid);
@@ -11213,9 +11223,12 @@
             let domain = '';
             try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
             if (!domain) domain = 'link';
+            const urlThumbHtml = b.ogImage
+              ? `<img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;border-radius:2px;" loading="lazy">`
+              : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
             return `<li data-kind="url" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb"><span class="ix-thumb-url">${escapeHtml(domain)}</span></span>
+              <span class="ix-thumb">${urlThumbHtml}</span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(b.title || b.url || '(url)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(b.source || '')} —</span>

@@ -110,7 +110,8 @@ export default {
         const p = row.payload || {};
         title = p.title || p.caption || `${row.kind} — Ateli.er`;
         description = (p.text || '').slice(0, 200) || p.caption || `by @${row.owner_handle || 'artist'} on Ateli.er`;
-        if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
+        if (p.ogImage) image = convertOgImageUrl(p.ogImage);
+        else if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
       }
     } else if (type === 'user' && id) {
       const rows = await sbGet(`profiles?id=eq.${encodeURIComponent(id)}&select=handle,bio,avatar_url&limit=1`);
