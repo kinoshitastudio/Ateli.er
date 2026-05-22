@@ -14454,7 +14454,20 @@
     const own = (typeof loadBlocks === 'function') ? loadBlocks() : [];
     const found = own.find(b => b.id === id);
     if (found) return found;
-    return (crossUserBlocksCache || []).find(b => b.id === id) || null;
+    const cross = (crossUserBlocksCache || []).find(b => b.id === id);
+    if (cross) return cross;
+    // Fallback: _explorePublicCache covers ownFromRemote blocks (own blocks
+    // in public_blocks but not in localStorage — e.g. Clip on another device).
+    if (typeof _explorePublicCache !== 'undefined' && _explorePublicCache[id]) {
+      const r = _explorePublicCache[id];
+      const p = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {});
+      return { ...p, id: r.id, kind: r.kind, ogImage: p.ogImage || '',
+               _external: !!(r.owner_id && currentUser?.id && r.owner_id !== currentUser.id),
+               _crossUser: !!(r.owner_id && currentUser?.id && r.owner_id !== currentUser.id),
+               _ownerId: r.owner_id, _ownerHandle: r.owner_handle,
+               channelLabel: r.channel_label || p.channelLabel || '' };
+    }
+    return null;
   }
 
   // ──────────────── TRACES — cross-user comments (Phase D-1) ────────────────
