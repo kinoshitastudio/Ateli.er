@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ateli.er Clip — モバイル版</title>
+<meta name="description" content="Safari からワンタップでページを Atelier に保存。">
+<meta name="theme-color" content="#DCDBD5">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta property="og:title" content="Ateli.er Clip — モバイル版">
+<meta property="og:description" content="Safari からワンタップでページを Atelier に保存。">
+<meta property="og:image" content="https://atelistudio.com/og-image.png">
+<meta property="og:url" content="https://atelistudio.com/clip-bookmarklet.html">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --paper:  #DCDBD5;
+  --ink:    #1600A2;
+  --ink-dim: #1600A266;
+  --dark:   #1a1a2e;
+  --mid:    #555;
+  --step-bg: #F5F4EF;
+  --code-bg: #1a1a2e;
+}
+html, body { background: var(--paper); color: var(--dark); font-family: 'Noto Sans JP', sans-serif; font-weight: 300; min-height: 100dvh; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #ccc;
+}
+.logo { font-size: 15px; font-weight: 400; color: var(--ink); letter-spacing: .04em; text-decoration: none; }
+.back { font-size: 12px; color: var(--mid); text-decoration: none; }
+
+main { max-width: 560px; margin: 0 auto; padding: 40px 20px 80px; }
+
+h1 { font-size: 22px; font-weight: 300; letter-spacing: .04em; margin-bottom: 8px; }
+.sub { font-size: 13px; color: var(--mid); line-height: 1.7; margin-bottom: 40px; }
+
+/* steps */
+.steps { display: flex; flex-direction: column; gap: 20px; margin-bottom: 48px; }
+.step { background: var(--step-bg); border-radius: 10px; padding: 20px; }
+.step-num { font-size: 11px; font-weight: 500; color: var(--ink); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px; }
+.step-title { font-size: 15px; font-weight: 400; margin-bottom: 8px; }
+.step-body { font-size: 13px; color: var(--mid); line-height: 1.75; }
+.step-body b { color: var(--dark); font-weight: 500; }
+
+/* code block */
+.code-wrap { margin-top: 16px; background: var(--code-bg); border-radius: 8px; overflow: hidden; }
+.code-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid #ffffff18; }
+.code-label { font-size: 11px; color: #ffffff66; font-family: 'JetBrains Mono', monospace; }
+.copy-btn {
+  font-size: 11px; font-weight: 500; color: #fff;
+  background: var(--ink); border: none; border-radius: 4px;
+  padding: 4px 10px; cursor: pointer; font-family: inherit;
+  transition: opacity .15s;
+}
+.copy-btn:active { opacity: .7; }
+.copy-btn.copied { background: #2a9d5c; }
+code {
+  display: block; padding: 14px; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: #a8d8ff; line-height: 1.6; word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* divider */
+.or { text-align: center; font-size: 12px; color: var(--mid); margin: 32px 0; letter-spacing: .08em; }
+.or::before, .or::after { content: '——'; margin: 0 10px; }
+
+/* demo */
+.demo { background: var(--step-bg); border-radius: 10px; padding: 20px; margin-bottom: 48px; }
+.demo-title { font-size: 14px; font-weight: 400; margin-bottom: 12px; }
+.demo-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.demo-step { background: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; color: var(--dark); }
+.demo-arrow { font-size: 12px; color: var(--ink-dim); }
+
+footer { text-align: center; padding: 32px 20px; font-size: 11px; color: var(--mid); border-top: 1px solid #ccc; }
+footer a { color: var(--ink); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">Ateli.er</a>
+  <a class="back" href="/about.html">← about</a>
+</header>
+
+<main>
+  <h1>Ateli.er Clip<br>モバイル版</h1>
+  <p class="sub">Safari で見ているページを、ブックマークのタップ1つで Atelier に保存できます。</p>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num">Step 1</div>
+      <div class="step-title">コードをコピーする</div>
+      <div class="step-body">下のボタンでコードをコピーしてください。</div>
+      <div class="code-wrap">
+        <div class="code-header">
+          <span class="code-label">bookmarklet</span>
+          <button class="copy-btn" id="copyBtn">コピー</button>
+        </div>
+        <code id="codeBlock">javascript:(function(){var m=function(p){var e=document.querySelector('meta[property="'+p+'"]')||document.querySelector('meta[name="'+p+'"]');return e?e.getAttribute('content'):''};var p=new URLSearchParams({add:'url',url:location.href,title:m('og:title')||document.title||'',description:m('og:description')||m('description')||'',image:m('og:image')||'',source:location.hostname.replace(/^www\./,'')});location.href='https://atelistudio.com/?'+p;})();</code>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 2</div>
+      <div class="step-title">このページをブックマークに追加する</div>
+      <div class="step-body">
+        Safari の <b>共有ボタン（□↑）→「ブックマークを追加」</b> でこのページを保存してください。名前は何でも OK です（あとで変えます）。<br>
+        フォルダは <b>「Atelier」</b>（なければお気に入りでも OK）。
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 3</div>
+      <div class="step-title">ブックマークの URL を書き換える</div>
+      <div class="step-body">
+        <b>ブックマーク一覧 → Atelier フォルダ → 追加したブックマークを長押し → 編集</b><br>
+        URL 欄の中身を全部消して、Step 1 でコピーしたコードを貼り付けます。<br>
+        名前を <b>「Atelier Clip」</b> に変更して保存して完了。
+      </div>
+    </div>
+
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">使い方</div>
+    <div class="demo-flow">
+      <div class="demo-step">保存したいページを開く</div>
+      <div class="demo-arrow">→</div>
+      <div class="demo-step">ブックマーク → Atelier Clip</div>
+      <div class="demo-arrow">→</div>
+      <div class="demo-step">Atelier でそのまま保存</div>
+    </div>
+  </div>
+
+  <p class="sub" style="font-size:12px;">
+    ※ PC では <a href="https://chromewebstore.google.com/detail/atelier-clip/ngkhghpnghaihcifjmieelhekmjpfkbo" target="_blank" rel="noopener">Chrome 拡張版</a> が使えます。
+  </p>
+
+</main>
+
+<footer>
+  <a href="/">Ateli.er</a> · <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a>
+</footer>
+
+<script>
+const CODE = document.getElementById('codeBlock').textContent;
+document.getElementById('copyBtn').addEventListener('click', function() {
+  navigator.clipboard.writeText(CODE).then(() => {
+    this.textContent = 'コピー済み';
+    this.classList.add('copied');
+    setTimeout(() => { this.textContent = 'コピー'; this.classList.remove('copied'); }, 2000);
+  });
+});
+</script>
+
+</body>
+</html>
