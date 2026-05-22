@@ -6144,7 +6144,7 @@
       if (b.ogImage) {
         _row4Pool.push(
           `<span class="image-item" data-kind="url" data-bid="${b.id}">
-            <img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+            <img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="this.style.display='none'">
           </span>`
         );
       } else {
