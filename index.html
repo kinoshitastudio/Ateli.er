@@ -13844,6 +13844,7 @@
     let lastPushedJson = null;
     let isPulling = false;
     let pullPromise = null;  // dedupe concurrent pulls
+    let _lastSelfPushMs = 0; // timestamp of last successful push from this session
 
     function _accessToken() {
       try {
@@ -13936,9 +13937,22 @@
           // sync gap). Push local up instead of wiping — unrecoverable data loss otherwise.
           const serverBlockCount = (() => { try { return JSON.parse(state.atelier_blocks_v1 || '[]').length; } catch(e) { return 0; } })();
           const localBlockCount = (() => { try { return JSON.parse(localStorage.getItem('atelier_blocks_v1') || '[]').length; } catch(e) { return 0; } })();
-          if (serverBlockCount === 0 && localBlockCount > 0) {
-            console.warn(`[atelierSync] pull: server has 0 blocks but local has ${localBlockCount} — pushing local up instead of wiping`);
-            try { await push(true); } catch(e) {}
+          if (serverBlockCount < localBlockCount) {
+            console.warn(`[atelierSync] pull: server has ${serverBlockCount} blocks but local has ${localBlockCount} — merging and pushing local up`);
+            // Merge: keep server state for all keys, but restore local-only blocks
+            // so recently uploaded blocks are never silently dropped by a stale pull.
+            try {
+              const serverBlocks = (() => { try { return JSON.parse(state.atelier_blocks_v1 || '[]'); } catch(e) { return []; } })();
+              const localBlocks = (() => { try { return JSON.parse(localStorage.getItem('atelier_blocks_v1') || '[]'); } catch(e) { return []; } })();
+              const serverIds = new Set(serverBlocks.map(b => b.id));
+              const localOnly = localBlocks.filter(b => !serverIds.has(b.id));
+              if (localOnly.length > 0) {
+                const merged = [...serverBlocks, ...localOnly];
+                _safeSetItem('atelier_blocks_v1', JSON.stringify(merged));
+                console.warn(`[atelierSync] pull: merged ${localOnly.length} local-only block(s) back — pushing merged state`);
+              }
+              await push(true);
+            } catch(e) {}
             lastPushedJson = JSON.stringify(_snapshot());
             localStorage.setItem(LAST_USER_KEY, currentUser.id);
             isPulling = false;
@@ -14008,6 +14022,7 @@
           throw new Error(`HTTP ${res.status}: ${text}`);
         }
         lastPushedJson = json;
+        _lastSelfPushMs = Date.now();
         return true;
       } catch (e) {
         console.warn('[atelierSync] push error:', e);
@@ -14055,7 +14070,7 @@
       } catch (e) { /* best-effort */ }
     });
 
-    return { pull, push, pushDebounced };
+    return { pull, push, pushDebounced, recentlyPushed: () => _lastSelfPushMs > 0 && (Date.now() - _lastSelfPushMs < 8000) };
   })();
 
   // ──────────────── multi-tab sync (storage event) ────────────────
@@ -15233,6 +15248,14 @@
             table: 'user_state',
             filter: 'user_id=eq.' + currentUser.id
           }, async () => {
+            // Guard: skip if we just pushed from this session — the realtime
+            // event is our own echo. Pulling would overwrite localStorage with
+            // a server snapshot that may not yet include blocks uploaded since
+            // the push landed (race between push and subsequent local writes).
+            if (atelierSync.recentlyPushed()) {
+              console.log('[realtime] skip pull — own push echo (within 8s)');
+              return;
+            }
             console.log('[realtime] user_state changed on another device → pulling');
             try { await atelierSync.pull(); } catch(e) {}
           })
