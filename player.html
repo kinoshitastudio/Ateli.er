@@ -392,22 +392,26 @@
   #ctrl-progress {
     position: relative;
     width: 100%;
-    height: 2px;
-    background: var(--c-bar-line);
+    height: 44px;
+    background: transparent;
     cursor: pointer;
-    transition: height 0.2s ease;
   }
+  /* Visual track — 2px line centered in the 44px touch target */
   #ctrl-progress::before {
     content: '';
     position: absolute;
-    top: -20px;
-    bottom: -20px;
-    left: 0;
-    right: 0;
+    left: 0; right: 0;
+    top: 50%; height: 2px;
+    margin-top: -1px;
+    background: var(--c-bar-line);
+    transition: height 0.2s ease, margin-top 0.2s ease;
+    pointer-events: none;
   }
-  #ctrl-progress:hover { height: 4px; }
+  #ctrl-progress:hover::before { height: 4px; margin-top: -2px; }
   #ctrl-progress-fill {
-    position: absolute; left: 0; top: 0; bottom: 0;
+    position: absolute; left: 0;
+    top: 50%; height: 2px;
+    margin-top: -1px;
     background: var(--c-bar-ink);
     width: 0%;
     pointer-events: none;
