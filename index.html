@@ -6140,12 +6140,23 @@
         </span>`
       );
     });
-    broadcastForImage.filter(b => b.kind === 'url' && b.ogImage).forEach(b => {
-      _row4Pool.push(
-        `<span class="image-item" data-kind="url" data-bid="${b.id}">
-          <img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
-        </span>`
-      );
+    broadcastForImage.filter(b => b.kind === 'url').forEach(b => {
+      if (b.ogImage) {
+        _row4Pool.push(
+          `<span class="image-item" data-kind="url" data-bid="${b.id}">
+            <img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+          </span>`
+        );
+      } else {
+        let _dom = '';
+        try { if (b.url) _dom = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
+        _dom = _dom || b.source || b.title || 'link';
+        _row4Pool.push(
+          `<span class="image-item" data-kind="url" data-bid="${b.id}" style="display:flex;align-items:center;justify-content:center;padding:10px;">
+            <span style="font-family:var(--mono);font-size:9px;color:var(--gray);letter-spacing:0.10em;text-transform:lowercase;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;text-align:center;line-height:1.6;">${escapeHtml(_dom)}</span>
+          </span>`
+        );
+      }
     });
     // Repeat-pad sparse pools (same fix as Row 1 and Row 2).
     const _row4Repeat = Math.max(1, Math.ceil(6 / Math.max(1, _row4Pool.length)));
@@ -14348,7 +14359,10 @@
     const channelPublic = new Map();
     CHANNELS.forEach(c => channelPublic.set(c.id, c.isPublic !== false));
     const own = ownAll.filter(b => {
-      if (b.isPublic !== true) return false;
+      // Treat isPublic:undefined the same as tracks — only explicit false is
+      // a draft. Old blocks saved before the isPublic field was added would
+      // otherwise be silently excluded from the broadcast pool.
+      if (b.isPublic === false) return false;
       const cPub = channelPublic.has(b.channelId) ? channelPublic.get(b.channelId) : true;
       return cPub;
     });
