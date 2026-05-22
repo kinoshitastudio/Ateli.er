@@ -13760,15 +13760,27 @@
         else if (b.kind === 'url')  openUrlModal(b);
         return;
       }
-      // Public block from another user — fetch and open in explore view.
+      // Block not in localStorage — fetch from public_blocks.
       try {
         const rows = await fetch(
           `${SUPABASE_URL}/rest/v1/public_blocks?id=eq.${encodeURIComponent(bid)}&select=*&limit=1`,
           { headers: { apikey: SUPABASE_PUB_KEY } }
         ).then(r => r.ok ? r.json() : []);
         if (rows && rows[0]) {
-          _explorePublicCache[bid] = rows[0];
-          openExternalFromCache(bid);
+          const row = rows[0];
+          _explorePublicCache[bid] = row;
+          if (row.owner_id && currentUser?.id && row.owner_id === currentUser.id) {
+            // Own block not in localStorage (sync gap between devices).
+            // Open in own-block mode with correct navStack.
+            const p = typeof row.payload === 'string' ? JSON.parse(row.payload) : (row.payload || {});
+            const b = { ...p, id: row.id, kind: row.kind };
+            openModal('pieces');
+            if (b.kind === 'image')     openImageModal(b);
+            else if (b.kind === 'text') openTextModal(b);
+            else if (b.kind === 'url')  openUrlModal(b);
+          } else {
+            openExternalFromCache(bid);
+          }
         }
       } catch (e) {}
       return;
@@ -14368,7 +14380,18 @@
     });
     const ownIds = new Set(own.map(b => b.id));
     const cross = (crossUserBlocksCache || []).filter(b => !ownIds.has(b.id));
-    return [...own, ...cross];
+    // Own blocks that exist in public_blocks but not in localStorage (sync gap
+    // between devices — e.g., Clip-captured blocks created on another device).
+    // _explorePublicCache is seeded by refreshCrossUserBlocks() from all public_blocks rows.
+    const ownFromRemote = (typeof _explorePublicCache !== 'undefined' && currentUser?.id)
+      ? Object.values(_explorePublicCache)
+          .filter(r => r && r.owner_id === currentUser.id && !ownIds.has(r.id))
+          .map(r => {
+            const p = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {});
+            return { ...p, id: r.id, kind: r.kind, ogImage: p.ogImage || '', ts: r.ts || 0 };
+          })
+      : [];
+    return [...own, ...ownFromRemote, ...cross];
   }
   // Lookup helper for click handlers — searches both own and cross-user pools.
   function _findBroadcastBlock(id) {
