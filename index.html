@@ -4780,13 +4780,6 @@
                   <textarea class="uf-input" id="tText" rows="3" placeholder="a fragment, a thought, a half-lyric" maxlength="240"></textarea>
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k">style</span>
-                  <select class="uf-input" id="tStyle">
-                    <option value="lyric">lyric — drifts in the phrase lane</option>
-                    <option value="prose">prose — visible in the channel only</option>
-                  </select>
-                </label>
-                <label class="uf-row">
                   <span class="sp-k" data-i18n="fldDescription">description</span>
                   <textarea class="uf-input" id="tDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this block" maxlength="800"></textarea>
                 </label>
@@ -5772,13 +5765,6 @@
     // Form button
     const sb = document.getElementById('bSubmit');
     if (sb) sb.textContent = t('placeBtn');
-    // tStyle option labels
-    const ts = document.getElementById('tStyle');
-    if (ts) {
-      const opts = ts.querySelectorAll('option');
-      if (opts[0]) opts[0].textContent = t('tStyleLyric');
-      if (opts[1]) opts[1].textContent = t('tStyleProse');
-    }
     // Channel grid back button
     const dbk = document.getElementById('channelDetailBack');
     if (dbk) dbk.textContent = t('backToChannels');
@@ -9682,7 +9668,7 @@
       } else if (bkActive === 'text') {
         const title = document.getElementById('tTitle')?.value.trim() || '';
         const text = document.getElementById('tText').value.trim();
-        const style = document.getElementById('tStyle').value;
+        const style = 'lyric';
         const context = document.getElementById('tContext')?.value.trim() || '';
         const description = document.getElementById('tDescription')?.value.trim() || '';
         if (!text) { status.textContent = '— text required.'; status.className = 'uf-status err'; return; }
