@@ -4848,6 +4848,7 @@
         <div class="pane-head">
           <h3><em>Courtyard</em></h3>
           <span class="pane-meta" id="paneCourtyardMeta">— audio from the courtyard</span>
+          <button type="button" onclick="_courtyardLoaded=false;document.getElementById('courtyardList').innerHTML='';document.getElementById('courtyardStatus').style.display='';document.getElementById('courtyardStatus').textContent='';renderCourtyard();" style="margin-left:auto;background:none;border:none;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--gray-2);letter-spacing:.08em;padding:2px 4px;" title="更新">↺</button>
         </div>
         <p style="font-family: var(--mono); font-size: 10px; color: var(--gray); letter-spacing: 0.06em; line-height: 1.85; margin-bottom: 20px;">
           <span data-i18n="courtyardIntro">sounds set down quietly, unfinished. all public audio · newest on top.</span><br>
@@ -9775,6 +9776,7 @@
       status.className = 'uf-status ok';
       submit.disabled = false;
       logActivity('upload');
+      if (block.kind === 'audio') _courtyardLoaded = false;  // force re-fetch on next Courtyard visit
       try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
     });
   }
