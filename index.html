@@ -15013,6 +15013,26 @@
       const handleEl = document.getElementById('userHandle');
       if (handleEl) handleEl.textContent = '@' + newHandle;
       setAccountAvatar(newAvatarUrl);
+
+      // 5) Propagate new handle to all own public_blocks rows so Courtyard
+      //    shows the updated name without waiting for individual re-upserts.
+      try {
+        const _patchUrl = `${SUPABASE_URL}/rest/v1/public_blocks?owner_id=eq.${encodeURIComponent(user.id)}`;
+        fetch(_patchUrl, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_PUB_KEY,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ owner_handle: newHandle }),
+        }).then(r => {
+          if (r.ok) console.log('[settings] public_blocks owner_handle patched → ' + newHandle);
+          else r.text().then(t => console.warn('[settings] public_blocks patch failed:', r.status, t));
+        }).catch(e => console.warn('[settings] public_blocks patch error:', e));
+        _courtyardLoaded = false;  // stale Courtyard cache will re-fetch with new handle
+      } catch (e) { /* best-effort */ }
     } catch (err) {
       console.error('[settings] save error:', err);
       setStatus('保存失敗: ' + (err?.message || String(err)), 'err');
