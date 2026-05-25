@@ -7068,7 +7068,9 @@
     // waiting for the next refreshProfilesCache() periodic tick.
     _pushBlockOrderToProfile(map)
       .then(() => {
-        if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined' && _exploreProfilesCache[currentUser.id]) {
+        if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined') {
+          // キャッシュエントリがなくても初期化して反映（並べ替え直後にExploreを開いても即反映）
+          if (!_exploreProfilesCache[currentUser.id]) _exploreProfilesCache[currentUser.id] = {};
           _exploreProfilesCache[currentUser.id].block_order = map;
         }
       })
@@ -12701,7 +12703,10 @@
     // from the Supabase query) regardless of how the owner has arranged
     // their channel. Same source of truth as the openUserChannel sort:
     // profiles.block_order keyed by channel id.
-    const _ownerBlockOrderForCards = _ownerProfile?.block_order || null;
+    // 自分のポートフォリオを見るときはlocalStorageが正（Supabase同期待ちも即反映）
+    const _ownerBlockOrderForCards = _isSelfPortfolio
+      ? loadChannelOrder()
+      : (_ownerProfile?.block_order || null);
     const _orderForChannel = (cid) => {
       if (!_ownerBlockOrderForCards) return null;
       const arr = _ownerBlockOrderForCards[cid];
@@ -12822,10 +12827,13 @@
     // block order isn't synced yet) fall through to the legacy
     // audio-first / ts-ASC sort.
     const _ownerProfileForOrder = (typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[ownerId] : null;
-    const _ownerBlockOrderMap = _ownerProfileForOrder?.block_order || null;
-    const _ownerBlockOrder = (_ownerBlockOrderMap && Array.isArray(_ownerBlockOrderMap[channelId]))
-      ? _ownerBlockOrderMap[channelId]
-      : [];
+    // 自分のチャンネルを Explore 経由で見るときも localStorage を正として使う
+    // → My Channel で並べ替えた直後、Supabase PATCH が反映される前でも一致する
+    const _ownerBlockOrder = _isSelfChannel
+      ? (loadChannelOrder()[channelId] || [])
+      : ((_ownerProfileForOrder?.block_order && Array.isArray(_ownerProfileForOrder.block_order[channelId]))
+          ? _ownerProfileForOrder.block_order[channelId]
+          : []);
     const _orderIndex = (id) => {
       const i = _ownerBlockOrder.indexOf(id);
       return i >= 0 ? i : -1;
