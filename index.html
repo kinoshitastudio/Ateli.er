@@ -15128,9 +15128,6 @@
         // Phase E-prep: prime the cross-user broadcast pool so TOP marquee
         // and Feed feel alive on first paint.
         refreshCrossUserBlocks();
-        // Phase: prime profiles cache so comment-author avatars show up
-        // right away without requiring the viewer to open Explore tab.
-        if (typeof refreshProfilesCache === 'function') refreshProfilesCache();
         // One-shot backfill: re-upsert this user's public blocks so the
         // channel_id / channel_label columns are populated for legacy
         // rows. Idempotent — runs in background, surfaces correct
@@ -15143,7 +15140,14 @@
         // One-shot sync: push localStorage block_order / channel_grid_order
         // to profiles so visitors see the owner's intended order even for
         // users who haven't manually re-saved since the columns were added.
-        try { syncLocalOrderingToProfile().catch(() => {}); } catch (e) {}
+        // refreshProfilesCache() is called AFTER the push resolves so the
+        // in-memory cache always reflects the freshly-written block_order
+        // (calling it before the PATCH would cache stale data).
+        try {
+          syncLocalOrderingToProfile()
+            .then(() => { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); })
+            .catch(() => { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); });
+        } catch (e) { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); }
         // One-shot sync: push localStorage atelier_external_blocks_v1 to
         // channel_connections so visitors viewing this owner's portfolio
         // see CONNECT'd items in the right channels.
@@ -15234,7 +15238,14 @@
     // One-shot sync of local ordering (block_order / channel_grid_order)
     // into profiles columns so visitor views reflect the owner's saved
     // arrangement without requiring a manual re-save.
-    try { syncLocalOrderingToProfile().catch(() => {}); } catch (e) {}
+    // refreshProfilesCache() fires AFTER the PATCH resolves so the cache
+    // always reflects the freshly-written block_order (race fix: calling it
+    // before the PATCH would cache stale data from Supabase).
+    try {
+      syncLocalOrderingToProfile()
+        .then(() => { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); })
+        .catch(() => { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); });
+    } catch (e) { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); }
     // One-shot mirror of local CONNECTed block list to channel_connections
     // so visitors see curated items in the right channel via Explore.
     try { syncChannelConnectionsToProfile().catch(() => {}); } catch (e) {}
@@ -15284,10 +15295,10 @@
           .subscribe();
       } catch(e) { console.warn('[realtime] subscribe failed', e); }
     }
-    // Same cadence for the profiles cache so updated avatars / handles
+    // Periodic refresh of profiles cache so updated avatars / handles
     // become visible to other viewers without a manual page refresh.
+    // (Initial fetch is handled after syncLocalOrderingToProfile above.)
     if (typeof refreshProfilesCache === 'function') {
-      refreshProfilesCache();
       window._appIntervalIds.push(setInterval(() => refreshProfilesCache(), 300_000));
     }
   })();
