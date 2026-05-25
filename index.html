@@ -6883,6 +6883,14 @@
   }
   function deleteBlock(id) {
     saveBlocks(loadBlocks().filter(b => b.id !== id));
+    // Keep channel order map in sync so Supabase doesn't reference a deleted block
+    const _dOrd = loadChannelOrder();
+    let _dChanged = false;
+    Object.keys(_dOrd).forEach(cid => {
+      const idx = _dOrd[cid].indexOf(id);
+      if (idx >= 0) { _dOrd[cid].splice(idx, 1); _dChanged = true; }
+    });
+    if (_dChanged) saveChannelOrder(_dOrd);
     try { atelierPublic?.remove(id); } catch (e) {}
   }
 
@@ -9777,6 +9785,9 @@
       if (syncFailed) {
         const errMsg = '⚠ 公開同期に失敗しました。ブロックは保存されましたが、他ユーザーには反映されません。再ログインで自動 retry されます。';
         try { await new Promise(resolve => customConfirm(errMsg).then(resolve)); } catch (e) {}
+      } else {
+        // Push updated block order so Explore reflects the new block immediately
+        saveChannelOrder(loadChannelOrder());
       }
       // Refresh
       injectBlocksIntoTracks();
@@ -15287,6 +15298,8 @@
     // so TOP marquee and Feed reflect new public posts without reload.
     refreshCrossUserBlocks();
     window._appIntervalIds.push(setInterval(() => refreshCrossUserBlocks(), 300_000));
+    // Fix B: periodically push localStorage block order to Supabase (5 min)
+    window._appIntervalIds.push(setInterval(() => syncLocalOrderingToProfile(), 300_000));
 
     // Realtime: pull own user_state when another device saves a change.
     // This ensures edits on mobile appear on PC (and vice-versa) without reload.
