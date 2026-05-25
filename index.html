@@ -7063,9 +7063,16 @@
     _safeSetItem(CHANNEL_ORDER_KEY, JSON.stringify(map));
     // Best-effort sync to profiles.block_order so visitors looking at this
     // user's channels via Explore see the same per-channel block order the
-    // owner has arranged. Silent on failure (column missing → run migration,
-    // or network blip) — the local order still works for the owner.
-    _pushBlockOrderToProfile(map).catch(() => {});
+    // owner has arranged. Also patch _exploreProfilesCache in-memory so the
+    // owner's own Explore view reflects the new order immediately without
+    // waiting for the next refreshProfilesCache() periodic tick.
+    _pushBlockOrderToProfile(map)
+      .then(() => {
+        if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined' && _exploreProfilesCache[currentUser.id]) {
+          _exploreProfilesCache[currentUser.id].block_order = map;
+        }
+      })
+      .catch(() => {});
   }
   async function _pushBlockOrderToProfile(map) {
     if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
@@ -7333,9 +7340,16 @@
   function saveChannelGridOrder(arr) {
     _safeSetItem(CHANNEL_GRID_ORDER_KEY, JSON.stringify(arr));
     // Best-effort sync to profiles.channel_grid_order so visitor portfolios
-    // pick up the owner's chosen order. Silent on failure (missing column,
-    // network) — the local order still works for the owner.
-    _pushChannelGridOrderToProfile(arr).catch(() => {});
+    // pick up the owner's chosen order. Also patch _exploreProfilesCache
+    // in-memory so the owner's own Explore view reflects the new channel
+    // order immediately without waiting for the next periodic cache refresh.
+    _pushChannelGridOrderToProfile(arr)
+      .then(() => {
+        if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined' && _exploreProfilesCache[currentUser.id]) {
+          _exploreProfilesCache[currentUser.id].channel_grid_order = arr;
+        }
+      })
+      .catch(() => {});
   }
   async function _pushChannelGridOrderToProfile(arr) {
     if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
