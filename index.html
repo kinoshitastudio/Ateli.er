@@ -14230,7 +14230,9 @@
         if (block.channelId && typeof _itemsInChannel === 'function') {
           const _chItems = _itemsInChannel(block.channelId);
           const _idx = _chItems.findIndex(it => (it.kind === 'audio' ? it.track.id : it.block.id) === block.id);
-          _sortOrder = (_idx >= 0 ? _idx + 1 : _chItems.length + 1) * 1000;
+          // 既知位置なら position * 1000、未発見（新規）は Date.now() で衝突回避
+          // 明示的な並び替え保存時に _pushSortOrderToPublicBlocks が 1000刻みに正規化する
+          _sortOrder = _idx >= 0 ? (_idx + 1) * 1000 : Date.now();
         }
       } catch (_) {}
       const row = {
