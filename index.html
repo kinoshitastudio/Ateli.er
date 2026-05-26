@@ -7069,20 +7069,44 @@
   function loadChannelOrder() { try { return JSON.parse(localStorage.getItem(CHANNEL_ORDER_KEY)) || {}; } catch(e) { return {}; } }
   function saveChannelOrder(map) {
     _safeSetItem(CHANNEL_ORDER_KEY, JSON.stringify(map));
-    // Best-effort sync to profiles.block_order so visitors looking at this
-    // user's channels via Explore see the same per-channel block order the
-    // owner has arranged. Also patch _exploreProfilesCache in-memory so the
-    // owner's own Explore view reflects the new order immediately without
-    // waiting for the next refreshProfilesCache() periodic tick.
+    // Phase G: push sort_order to public_blocks (single source of truth).
+    _pushSortOrderToPublicBlocks(map).catch(() => {});
+    // Legacy: keep profiles.block_order in sync for connected-block ordering
+    // fallback and cache patch until Phase G is fully validated.
     _pushBlockOrderToProfile(map)
       .then(() => {
         if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined') {
-          // キャッシュエントリがなくても初期化して反映（並べ替え直後にExploreを開いても即反映）
           if (!_exploreProfilesCache[currentUser.id]) _exploreProfilesCache[currentUser.id] = {};
           _exploreProfilesCache[currentUser.id].block_order = map;
         }
       })
       .catch(() => {});
+  }
+  // Phase G: batch-update sort_order in public_blocks for every channel in map.
+  // Fire-and-forget; PATCH per block (typical channel < 50 blocks so overhead is low).
+  async function _pushSortOrderToPublicBlocks(map) {
+    if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
+    const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
+    const token = tokenData?.access_token;
+    if (!token) return;
+    const headers = {
+      'apikey': SUPABASE_PUB_KEY,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    };
+    for (const orderedIds of Object.values(map)) {
+      if (!Array.isArray(orderedIds)) continue;
+      for (let i = 0; i < orderedIds.length; i++) {
+        const id = orderedIds[i];
+        if (!id) continue;
+        fetch(
+          `${SUPABASE_URL}/rest/v1/public_blocks?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(currentUser.id)}`,
+          { method: 'PATCH', headers, body: JSON.stringify({ sort_order: (i + 1) * 1000 }) }
+        ).catch(() => {});
+      }
+    }
   }
   async function _pushBlockOrderToProfile(map) {
     if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
@@ -12545,7 +12569,8 @@
       _shareViaFn({ type: 'user', id: ownerId }, `@${handle || 'resident'} — Ateli.er`);
     });
     // Fetch all public_blocks for this owner.
-    const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&owner_id=eq.${encodeURIComponent(ownerId)}&order=ts.desc&limit=200`;
+    // Phase G: sort_order.asc.nullslast が単一ソース。sort_order 未設定行は ts.asc にフォールバック
+    const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&owner_id=eq.${encodeURIComponent(ownerId)}&order=sort_order.asc.nullslast,ts.asc&limit=200`;
     const headers = { 'apikey': SUPABASE_PUB_KEY };
     const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     const tokenData = tokenKey ? (() => { try { return JSON.parse(localStorage.getItem(tokenKey) || 'null'); } catch (e) { return null; } })() : null;
@@ -12738,26 +12763,9 @@
         const _selfItems = _itemsInChannel(c.channelId);
         cells = [_selfItems[0] || null, _selfItems[1] || null, _selfItems[2] || null, _selfItems[3] || null];
       } else {
-        // 他ユーザー: Supabase rows を block_order でソートして先頭4件
-        // block_order がない場合も必ず audio-first / ts-ASC でソートする
-        // (Supabase クエリは ts.desc 取得なので、ガードを外さないと
-        //  inside view の ts-ASC と逆順になり card ↔ 中身がずれる)
+        // Phase G: Supabase クエリが sort_order.asc.nullslast,ts.asc で返るので
+        // 追加ソート不要 — c.items はすでにオーナーの意図した順序
         const items = c.items.map(_publicRowToItem);
-        const order = _orderForChannel(c.channelId);
-        const idOf = it => it.kind === 'audio' ? it.track.id : it.block.id;
-        items.sort((a, b) => {
-          const ai = order ? order.indexOf(idOf(a)) : -1;
-          const bi = order ? order.indexOf(idOf(b)) : -1;
-          if (ai !== -1 && bi !== -1) return ai - bi;
-          if (ai !== -1) return -1;
-          if (bi !== -1) return 1;
-          const aIsAudio = a.kind === 'audio';
-          const bIsAudio = b.kind === 'audio';
-          if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
-          const aTs = (a.kind === 'audio' ? a.track : a.block)?.ts || 0;
-          const bTs = (b.kind === 'audio' ? b.track : b.block)?.ts || 0;
-          return aTs - bTs;
-        });
         cells = [items[0] || null, items[1] || null, items[2] || null, items[3] || null];
       }
       // CONNECT badge on the channel card — only when the channel is a *pure*
@@ -12919,12 +12927,20 @@
       .map(r => ({ ...r, _isConnected: true }));
     const rows = [..._ownRows, ..._connectedRows]
       .sort((a, b) => {
+        // Phase G: own blocks carry sort_order from public_blocks (Supabase).
+        // Connected blocks (external) don't have a channel-relative sort_order,
+        // so fall back to the legacy _ownerBlockOrder for those, then ts-ASC.
+        const aHasSortOrder = a.sort_order != null && !a._isConnected;
+        const bHasSortOrder = b.sort_order != null && !b._isConnected;
+        if (aHasSortOrder && bHasSortOrder) return a.sort_order - b.sort_order;
+        if (aHasSortOrder) return -1;
+        if (bHasSortOrder) return 1;
+        // Fallback: legacy block_order index for connected/unordered rows.
         const ai = _orderIndex(a.id);
         const bi = _orderIndex(b.id);
-        if (ai !== -1 && bi !== -1) return ai - bi;          // both ranked → owner's order
-        if (ai !== -1) return -1;                            // only a ranked → a first
-        if (bi !== -1) return 1;                             // only b ranked → b first
-        // Neither in saved order — fall back to audio-first then ts-ASC.
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
         const aIsAudio = a.kind === 'audio';
         const bIsAudio = b.kind === 'audio';
         if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
@@ -14207,6 +14223,16 @@
       if (!currentUser || !block || !block.id) return false;
       const token = _accessToken();
       if (!token) return false;
+      // Phase G: compute sort_order from the block's current position in the channel.
+      // _itemsInChannel is in outer scope (same closure). Fallback to null on any error.
+      let _sortOrder = null;
+      try {
+        if (block.channelId && typeof _itemsInChannel === 'function') {
+          const _chItems = _itemsInChannel(block.channelId);
+          const _idx = _chItems.findIndex(it => (it.kind === 'audio' ? it.track.id : it.block.id) === block.id);
+          _sortOrder = (_idx >= 0 ? _idx + 1 : _chItems.length + 1) * 1000;
+        }
+      } catch (_) {}
       const row = {
         id: block.id,
         owner_id: currentUser.id,
@@ -14216,6 +14242,7 @@
         channel_label: _channelLabel(block.channelId) || null,
         payload: block,
         ts: block.ts || Date.now(),
+        sort_order: _sortOrder,
       };
       try {
         const res = await Promise.race([
