@@ -13181,10 +13181,22 @@
       out.innerHTML = `<p style="font-family: var(--mono); font-size: 11px; color: var(--gray); letter-spacing: 0.06em; padding: 16px 0;">— type to search across channels and blocks.</p>`;
       return;
     }
-    // Channel matches
-    const chMatches = CHANNELS.filter(c =>
+    // Channel matches — exclude hardcoded seed channels, include user channels directly
+    const _SEED_IDS = new Set(['-01', '00', '01']);
+    const _userChs = (typeof loadUserChannels === 'function') ? loadUserChannels() : [];
+    const _chPool = [
+      ...CHANNELS.filter(c => !_SEED_IDS.has(c.id)),
+      ..._userChs.filter(c => !_SEED_IDS.has(c.id) && !CHANNELS.some(x => x.id === c.id)),
+    ];
+    const chMatches = _chPool.filter(c =>
       _matches(c.label, q) || _matches(c.mainPhrase, q) || _matches(c.meta, q)
     );
+    // Block matches (non-audio: text / url / image)
+    const _blkMatches = (typeof loadBlocks === 'function') ? loadBlocks().filter(b => {
+      if (b.kind === 'audio') return false; // audio covered by TRACKS
+      return _matches(b.title, q) || _matches(b.text, q) || _matches(b.source, q)
+          || _matches(b.url, q) || _matches(b.caption, q) || _matches(b.context, q);
+    }) : [];
     // Track matches
     const trMatches = TRACKS.filter(t => {
       const m = t.metadata || {};
@@ -13230,7 +13242,22 @@
         }</ul>
       </div>`;
     }
-    if (!chMatches.length && !trMatches.length) {
+    if (_blkMatches.length) {
+      html += `<div style="margin-bottom: 28px;">
+        <h4 style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gray); margin-bottom: 12px;">— blocks · ${_blkMatches.length}</h4>
+        <ul>${
+          _blkMatches.slice(0, 20).map(b => {
+            const _label = b.title || b.caption || b.source || b.url || (b.text || '').slice(0, 60) || b.id;
+            const _ch = CHANNELS.find(c => c.id === b.channelId);
+            return `<li class="srch-blk" data-bid="${escapeHtml(b.id)}" style="display:grid;grid-template-columns:1fr auto;gap:18px;padding:12px 0;border-bottom:1px dashed var(--line-soft);cursor:pointer;">
+              <span style="font-family:var(--sans-jp);font-size:14px;color:var(--ink);font-weight:400;">${escapeHtml(_label)}</span>
+              <span style="font-family:var(--mono);font-size:9.5px;color:var(--gray);letter-spacing:0.06em;">${escapeHtml(b.kind)} · ${escapeHtml(_ch?.label || b.channelId || '')}</span>
+            </li>`;
+          }).join('')
+        }</ul>
+      </div>`;
+    }
+    if (!chMatches.length && !trMatches.length && !_blkMatches.length) {
       html = `<p style="font-family: var(--mono); font-size: 11px; color: var(--gray); letter-spacing: 0.06em; padding: 16px 0;">— no matches.</p>`;
     }
     out.innerHTML = html;
@@ -13249,6 +13276,12 @@
           closeSearch();
           openPieceModal(t);
         }
+      });
+    });
+    out.querySelectorAll('.srch-blk').forEach(el => {
+      el.addEventListener('click', () => {
+        const b = (typeof loadBlocks === 'function' ? loadBlocks() : []).find(x => x.id === el.dataset.bid);
+        if (b) { closeSearch(); openBlockModal(b); }
       });
     });
   }
