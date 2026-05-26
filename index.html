@@ -12739,24 +12739,25 @@
         cells = [_selfItems[0] || null, _selfItems[1] || null, _selfItems[2] || null, _selfItems[3] || null];
       } else {
         // 他ユーザー: Supabase rows を block_order でソートして先頭4件
+        // block_order がない場合も必ず audio-first / ts-ASC でソートする
+        // (Supabase クエリは ts.desc 取得なので、ガードを外さないと
+        //  inside view の ts-ASC と逆順になり card ↔ 中身がずれる)
         const items = c.items.map(_publicRowToItem);
         const order = _orderForChannel(c.channelId);
-        if (order && order.length > 0) {
-          const idOf = it => it.kind === 'audio' ? it.track.id : it.block.id;
-          items.sort((a, b) => {
-            const ai = order.indexOf(idOf(a));
-            const bi = order.indexOf(idOf(b));
-            if (ai !== -1 && bi !== -1) return ai - bi;
-            if (ai !== -1) return -1;
-            if (bi !== -1) return 1;
-            const aIsAudio = a.kind === 'audio';
-            const bIsAudio = b.kind === 'audio';
-            if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
-            const aTs = (a.kind === 'audio' ? a.track : a.block)?.ts || 0;
-            const bTs = (b.kind === 'audio' ? b.track : b.block)?.ts || 0;
-            return aTs - bTs;
-          });
-        }
+        const idOf = it => it.kind === 'audio' ? it.track.id : it.block.id;
+        items.sort((a, b) => {
+          const ai = order ? order.indexOf(idOf(a)) : -1;
+          const bi = order ? order.indexOf(idOf(b)) : -1;
+          if (ai !== -1 && bi !== -1) return ai - bi;
+          if (ai !== -1) return -1;
+          if (bi !== -1) return 1;
+          const aIsAudio = a.kind === 'audio';
+          const bIsAudio = b.kind === 'audio';
+          if (aIsAudio !== bIsAudio) return aIsAudio ? -1 : 1;
+          const aTs = (a.kind === 'audio' ? a.track : a.block)?.ts || 0;
+          const bTs = (b.kind === 'audio' ? b.track : b.block)?.ts || 0;
+          return aTs - bTs;
+        });
         cells = [items[0] || null, items[1] || null, items[2] || null, items[3] || null];
       }
       // CONNECT badge on the channel card — only when the channel is a *pure*
