@@ -12851,6 +12851,8 @@
     // block order isn't synced yet) fall through to the legacy
     // audio-first / ts-ASC sort.
     const _ownerProfileForOrder = (typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[ownerId] : null;
+    // _isSelfChannel は _ownerBlockOrder より前に定義する必要がある
+    const _isSelfChannel = !!(currentUser?.id && ownerId === currentUser.id);
     // 自分のチャンネルを Explore 経由で見るときも localStorage を正として使う
     // → My Channel で並べ替えた直後、Supabase PATCH が反映される前でも一致する
     const _ownerBlockOrder = _isSelfChannel
@@ -12867,7 +12869,6 @@
     // owner+channel — the underlying block lives under another user's
     // owner_id, so the strict filter below would drop it). External rows
     // are tagged _isConnected so the renderer shows a CONNECT badge.
-    const _isSelfChannel = !!(currentUser?.id && ownerId === currentUser.id);
     let _ownRows = Object.values(_explorePublicCache)
       .filter(r => r && r.owner_id === ownerId &&
         (channelId ? (r.channel_id || '_unkn') === channelId
