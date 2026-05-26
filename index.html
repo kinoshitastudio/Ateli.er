@@ -7167,6 +7167,11 @@
     } catch (e) {
       // Silent — column missing or transient network error.
     }
+    // Phase G: also push sort_order to public_blocks so visitors see the
+    // owner's custom order even before their first explicit re-save.
+    if (blockOrder && typeof blockOrder === 'object') {
+      _pushSortOrderToPublicBlocks(blockOrder).catch(() => {});
+    }
   }
   // ──────────────── channel_connections (Supabase mirror) ────────────────
   // Owners CONNECT another user's public block to one of their own channels.
