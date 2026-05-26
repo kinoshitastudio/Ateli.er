@@ -12714,10 +12714,17 @@
     // from the Supabase query) regardless of how the owner has arranged
     // their channel. Same source of truth as the openUserChannel sort:
     // profiles.block_order keyed by channel id.
-    // 自分のポートフォリオを見るときはlocalStorageが正（Supabase同期待ちも即反映）
-    const _ownerBlockOrderForCards = _isSelfPortfolio
-      ? loadChannelOrder()
-      : (_ownerProfile?.block_order || null);
+    // 自分のポートフォリオ: _itemsInChannel が My Channel と完全に同じ順序を返す
+    // (loadChannelOrder が空のチャンネルでも TRACKS→blocks→connected の fallback が同じ)
+    // 他ユーザー: Supabase profiles.block_order を使う
+    const _ownerBlockOrderForCards = (() => {
+      if (!_isSelfPortfolio) return _ownerProfile?.block_order || null;
+      const map = {};
+      [...byChannel.keys()].forEach(cid => {
+        map[cid] = _itemsInChannel(cid).map(it => it.kind === 'audio' ? it.track.id : it.block.id);
+      });
+      return map;
+    })();
     const _orderForChannel = (cid) => {
       if (!_ownerBlockOrderForCards) return null;
       const arr = _ownerBlockOrderForCards[cid];
