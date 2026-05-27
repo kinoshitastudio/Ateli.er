@@ -10088,21 +10088,25 @@
     list.innerHTML = groups.map(g => {
       const firstItem = g.items[0];
       const actorIsExternal = !!firstItem?.crossUser;
-      // Resolve channel label. For cross-user groups, prefer the owner's
-      // own label snapshot (b.channelLabel from public_blocks) so a viewer
-      // sees the channel as the owner named it — even if the owner renamed
-      // a seed channel locally and the rename hasn't reached the viewer's
-      // CHANNELS array.
+      // Resolve channel label.
+      // Own channels: always prefer CHANNELS (current label) so renames are
+      // reflected immediately without needing a cache refresh.
+      // Cross-user channels: also prefer CHANNELS when the viewer owns the
+      // channel (connected block in viewer's own channel — rename must win
+      // over the stale snapshot stored at CONNECT time).
       let chLabel = '—';
-      if (actorIsExternal && firstItem?.block) {
+      const _ownChMatch = CHANNELS.find(c => c.id === g.channelId);
+      if (_ownChMatch) {
+        // Viewer owns this channel — always use current label.
+        chLabel = _ownChMatch.label || g.channelId || '—';
+      } else if (actorIsExternal && firstItem?.block) {
+        // External channel: use the stored snapshot (best we have).
         chLabel = firstItem.block.channelLabel
                 || firstItem.block._externalChannelLabel
-                || (CHANNELS.find(c => c.id === g.channelId)?.label)
                 || g.channelId
                 || '—';
       } else {
-        const ch = CHANNELS.find(c => c.id === g.channelId);
-        chLabel = ch ? ch.label : '—';
+        chLabel = g.channelId || '—';
       }
       const when = g.ts ? ageString(g.ts) : '';
       const summary = _summarizeFeedItems(g.items);
@@ -14370,12 +14374,36 @@
     // new name on their next refresh without any new API or RLS surface.
     async function syncChannelLabel(channelId) {
       if (!currentUser?.id || !channelId) return false;
+      const newLabel = _channelLabel(channelId);
+      const token = _accessToken();
+
+      // 1. Re-upsert own public blocks so public_blocks.channel_label is current.
       const blocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
       const targets = blocks.filter(b => b.channelId === channelId && b.isPublic);
-      if (targets.length === 0) return true;
       for (const b of targets) {
         try { await upsert(b); } catch (e) { /* keep going */ }
       }
+
+      // 2. Patch channel_connections.channel_label so connected external blocks
+      //    also reflect the new name (prevents stale label in Feed after rename).
+      if (newLabel && token) {
+        try {
+          await fetch(
+            `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(currentUser.id)}&channel_id=eq.${encodeURIComponent(channelId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                'apikey': SUPABASE_PUB_KEY,
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal',
+              },
+              body: JSON.stringify({ channel_label: newLabel }),
+            }
+          );
+        } catch (e) { console.warn('[syncChannelLabel] channel_connections patch failed:', e); }
+      }
+
       return true;
     }
     // One-shot backfill: re-upsert every own public block so channel_id /
