@@ -8,7 +8,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
 const APP_URL = 'https://atelistudio.com/';
 const DEFAULT_OG_IMAGE = 'https://atelistudio.com/og-image.png';
 
-const BOT_UA = /Twitterbot|facebookexternalhit|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|Pinterest|redditbot|Applebot|Googlebot|bingbot|DuckDuckBot/i;
+const BOT_UA = /Twitterbot|facebookexternalhit|meta-externalagent|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|Pinterest|redditbot|Applebot|Googlebot|bingbot|DuckDuckBot/i;
 
 function convertImageUrl(url) {
   if (!url) return '';
@@ -109,7 +109,7 @@ export default {
       if (row) {
         const p = row.payload || {};
         title = p.title || p.caption || `${row.kind} — Ateli.er`;
-        description = (p.text || '').slice(0, 200) || p.caption || `by @${row.owner_handle || 'artist'} on Ateli.er`;
+        description = (p.description || p.text || p.caption || `by @${row.owner_handle || 'artist'} on Ateli.er`).slice(0, 200);
         if (p.ogImage) image = convertOgImageUrl(p.ogImage);
         else if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
       }
