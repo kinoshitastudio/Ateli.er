@@ -14259,8 +14259,15 @@
           changed = true;
           console.log('[importFromPublicBlocks] imported missing block:', r.id);
         } else if ((r.ts || 0) > (local.ts || 0)) {
-          // リモートの方が新しい → ローカルを上書き
-          const updated = { ...local, ...payload, id: r.id, kind: r.kind, ts: r.ts };
+          // リモートの方が新しい → payload を全面採用（ローカルフィールドと混在させない）
+          const updated = {
+            ...payload,
+            id: r.id,
+            kind: r.kind || local.kind,
+            isPublic: true,
+            channelId: r.channel_id || payload.channelId || local.channelId || null,
+            ts: r.ts,
+          };
           const idx = localBlocks.findIndex(b => b.id === r.id);
           if (idx >= 0) { localBlocks[idx] = updated; localById.set(r.id, updated); changed = true; }
           console.log('[importFromPublicBlocks] updated stale block:', r.id);
