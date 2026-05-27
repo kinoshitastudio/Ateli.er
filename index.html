@@ -14081,9 +14081,14 @@
           if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
           lastPushedJson = JSON.stringify(_snapshot());
           localStorage.setItem(LAST_USER_KEY, currentUser.id);
-          // Fire-and-forget: remove any public_blocks rows that no longer
-          // exist locally (deleted blocks that failed to clean up remotely).
-          setTimeout(() => { try { atelierPublic?.reconcileOwnPublicBlocks(); } catch(e) {} }, 2000);
+          // Fire-and-forget: merge own public_blocks rows that are missing or
+          // newer than local (handles Clip extension blocks and cross-device edits).
+          // Runs before reconcile so newly imported blocks aren't deleted as orphans.
+          setTimeout(async () => {
+            try { await _importFromPublicBlocks(); } catch(e) {}
+            // After import, remove any public_blocks rows that truly no longer exist locally.
+            try { atelierPublic?.reconcileOwnPublicBlocks(); } catch(e) {}
+          }, 2000);
           return true;
         } catch (e) {
           console.warn('[atelierSync] pull error:', e);
@@ -14207,6 +14212,71 @@
       }
     }, 80);
   });
+
+  // ──────────────── Clip 拡張 / クロスデバイス補完 ────────────────
+  // public_blocks に存在するが user_state (localStorage) にないブロックを補完する。
+  // Atelier Clip 拡張が public_blocks に直接書いた行や、別デバイスで追加した公開ブロックが対象。
+  async function _importFromPublicBlocks() {
+    if (!currentUser?.id) return;
+    const token = (() => {
+      try {
+        const k = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        return k ? JSON.parse(localStorage.getItem(k) || 'null')?.access_token : null;
+      } catch(e) { return null; }
+    })();
+    if (!token) return;
+    try {
+      const res = await Promise.race([
+        fetch(
+          `${SUPABASE_URL}/rest/v1/public_blocks?owner_id=eq.${encodeURIComponent(currentUser.id)}&select=id,ts,payload,kind,channel_id,channel_label&order=ts.desc&limit=200`,
+          { headers: { 'apikey': SUPABASE_PUB_KEY, 'Authorization': `Bearer ${token}` } }
+        ),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+      ]);
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) return;
+
+      const localBlocks = (typeof loadBlocks === 'function') ? loadBlocks() : [];
+      const localById = new Map(localBlocks.map(b => [b.id, b]));
+      let changed = false;
+
+      for (const r of rows) {
+        const payload = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {});
+        const local = localById.get(r.id);
+        if (!local) {
+          // public_blocks にはあるがローカルにない（Clip 拡張 or 別デバイス）
+          const newBlock = {
+            ...payload,
+            id: r.id,
+            kind: r.kind,
+            isPublic: true,
+            channelId: r.channel_id || payload.channelId || null,
+            ts: r.ts || Date.now(),
+          };
+          localBlocks.push(newBlock);
+          localById.set(r.id, newBlock);
+          changed = true;
+          console.log('[importFromPublicBlocks] imported missing block:', r.id);
+        } else if ((r.ts || 0) > (local.ts || 0)) {
+          // リモートの方が新しい → ローカルを上書き
+          const updated = { ...local, ...payload, id: r.id, kind: r.kind, ts: r.ts };
+          const idx = localBlocks.findIndex(b => b.id === r.id);
+          if (idx >= 0) { localBlocks[idx] = updated; localById.set(r.id, updated); changed = true; }
+          console.log('[importFromPublicBlocks] updated stale block:', r.id);
+        }
+      }
+
+      if (changed) {
+        if (typeof saveBlocks === 'function') saveBlocks(localBlocks);
+        if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
+        try { if (typeof atelierSync !== 'undefined') await atelierSync.push(true); } catch(e) {}
+        console.log('[importFromPublicBlocks] done — synced changes to user_state');
+      }
+    } catch(e) {
+      console.warn('[importFromPublicBlocks] error:', e);
+    }
+  }
 
   // ──────────────── PUBLISH — atelierPublic (Phase C-1) ────────────────
   // Mirrors a block into public_blocks when the user marks it `isPublic: true`.
