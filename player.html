@@ -546,7 +546,8 @@
   </div>
 </div>
 
-<audio id="audio" preload="auto"></audio>
+<audio id="audio"  preload="auto" style="display:none"></audio>
+<audio id="audio2" preload="auto" style="display:none"></audio>
 
 <script>
 (function(){
@@ -593,7 +594,11 @@
   const $imgB = document.getElementById('img-b');
   const $text = document.getElementById('text-overlay');
   const $meta = document.getElementById('meta');
-  const $audio = document.getElementById('audio');
+  const $audio  = document.getElementById('audio');
+  const $audio2 = document.getElementById('audio2');
+  const $audios = [$audio, $audio2];
+  function _getActive()   { return $audios[_slot]; }
+  function _getNextSlot() { return 1 - _slot; }
   const $loading = document.getElementById('loading');
   const $notice = document.getElementById('notice');
   const $help = document.getElementById('help');
@@ -759,6 +764,51 @@
   const _MAX_TRACK_SEC = 60 * 20;
   let _advancedAtCap = false;
 
+  // Web Audio / crossfade
+  const FADE_SEC    = 3.5;
+  const TARGET_GAIN = 0.85;
+  let _actx = null;
+  const _gainNode = [null, null];
+  let _slot = 0;    // 0 or 1 — which $audios[] is on air
+  let _xfade = false;  // auto-crossfade in progress
+
+  function _initAudioCtx() {
+    if (_actx) { _resumeCtx(); return; }
+    try {
+      _actx = new (window.AudioContext || window.webkitAudioContext)();
+      const comp = _actx.createDynamicsCompressor();
+      comp.threshold.value = -24; comp.knee.value = 8;
+      comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
+      comp.connect(_actx.destination);
+      $audios.forEach((el, i) => {
+        _gainNode[i] = _actx.createGain();
+        _gainNode[i].gain.value = 0;
+        _actx.createMediaElementSource(el).connect(_gainNode[i]);
+        _gainNode[i].connect(comp);
+      });
+    } catch(e) {
+      console.warn('[Atelier Player] Web Audio init failed', e);
+      _actx = null;
+    }
+  }
+  function _resumeCtx() {
+    if (_actx && _actx.state === 'suspended') _actx.resume().catch(()=>{});
+  }
+  function _rampGain(slot, toVal, durSec) {
+    const g = _gainNode[slot];
+    if (!g || !_actx) return;
+    const now = _actx.currentTime;
+    g.gain.cancelScheduledValues(now);
+    g.gain.setValueAtTime(g.gain.value, now);
+    g.gain.linearRampToValueAtTime(toVal, now + Math.max(0.01, durSec));
+  }
+  function _setGainNow(slot, val) {
+    const g = _gainNode[slot];
+    if (!g || !_actx) return;
+    g.gain.cancelScheduledValues(_actx.currentTime);
+    g.gain.setValueAtTime(val, _actx.currentTime);
+  }
+
   function _clearAudioWatchdog() {
     if (_audioWatchdog) { clearTimeout(_audioWatchdog); _audioWatchdog = null; }
   }
@@ -790,11 +840,72 @@
     _scheduleNextAudio(800);
   }
 
+  // Auto-crossfade: starts fading out active slot and fading in the next track
+  // on the inactive slot. Called from timeupdate when remaining time ≤ FADE_SEC.
+  function _doAutoCrossfade() {
+    if (_xfade) return;
+    // Find next valid track without modifying audioIdx yet
+    let nextIdx = (audioIdx + 1) % audios.length;
+    let nextT = null;
+    for (let i = 0; i < audios.length; i++) {
+      const c = audios[nextIdx];
+      if (c && c.audioUrl && !_failedAudioUrls.has(c.audioUrl)) { nextT = c; break; }
+      nextIdx = (nextIdx + 1) % audios.length;
+    }
+    if (!nextT) return;  // no valid next — let ended handle it normally
+
+    _xfade = true;
+    const nextSlot = _getNextSlot();
+    const nextEl   = $audios[nextSlot];
+
+    _setGainNow(nextSlot, 0);
+    try { nextEl.pause(); } catch(_e) {}
+    nextEl.src = nextT.audioUrl;
+
+    nextEl.play().then(() => {
+      _resumeCtx();
+      _rampGain(nextSlot, TARGET_GAIN, FADE_SEC);
+      _rampGain(_slot,     0,           FADE_SEC);
+
+      setTimeout(() => {
+        if (!_xfade) return;  // cancelled by user pressing next
+        const prevSlot = _slot;
+        _slot     = nextSlot;
+        _xfade    = false;
+        audioIdx  = nextIdx;
+        _currentAudioUrl = nextT.audioUrl;
+        _advancedAtCap   = false;
+        _audioConsecutiveFails = 0;
+        _clearAudioWatchdog();
+        _clearDeferredNextAudio();
+        try { $audios[prevSlot].pause(); $audios[prevSlot].src = ''; } catch(_e) {}
+        _setGainNow(prevSlot, 0);
+        incrementPlayCount(nextT._id || nextT.id);
+        setNowPlaying(nextT.title, nextT.artist || nextT._owner, nextT.phrase);
+      }, FADE_SEC * 1000);
+
+    }).catch(() => {
+      _xfade = false;
+      _setGainNow(nextSlot, 0);
+      try { nextEl.pause(); nextEl.src = ''; } catch(_e) {}
+      // Let the natural ended event call nextAudio() normally
+    });
+  }
+
   function nextAudio(_attempts) {
     _clearDeferredNextAudio();
     _clearAudioWatchdog();
+
+    // Cancel any auto-crossfade in progress
+    if (_xfade) {
+      _xfade = false;
+      const ns = _getNextSlot();
+      _setGainNow(ns, 0);
+      try { $audios[ns].pause(); $audios[ns].src = ''; } catch(_e) {}
+    }
+
     if (MODE === 'visual') {
-      $audio.pause();
+      $audios.forEach(a => { try { a.pause(); } catch(_e) {} });
       $npTop.classList.remove('show');
       return;
     }
@@ -803,7 +914,6 @@
       return;
     }
     const attempts = _attempts || 0;
-    // If we've cycled past the entire pool, all blacklisted — give up.
     if (attempts >= audios.length) {
       $npTop.classList.remove('show');
       $loading.textContent = '— audio unavailable in this courtyard —';
@@ -812,55 +922,71 @@
       return;
     }
     audioIdx = (audioIdx + 1) % audios.length;
-    const t = audios[audioIdx];
+    const t   = audios[audioIdx];
     const url = t.audioUrl;
 
     if (!url || _failedAudioUrls.has(url)) {
-      // Skip without touching the audio element
       return nextAudio(attempts + 1);
     }
 
-    _currentAudioUrl = url;
-    try { $audio.pause(); } catch(_e) {}
-    $audio.src = url;
+    // Fade out active slot, then load next track on same slot with fade-in
+    _rampGain(_slot, 0, 0.25);
+    const loadSlot = _slot;
+    const el = $audios[loadSlot];
 
-    // Watchdog: if neither `playing` nor `error` fires within 9s, assume
-    // the source is wedged (CORS / stalled / silent) and skip.
-    _audioWatchdog = setTimeout(() => {
-      _audioWatchdog = null;
-      _markAudioFailed(url, 'watchdog timeout');
-    }, 9000);
+    setTimeout(() => {
+      _currentAudioUrl = url;
+      try { el.pause(); } catch(_e) {}
+      el.src = url;
+      _setGainNow(loadSlot, 0);
 
-    $audio.play().catch(err => {
-      console.warn('[Atelier Player] audio play() rejected', err);
-      // Likely autoplay-blocked OR src error. If the user has already entered
-      // (curtain gone), this is a real failure — blacklist + advance.
-      if ($curtain.classList.contains('gone')) {
-        _markAudioFailed(url, 'play rejected');
-      }
-    });
+      _audioWatchdog = setTimeout(() => {
+        _audioWatchdog = null;
+        _markAudioFailed(url, 'watchdog timeout');
+      }, 9000);
 
-    setNowPlaying(t.title, t.artist || t._owner, t.phrase);
+      el.play().catch(err => {
+        console.warn('[Atelier Player] audio play() rejected', err);
+        if ($curtain.classList.contains('gone')) {
+          _markAudioFailed(url, 'play rejected');
+        }
+      });
+
+      setNowPlaying(t.title, t.artist || t._owner, t.phrase);
+    }, 280);
   }
 
   // Successful playback resets the consecutive-fail counter, clears the
   // watchdog, AND cancels any pending deferred-advance from a prior failure
   // (otherwise the deferred call would interrupt the now-playing track).
-  $audio.addEventListener('playing', () => {
-    _clearAudioWatchdog();
-    _clearDeferredNextAudio();
-    _audioConsecutiveFails = 0;
-    _advancedAtCap = false;
-    incrementPlayCount(audios[audioIdx]?.id);
-  });
-  $audio.addEventListener('ended', () => { nextAudio(); });
-  $audio.addEventListener('error', () => {
-    _markAudioFailed(_currentAudioUrl, 'media error');
-  });
-  $audio.addEventListener('stalled', () => {
-    // Network stalled — give it a few seconds, but don't immediately fail
-    // (transient network blips shouldn't blacklist a track).
-    console.warn('[Atelier Player] audio stalled');
+  // Listeners are attached to both elements; inactive-slot events are ignored.
+  $audios.forEach((el, i) => {
+    el.addEventListener('playing', () => {
+      if (el !== _getActive()) return;  // ignore inactive slot (e.g. preloading)
+      _clearAudioWatchdog();
+      _clearDeferredNextAudio();
+      _audioConsecutiveFails = 0;
+      _advancedAtCap = false;
+      _resumeCtx();
+      _rampGain(_slot, TARGET_GAIN, 1.5);   // fade in on play start
+      incrementPlayCount(audios[audioIdx]?.id);
+    });
+    el.addEventListener('ended', () => {
+      if (el !== _getActive() || _xfade) return;  // xfade already handling it
+      nextAudio();
+    });
+    el.addEventListener('error', () => {
+      if (el !== _getActive()) {
+        // Inactive slot error during crossfade — cancel crossfade
+        if (_xfade) { _xfade = false; _setGainNow(i, 0); }
+        return;
+      }
+      _markAudioFailed(_currentAudioUrl, 'media error');
+    });
+    el.addEventListener('stalled', () => {
+      if (el !== _getActive()) return;
+      console.warn('[Atelier Player] audio stalled');
+    });
   });
 
   // ─── Text overlay (lyric drift) ─────────────────────────────────────
@@ -922,7 +1048,7 @@
       document.body.classList.remove('has-image');
     }
     if (MODE === 'visual') {
-      $audio.pause();
+      $audios.forEach(a => { try { a.pause(); } catch(_e) {} });
       $npTop.classList.remove('show');
     }
     updateMeta();
@@ -932,7 +1058,7 @@
     const order = ['all', 'audio', 'visual'];
     MODE = order[(order.indexOf(MODE) + 1) % order.length];
     applyMode();
-    if (MODE !== 'visual' && $audio.paused) nextAudio();
+    if (MODE !== 'visual' && _getActive().paused) nextAudio();
     if (MODE !== 'audio' && !document.body.classList.contains('has-image')) nextImage();
   }
 
@@ -994,8 +1120,9 @@
   $ctrlPlay.addEventListener('click', (e) => {
     e.stopPropagation();
     if (MODE === 'visual') return;
-    if ($audio.paused) $audio.play().catch(()=>{});
-    else $audio.pause();
+    const a = _getActive();
+    if (a.paused) { _resumeCtx(); a.play().catch(()=>{}); }
+    else a.pause();
     showControls();
   });
   $ctrlNext.addEventListener('click', (e) => {
@@ -1017,8 +1144,9 @@
   // from pause, which freezes everything to preserve the chance pairing).
   $ctrlMute.addEventListener('click', (e) => {
     e.stopPropagation();
-    $audio.muted = !$audio.muted;
-    $ctrlMute.textContent = $audio.muted ? '🔇' : '🔊';
+    const muted = !$audio.muted;
+    $audios.forEach(a => { a.muted = muted; });
+    $ctrlMute.textContent = muted ? '🔇' : '🔊';
     showControls();
   });
   $audio.addEventListener('volumechange', () => {
@@ -1029,13 +1157,17 @@
   // cycles in lockstep with audio. The miracle is the random alignment,
   // so the listener pausing for a moment shouldn't lose a track / image
   // pairing while they're away.
-  $audio.addEventListener('play', () => {
-    $ctrlPlay.textContent = '⏸';
-    if (started && MODE !== 'visual') _resumeCycles();
-  });
-  $audio.addEventListener('pause', () => {
-    $ctrlPlay.textContent = '▶';
-    if (started && MODE !== 'visual') _pauseCycles();
+  $audios.forEach(el => {
+    el.addEventListener('play', () => {
+      if (el !== _getActive()) return;
+      $ctrlPlay.textContent = '⏸';
+      if (started && MODE !== 'visual') _resumeCycles();
+    });
+    el.addEventListener('pause', () => {
+      if (el !== _getActive()) return;
+      $ctrlPlay.textContent = '▶';
+      if (started && MODE !== 'visual') _pauseCycles();
+    });
   });
 
   function _pauseCycles() {
@@ -1065,34 +1197,41 @@
   // playback-side safety net. Advances to the next track rather than
   // hard-stopping so the courtyard keeps drifting. (State vars declared
   // earlier in the file so the `playing` listener can also reset them.)
-  $audio.addEventListener('timeupdate', () => {
-    const cur = $audio.currentTime;
-    const dur = $audio.duration;
-    if (dur && isFinite(dur)) {
-      $ctrlFill.style.width = ((cur / dur) * 100).toFixed(2) + '%';
-      $ctrlTime.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
-    } else {
-      $ctrlFill.style.width = '0%';
-      $ctrlTime.textContent = fmtTime(cur) + ' / --:--';
-    }
-    if (cur >= _MAX_TRACK_SEC && !_advancedAtCap) {
-      _advancedAtCap = true;
-      nextAudio();
-    }
-  });
-  $audio.addEventListener('loadedmetadata', () => {
-    $ctrlTime.textContent = '0:00 / ' + fmtTime($audio.duration);
-    // Reset the cap flag whenever a fresh track loads so the next track
-    // gets its own 20-minute window.
-    _advancedAtCap = false;
+  $audios.forEach(el => {
+    el.addEventListener('timeupdate', () => {
+      if (el !== _getActive()) return;
+      const cur = el.currentTime;
+      const dur = el.duration;
+      if (dur && isFinite(dur)) {
+        $ctrlFill.style.width = ((cur / dur) * 100).toFixed(2) + '%';
+        $ctrlTime.textContent = fmtTime(cur) + ' / ' + fmtTime(dur);
+        // Trigger auto-crossfade when approaching the end
+        if (!_xfade && cur > 0 && (dur - cur) <= FADE_SEC) {
+          _doAutoCrossfade();
+        }
+      } else {
+        $ctrlFill.style.width = '0%';
+        $ctrlTime.textContent = fmtTime(cur) + ' / --:--';
+      }
+      if (cur >= _MAX_TRACK_SEC && !_advancedAtCap) {
+        _advancedAtCap = true;
+        nextAudio();
+      }
+    });
+    el.addEventListener('loadedmetadata', () => {
+      if (el !== _getActive()) return;
+      $ctrlTime.textContent = '0:00 / ' + fmtTime(el.duration);
+      _advancedAtCap = false;
+    });
   });
 
   // Click & drag to seek/scrub on the progress bar (mouse + touch)
   function _seekAtClientX(clientX) {
-    if (!$audio.duration || !isFinite($audio.duration)) return;
+    const a = _getActive();
+    if (!a.duration || !isFinite(a.duration)) return;
     const rect = $ctrlProgress.getBoundingClientRect();
     const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    try { $audio.currentTime = pct * $audio.duration; } catch (_e) {}
+    try { a.currentTime = pct * a.duration; } catch (_e) {}
   }
   let _scrubbing = false;
   // Mouse
@@ -1141,7 +1280,8 @@
       case ' ':
         e.preventDefault();
         if (MODE !== 'visual') {
-          if ($audio.paused) $audio.play().catch(()=>{}); else $audio.pause();
+          const a = _getActive();
+          if (a.paused) { _resumeCtx(); a.play().catch(()=>{}); } else a.pause();
         }
         break;
       case 'n': case 'N':
@@ -1242,13 +1382,18 @@
     }
     if (idx < 0) return false;
 
+    // Init Web Audio inside the user gesture so AudioContext is allowed
+    _initAudioCtx();
+
     audioIdx = idx;
+    _slot = 0;
     const t = audios[idx];
     const url = t.audioUrl;
     _currentAudioUrl = url;
 
-    try { $audio.pause(); } catch (_e) {}
-    $audio.src = url;
+    try { $audios[0].pause(); } catch (_e) {}
+    $audios[0].src = url;
+    _setGainNow(0, 0);  // start silent; 'playing' listener will fade in
 
     _audioWatchdog = setTimeout(() => {
       _audioWatchdog = null;
@@ -1257,7 +1402,7 @@
 
     // Crucial: this play() call is synchronous inside the click handler,
     // so it counts as user-initiated and the autoplay policy is satisfied.
-    const p = $audio.play();
+    const p = $audios[0].play();
     if (p && typeof p.catch === 'function') {
       p.catch(err => {
         console.warn('[Atelier Player] initial play() rejected', err);
@@ -1307,9 +1452,9 @@
     // it with zero buffering delay.
     if (audios.length > 0 && MODE !== 'visual') {
       try {
-        $audio.preload = 'auto';
-        $audio.src = audios[0].audioUrl;
-        $audio.load();
+        $audios[0].preload = 'auto';
+        $audios[0].src = audios[0].audioUrl;
+        $audios[0].load();
       } catch (_e) { /* preload failure is non-fatal */ }
     }
     // If curtain already lifted (e.g. user clicked very fast), kick off.
