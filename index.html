@@ -13354,6 +13354,7 @@
   $('#searchTrigger').addEventListener('click', openSearch);
   $('#searchClose').addEventListener('click', closeSearch);
   $('#searchBg').addEventListener('click', closeSearch);
+  $('#searchModal').addEventListener('touchstart', () => $('#searchInput').focus(), { passive: true });
   $('#searchInput').addEventListener('input', e => renderSearchResults(e.target.value));
   $('#searchInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
