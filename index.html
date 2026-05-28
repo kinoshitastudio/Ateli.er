@@ -12246,7 +12246,7 @@
           // Populate explore cache so openExternalBlock can resolve the block,
           // then restore Courtyard as the active pane (openExternalBlock would
           // otherwise switch the parent modal to Explore via _markVisitorContextOnTabs).
-          _explorePublicCache[t.id] = t;
+          _cachePublicRow(t);
           const ext = {
             ...(t.payload || {}),
             id: t.id, kind: t.kind,
@@ -12400,6 +12400,20 @@
     if (over <= 0) return;
     for (let i = 0; i < over; i++) delete _explorePublicCache[keys[i]];
   }
+  // Single write gate for _explorePublicCache.
+  // Normalizes imageUrl / audioUrl via convert* so every downstream consumer
+  // (marquee, modal, openExternalBlock) always gets a clean URL — no matter
+  // which fetch path populated the cache.
+  function _cachePublicRow(r) {
+    if (!r || !r.id) return;
+    const p = r.payload;
+    if (p) {
+      if (p.imageUrl) p.imageUrl = convertImageUrl(p.imageUrl);
+      if (p.audioUrl) p.audioUrl = convertAudioUrl(p.audioUrl);
+    }
+    _explorePublicCache[r.id] = r;
+  }
+
   // Phase C-2: open an external (other-user) public block in preview mode.
   // We synthesize an enriched block object carrying _external markers so the
   // existing modal helpers swap to the read-only / connect action set.
@@ -12469,7 +12483,7 @@
     // openUserChannel finds 0 rows for that owner+channel and shows the
     // "no public blocks" empty state. Merge is safe — rows are keyed by
     // unique block id, so newer fetches overwrite older snapshots.
-    rows.forEach(r => { _explorePublicCache[r.id] = r; });
+    rows.forEach(r => { _cachePublicRow(r); });
     _capExplorePublicCache();
     if (rows.length === 0) {
       list.innerHTML = '<li class="explore-empty">他のユーザーの公開 block はまだありません。</li>';
@@ -12660,7 +12674,7 @@
       fetchError = e?.message || 'network';
     }
     // Cache rows so block click can open them via openExternalBlock.
-    rows.forEach(r => { _explorePublicCache[r.id] = r; });
+    rows.forEach(r => { _cachePublicRow(r); });
     // Fetch this owner's CONNECT'd blocks (channel_connections rows with
     // embedded public_blocks payload via FK). For each connection, build a
     // "synthetic" row whose channel_id is overridden to the connection's
@@ -12689,7 +12703,7 @@
       // Cache the original row (canonical owner_id, original channel_id)
       // so other lookups (block click, comment author resolution, etc.)
       // get accurate data. Don't overwrite if a richer copy already exists.
-      if (!_explorePublicCache[pb.id]) _explorePublicCache[pb.id] = pb;
+      if (!_explorePublicCache[pb.id]) _cachePublicRow(pb);
       // Synthetic row with overridden channel_id and CONNECT marker. Carry the
       // connecting channel's label so grouping below can name the card.
       rows.push({ ...pb, channel_id: c.channel_id, channel_label: c.channel_label || pb.channel_label, _isConnected: true });
@@ -13954,7 +13968,7 @@
         ).then(r => r.ok ? r.json() : []);
         if (rows && rows[0]) {
           const row = rows[0];
-          _explorePublicCache[bid] = row;
+          _cachePublicRow(row);
           if (row.owner_id && currentUser?.id && row.owner_id === currentUser.id) {
             // Own block not in localStorage (sync gap between devices).
             // Open in own-block mode with correct navStack.
@@ -14728,7 +14742,7 @@
       // (owner_id, channel_id, channel_label) — without this the cache only
       // populates after the user opens the Explore tab, so navigating from
       // a TOP-marquee deep link landed on an empty visitor channel detail.
-      rows.forEach(r => { _explorePublicCache[r.id] = r; });
+      rows.forEach(r => { _cachePublicRow(r); });
       _capExplorePublicCache();
       // Re-render TOP and Feed with new data
       try { if (typeof renderMarquees === 'function') renderMarquees(); } catch (e) {}
