@@ -9424,7 +9424,9 @@
       try { const p = new URL(u); p.searchParams.delete('st'); u = p.toString(); } catch(_e) {}
       if (/[?&](dl|raw)=/.test(u)) u = u.replace(/([?&])(?:dl|raw)=[^&#]*/, '$1raw=1');
       else u += (u.includes('?') ? '&' : '?') + 'raw=1';
-      return u;
+      // Dropbox /scl/fi/ CDN returns content-type:application/json — mobile Safari refuses.
+      // Proxy via wsrv.nl to fix MIME type and resize to 1500px.
+      return `https://wsrv.nl/?url=${encodeURIComponent(u)}&w=1500&output=jpg`;
     }
     return url;
   }
