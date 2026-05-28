@@ -10987,7 +10987,17 @@
     // Phase C-2: external block snapshot (other user's public block we connected)
     const ext = findExternalBlock(id);
     if (ext) {
-      const obj = { ...(ext.snapshot.payload || {}), id: ext.snapshot.id, kind: ext.snapshot.kind, _external: true, _ownerHandle: ext.snapshot.ownerHandle, _ownerId: ext.snapshot.ownerId, _hostChannelId: ext.channelId };
+      const obj = {
+        ...(ext.snapshot.payload || {}),
+        id: ext.snapshot.id, kind: ext.snapshot.kind,
+        _external: true, _ownerHandle: ext.snapshot.ownerHandle, _ownerId: ext.snapshot.ownerId,
+        _hostChannelId: ext.channelId,
+        // ch-uNN ids are per-user; clearing channelId prevents collisions where the
+        // viewer has their own ch-u01 and the external block's payload also carries ch-u01.
+        channelId: undefined,
+        _externalChannelLabel: ext.snapshot.channelLabel || '',
+        _externalHostChannelId: (ext.snapshot.payload || {}).channelId || '',
+      };
       return { obj, kind: ext.snapshot.kind, external: true };
     }
     // Cross-user view: block being browsed via Explore (not yet connected).
@@ -10996,7 +11006,14 @@
     // so comments on Taka's block by BMboard would never reach Taka.
     if (typeof _explorePublicCache !== 'undefined' && _explorePublicCache?.[id]) {
       const r = _explorePublicCache[id];
-      const obj = { ...(r.payload || {}), id: r.id, kind: r.kind, _external: true, _ownerHandle: r.owner_handle, _ownerId: r.owner_id };
+      const obj = {
+        ...(r.payload || {}),
+        id: r.id, kind: r.kind,
+        _external: true, _ownerHandle: r.owner_handle, _ownerId: r.owner_id,
+        channelId: undefined,
+        _externalChannelLabel: r.channel_label || '',
+        _externalHostChannelId: r.channel_id || '',
+      };
       return { obj, kind: r.kind, external: true };
     }
     if (typeof crossUserBlocksCache !== 'undefined' && Array.isArray(crossUserBlocksCache)) {
