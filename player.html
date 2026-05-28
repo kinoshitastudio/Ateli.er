@@ -772,17 +772,18 @@
   let _slot = 0;    // 0 or 1 — which $audios[] is on air
   let _xfade = false;  // auto-crossfade in progress
 
+  // True when running inside the Chrome extension popup (cross-origin iframe).
+  // In that context Web Audio routing consistently produces silence, so we
+  // skip createMediaElementSource entirely and use el.volume instead.
+  const _IS_EXT_POPUP = params.get('from') === 'ext-popup';
+
   function _initAudioCtx() {
     if (_actx) { _resumeCtx(); return; }
+    // Extension popup: skip Web Audio. _gainNode stays null so _rampGain /
+    // _setGainNow fall back to el.volume, which works reliably.
+    if (_IS_EXT_POPUP) return;
     try {
       _actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (_actx.state !== 'running') {
-        // AudioContext suspended at creation — cross-origin iframe or extension context.
-        // Skip Web Audio routing to avoid gainNode stuck at 0 producing silence.
-        // _gainNode stays null → _rampGain/_setGainNow fall back to el.volume.
-        _actx.resume().catch(() => {});
-        return;
-      }
       const comp = _actx.createDynamicsCompressor();
       comp.threshold.value = -24; comp.knee.value = 8;
       comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
