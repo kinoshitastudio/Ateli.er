@@ -10095,7 +10095,12 @@
       // channel (connected block in viewer's own channel — rename must win
       // over the stale snapshot stored at CONNECT time).
       let chLabel = '—';
-      const _ownChMatch = CHANNELS.find(c => c.id === g.channelId);
+      // Only match viewer's own CHANNELS when the actor is the viewer themselves.
+      // ch-uNN ids are per-user and two different users can share the same id
+      // (e.g. both have 'ch-u01'). Using the viewer's label for another user's
+      // channel would silently replace the external channel name with the
+      // viewer's own channel name.
+      const _ownChMatch = !actorIsExternal && CHANNELS.find(c => c.id === g.channelId);
       if (_ownChMatch) {
         // Viewer owns this channel — always use current label.
         chLabel = _ownChMatch.label || g.channelId || '—';
