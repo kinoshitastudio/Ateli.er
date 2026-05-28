@@ -13959,6 +13959,32 @@
             else if (b.kind === 'text') openTextModal(b);
             else if (b.kind === 'url')  openUrlModal(b);
           } else {
+            // Lazy-restore CONNECT relationship from Supabase if not in local
+            // storage. Handles the case where the user connected this block on
+            // another device and iOS ITP / pull failure left local storage empty.
+            if (currentUser?.id && typeof findExternalBlock === 'function' && !findExternalBlock(bid)) {
+              try {
+                const _tok = (() => { try { const k = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token')); return k ? JSON.parse(localStorage.getItem(k) || 'null')?.access_token : null; } catch(_e) { return null; } })();
+                if (_tok) {
+                  const _connRows = await fetch(
+                    `${SUPABASE_URL}/rest/v1/channel_connections?owner_id=eq.${encodeURIComponent(currentUser.id)}&block_id=eq.${encodeURIComponent(bid)}&select=channel_id,channel_label`,
+                    { headers: { apikey: SUPABASE_PUB_KEY, Authorization: `Bearer ${_tok}` } }
+                  ).then(r => r.ok ? r.json() : []);
+                  if (Array.isArray(_connRows) && _connRows.length > 0) {
+                    const _p = typeof row.payload === 'string' ? JSON.parse(row.payload) : (row.payload || {});
+                    _connRows.forEach(conn => {
+                      if (conn.channel_id && typeof connectExternalBlock === 'function') {
+                        connectExternalBlock(conn.channel_id, {
+                          id: bid, kind: row.kind, payload: _p,
+                          ownerId: row.owner_id || '', ownerHandle: row.owner_handle || '',
+                          channelLabel: conn.channel_label || '',
+                        });
+                      }
+                    });
+                  }
+                }
+              } catch (_e) { /* silent */ }
+            }
             openExternalFromCache(bid);
           }
         }
