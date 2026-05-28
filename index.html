@@ -372,6 +372,12 @@
     display: flex; justify-content: space-between;
   }
   .image-item:hover { transform: translateY(-2px); }
+  .img-load-err {
+    position: absolute; top: 5px; left: 5px;
+    font-family: var(--mono); font-size: 8px; letter-spacing: .12em;
+    color: #fff; background: rgba(180,40,30,0.82);
+    padding: 2px 6px; pointer-events: none; z-index: 2;
+  }
 
   /* FOCUS MODE — exclusive hover dimming inside each marquee */
   @media (hover: hover) {
@@ -5909,8 +5915,16 @@
       img.src = clean + cleanSep + '_r=' + Date.now();
       return;
     }
-    // Second failure — keep the slot but mark the image as failed.
-    img.style.opacity = '0.25';
+    // Second failure — dim the image and show a load-error badge
+    img.style.opacity = '0.12';
+    const par = img.closest('.image-item, .yu-thumb, .piece-modal-image, .ix-thumb');
+    if (par && !par.querySelector('.img-load-err')) {
+      par.style.position = 'relative';
+      const badge = document.createElement('span');
+      badge.className = 'img-load-err';
+      badge.textContent = '⚠ heavy';
+      par.appendChild(badge);
+    }
   };
   // All images render in their original colour. The `mono` flag is kept for
   // backward compatibility (call-site signatures unchanged) but no longer
@@ -9382,6 +9396,7 @@
     // that host is unreliable for the new /scl/fi/ format.
     if (url.includes('dropbox.com')) {
       let u = url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+      try { const p = new URL(u); p.searchParams.delete('st'); u = p.toString(); } catch(_e) {}
       if (/[?&](dl|raw)=/.test(u)) u = u.replace(/([?&])(?:dl|raw)=[^&#]*/, '$1raw=1');
       else u += (u.includes('?') ? '&' : '?') + 'raw=1';
       return u;
@@ -9406,6 +9421,7 @@
     if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
     if (url.includes('dropbox.com')) {
       let u = url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
+      try { const p = new URL(u); p.searchParams.delete('st'); u = p.toString(); } catch(_e) {}
       if (/[?&](dl|raw)=/.test(u)) u = u.replace(/([?&])(?:dl|raw)=[^&#]*/, '$1raw=1');
       else u += (u.includes('?') ? '&' : '?') + 'raw=1';
       return u;
