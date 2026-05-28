@@ -8752,7 +8752,7 @@
       if (newTitle === null) return;
       const newArtist = prompt('artist?', obj.artist);
       if (newArtist === null) return;
-      const firstPhrase = (obj.phrases || [])[0] || '';
+      const firstPhrase = (obj.phrases && obj.phrases[0]) || obj.phrase || '';
       const newPhrase = prompt('main phrase (one line)?', firstPhrase);
       if (newPhrase === null) return;
       const newContext = prompt('context?', obj.context || '');
@@ -10830,7 +10830,10 @@
     if (!wasOpen) navOpen('pieceModal');
     const inner = $('#pieceModalInner');
     // texture removed; process is rendered inline below as free-form text
-    const phrasesHtml = (track.phrases || []).map(p => `<li>${escapeHtml(p)}</li>`).join('');
+    const _trackPhrases = (track.phrases && track.phrases.length)
+        ? track.phrases
+        : (track.phrase ? [track.phrase] : []);
+    const phrasesHtml = _trackPhrases.map(p => `<li>${escapeHtml(p)}</li>`).join('');
     const layersHtml = (track.layers || []).map((l, i) => {
       const meta = l.noiseOnly ? '— ambient' : '— synth';
       return `
@@ -11295,7 +11298,7 @@
       : `<ol class="pane-index">${ matches.map(m => {
           if (m.kind === 'audio') {
             const tr = m.track;
-            const phrase = (tr.phrases && tr.phrases[0]) || '';
+            const phrase = (tr.phrases && tr.phrases[0]) || tr.phrase || '';
             return `<li data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(tr.id)}</span>
               <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
@@ -13270,6 +13273,7 @@
       return _matches(t.title, q)
           || _matches(t.artist, q)
           || (t.phrases || []).some(p => _matches(p, q))
+          || _matches(t.phrase, q)
           || _matches(t.context, q)
           || _matches(m.date, q)
           || _matches(m.location, q)
