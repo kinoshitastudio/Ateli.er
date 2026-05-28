@@ -14352,9 +14352,15 @@
       return c?.label || '';
     }
     async function upsert(block, _retried) {
-      if (!currentUser || !block || !block.id) return false;
+      if (!currentUser || !block || !block.id) {
+        console.warn('[atelierPublic] upsert skipped — no currentUser or block id', { currentUser: !!currentUser, blockId: block?.id });
+        return false;
+      }
       const token = _accessToken();
-      if (!token) return false;
+      if (!token) {
+        console.warn('[atelierPublic] upsert skipped — no access token in localStorage');
+        return false;
+      }
       // Phase G: compute sort_order from the block's current position in the channel.
       // _itemsInChannel is in outer scope (same closure). Fallback to null on any error.
       let _sortOrder = null;
