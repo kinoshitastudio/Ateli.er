@@ -14421,10 +14421,13 @@
               console.warn('[atelierPublic] id recovery failed:', re);
             }
           }
-          // Same auth-recovery path as atelierSync.push: trigger a token
-          // refresh on 401 so the next operation has a valid token.
-          if (res.status === 401) {
+          // 401: refresh token and retry once — _accessToken() may have read a
+          // stale localStorage value while the client already refreshed in memory.
+          if (res.status === 401 && !_retried) {
             try { await supabaseClient?.auth?.refreshSession?.(); } catch (_) {}
+            return await upsert(block, /*_retried=*/true);
+          }
+          if (res.status === 401) {
             try { showToast(t('toastSessionExpired')); } catch (_) {}
           }
           throw new Error(`HTTP ${res.status}: ${txt}`);
