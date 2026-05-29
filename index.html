@@ -5916,37 +5916,57 @@
     `;
   }
 
-  // Transient image failure recovery. The marquee is long-running and on
-  // mobile Safari the decoded-image cache evicts under memory pressure;
-  // when an off-screen tile scrolls back in, the browser refetches and a
-  // single 403 / timeout from external hosts (Google Drive's
-  // lh3.googleusercontent.com is the worst offender) hits onerror.
-  // Previous behaviour (this.style.display='none') made the failure
-  // permanent for the rest of the session — once an image vanished it
-  // never returned. Now: retry once with a cache-buster, then fall back
-  // to a soft fade so the slot stays the right size and visible.
+  // Multi-step image failure recovery.
+  //
+  // wsrv.nl proxied URLs go through 3 stages:
+  //   1) Retry at w=300/q=50 — much smaller, less likely to timeout
+  //   2) Bypass wsrv.nl entirely and try the original source URL directly
+  //   3) Hide the img — paper-2 background acts as neutral placeholder
+  //
+  // Direct (non-proxy) URLs:
+  //   1) Cache-buster retry (handles transient eviction on mobile Safari)
+  //   2) Hide the img
+  //
+  // No badge is shown. A dimmed placeholder or red badge stresses the user
+  // and communicates nothing actionable — the paper slot is cleaner.
   window._imgRetry = function(img) {
     if (!img) return;
-    if (!img.dataset.imgRetried) {
-      img.dataset.imgRetried = '1';
-      const original = img.src;
-      const sep = original.includes('?') ? '&' : '?';
-      // Drop any prior cache-buster fragment first so we don't pile up.
-      const clean = original.replace(/[?&]_r=\d+$/, '');
-      const cleanSep = clean.includes('?') ? '&' : '?';
-      img.src = clean + cleanSep + '_r=' + Date.now();
+    const src = img.src || '';
+
+    if (src.includes('wsrv.nl')) {
+      if (!img.dataset.wsrv1) {
+        // Step 1: same proxy but 300px / q=50 — smaller request, faster response
+        img.dataset.wsrv1 = '1';
+        try {
+          const u = new URL(src.replace(/[?&]_r=\d+/, ''));
+          u.searchParams.set('w', '300');
+          u.searchParams.set('q', '50');
+          img.src = u.toString();
+          return;
+        } catch (e) {}
+      }
+      if (!img.dataset.wsrv2) {
+        // Step 2: bypass wsrv.nl — try original source URL directly
+        img.dataset.wsrv2 = '1';
+        try {
+          const u = new URL(src.replace(/[?&]_r=\d+/, ''));
+          const original = u.searchParams.get('url');
+          if (original) { img.src = decodeURIComponent(original); return; }
+        } catch (e) {}
+      }
+      // All wsrv.nl paths exhausted — hide, let paper-2 bg show as placeholder
+      img.style.display = 'none';
       return;
     }
-    // Second failure — dim the image and show a load-error badge
-    img.style.opacity = '0.12';
-    const par = img.closest('.image-item, .yu-thumb, .piece-modal-image, .ix-thumb');
-    if (par && !par.querySelector('.img-load-err')) {
-      par.style.position = 'relative';
-      const badge = document.createElement('span');
-      badge.className = 'img-load-err';
-      badge.textContent = '⚠ heavy';
-      par.appendChild(badge);
+
+    // Non-wsrv URL: one cache-buster retry (mobile Safari eviction), then hide
+    if (!img.dataset.imgRetried) {
+      img.dataset.imgRetried = '1';
+      const clean = src.replace(/[?&]_r=\d+$/, '');
+      img.src = clean + (clean.includes('?') ? '&' : '?') + '_r=' + Date.now();
+      return;
     }
+    img.style.display = 'none';
   };
   // All images render in their original colour. The `mono` flag is kept for
   // backward compatibility (call-site signatures unchanged) but no longer
@@ -6181,7 +6201,7 @@
       if (b.ogImage) {
         _row4Pool.push(
           `<span class="image-item" data-kind="url" data-bid="${b.id}">
-            <img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="this.style.display='none'">
+            <img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">
           </span>`
         );
       } else {
@@ -9438,9 +9458,9 @@
     if (/['"\\\(\)\n\r<>]/.test(url)) return '';
     if (!/^https?:\/\//i.test(url)) return '';
     let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
-    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w960`;
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w640`;
     m = url.match(/[?&]id=([^&]+)/);
-    if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w960`;
+    if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w640`;
     if (url.includes('dropbox.com')) {
       let u = url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
       try { const p = new URL(u); p.searchParams.delete('st'); u = p.toString(); } catch(_e) {}
@@ -9448,7 +9468,7 @@
       else u += (u.includes('?') ? '&' : '?') + 'raw=1';
       // Dropbox /scl/fi/ CDN returns content-type:application/json — mobile Safari refuses.
       // Proxy via wsrv.nl to fix MIME type and resize to 960px.
-      return `https://wsrv.nl/?url=${encodeURIComponent(u)}&w=960&output=webp`;
+      return `https://wsrv.nl/?url=${encodeURIComponent(u)}&w=640&output=webp&q=70`;
     }
     return url;
   }
@@ -9458,7 +9478,7 @@
     if (!url) return '';
     if (url.startsWith('https://wsrv.nl/')) return url;
     if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
-    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=960&output=webp&q=85`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=400&output=webp&q=65`;
   }
 
   // Merge audio blocks into TRACKS (so they participate in marquees, vein index, etc.)
