@@ -4272,9 +4272,20 @@
     .img-zoom-bg { padding: 12px; }
     .img-zoom-close { top: 8px; right: 10px; font-size: 24px; }
   }
+
+  /* ── App loading overlay ── */
+  #app-loader {
+    position: fixed; inset: 0;
+    background: var(--paper);
+    z-index: 9990;
+    pointer-events: none;
+    transition: opacity 0.65s ease;
+  }
+  #app-loader.is-done { opacity: 0; }
 </style>
 </head>
 <body>
+<div id="app-loader"></div>
 
 <!-- ──────────────── LANDING ──────────────── -->
 <section class="landing" id="landingScreen" hidden>
@@ -15015,10 +15026,20 @@
   function showLanding() {
     const el = document.getElementById('landingScreen');
     if (el) { el.hidden = false; el.classList.add('is-open'); }
+    const loader = document.getElementById('app-loader');
+    if (loader) { loader.classList.add('is-done'); setTimeout(() => { try { loader.remove(); } catch(e) {} }, 700); }
   }
   function hideLanding() {
     const el = document.getElementById('landingScreen');
     if (el) { el.classList.remove('is-open'); el.hidden = true; }
+    // Dismiss loading overlay after renders settle (multiple renderMarquees calls)
+    setTimeout(() => {
+      const loader = document.getElementById('app-loader');
+      if (loader) {
+        loader.classList.add('is-done');
+        setTimeout(() => { try { loader.remove(); } catch(e) {} }, 700);
+      }
+    }, 1200);
   }
   function openAuthModal(which) {
     closeAuthModals();
