@@ -4282,6 +4282,10 @@
     transition: opacity 0.65s ease;
   }
   #app-loader.is-done { opacity: 0; }
+  /* Mobile: slow, gentle fade-in instead of blank → sudden reveal */
+  @media (max-width: 720px) {
+    #app-loader { transition: opacity 2.5s ease; }
+  }
 </style>
 </head>
 <body>
@@ -6170,7 +6174,7 @@
       if (b.ogImage) {
         _row4Pool.push(
           `<span class="image-item" data-kind="url" data-bid="${b.id}">
-            <img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="this.style.display='none'">
+            <img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="this.style.display='none'">
           </span>`
         );
       } else {
@@ -7377,7 +7381,7 @@
       if (b.ogImage) {
         return `<div class="ch-card-cell">
           <span class="ch-card-cell-kind">url</span>
-          <img src="${escapeHtml(b.ogImage)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+          <img src="${escapeHtml(_thumbUrl(b.ogImage))}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
           <span class="ch-card-cell-url" style="display:none;">${escapeHtml(display)}</span>
         </div>`;
       }
@@ -7786,7 +7790,7 @@
             try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
             if (!domain) domain = 'link';
             const _ownUrlThumb = b.ogImage
-              ? `<img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+              ? `<img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
               : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
             return `<li class="${ownClass}" data-kind="url" data-bid="${escapeHtml(b.id)}">
               ${cbox}
@@ -9427,19 +9431,27 @@
     if (/['"\\\(\)\n\r<>]/.test(url)) return '';
     if (!/^https?:\/\//i.test(url)) return '';
     let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
-    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w960`;
     m = url.match(/[?&]id=([^&]+)/);
-    if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w2000`;
+    if (m && url.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${m[1]}=w960`;
     if (url.includes('dropbox.com')) {
       let u = url.replace('dl.dropboxusercontent.com', 'www.dropbox.com');
       try { const p = new URL(u); p.searchParams.delete('st'); u = p.toString(); } catch(_e) {}
       if (/[?&](dl|raw)=/.test(u)) u = u.replace(/([?&])(?:dl|raw)=[^&#]*/, '$1raw=1');
       else u += (u.includes('?') ? '&' : '?') + 'raw=1';
       // Dropbox /scl/fi/ CDN returns content-type:application/json — mobile Safari refuses.
-      // Proxy via wsrv.nl to fix MIME type and resize to 1500px.
-      return `https://wsrv.nl/?url=${encodeURIComponent(u)}&w=1500&output=jpg`;
+      // Proxy via wsrv.nl to fix MIME type and resize to 960px.
+      return `https://wsrv.nl/?url=${encodeURIComponent(u)}&w=960&output=webp`;
     }
     return url;
+  }
+  // Display helper: proxy any ogImage URL through wsrv.nl at 960px max.
+  // Prevents heavy OGP images from external sites from blocking render.
+  function _thumbUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('https://wsrv.nl/')) return url;
+    if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=960&output=webp&q=85`;
   }
 
   // Merge audio blocks into TRACKS (so they participate in marquees, vein index, etc.)
@@ -9919,7 +9931,7 @@
       } else if (b.kind === 'url') {
         const _urlDisplay = b.title || b.source || b.url || '';
         thumb = b.ogImage
-          ? `<img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<div style=padding:8px;font-family:var(--mono);font-size:8px;color:var(--gray);word-break:break-all;line-height:1.3;overflow:hidden>${escapeHtml(_urlDisplay.slice(0,60))}</div>'">`
+          ? `<img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<div style=padding:8px;font-family:var(--mono);font-size:8px;color:var(--gray);word-break:break-all;line-height:1.3;overflow:hidden>${escapeHtml(_urlDisplay.slice(0,60))}</div>'">`
           : `<div style="padding:8px; font-family:var(--mono); font-size:8px; color:var(--gray); letter-spacing:0.06em; word-break:break-all; line-height:1.3; overflow:hidden;">${escapeHtml(_urlDisplay.slice(0, 60))}</div>`;
         title = escapeHtml(b.title || b.source || b.url || '(url)');
         meta = `${escapeHtml(b.source || '')} · placed ${ageString(b.ts)}`;
@@ -10054,7 +10066,7 @@
         // position:relative + overflow:hidden so the overlay can sit on top.
         // A wrapper div with height:100% breaks rendering when the parent
         // height is set via aspect-ratio (Chrome doesn't resolve it).
-        return `<img src="${escapeHtml(_ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">` +
+        return `<img src="${escapeHtml(_thumbUrl(_ogImage))}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">` +
           `<div style="position:absolute;top:0;left:0;right:0;padding:6px 8px;background:rgba(220,219,213,0.82);pointer-events:none;">` +
           `<span style="font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${escapeHtml(domain)}</span>` +
           `</div>`;
@@ -11375,7 +11387,7 @@
             try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
             if (!domain) domain = 'link';
             const urlThumbHtml = b.ogImage
-              ? `<img src="${escapeHtml(b.ogImage)}" style="width:100%;height:100%;object-fit:cover;border-radius:2px;" loading="lazy">`
+              ? `<img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;border-radius:2px;" loading="lazy">`
               : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
             return `<li data-kind="url" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(b.id)}</span>
@@ -11484,7 +11496,7 @@
       ${_feedBackHtml()}
       ${_backBtnHtml()}
       ${_blockModalHeadHtml({ channel: _channelForBlock(block), kindLabel: t('modalLabelUrl') || '— url', label: block.title || block.url || '(url)', block })}
-      ${ block.ogImage ? `<div class="piece-modal-image"><img src="${escapeHtml(block.ogImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.remove()"></div>` : '' }
+      ${ block.ogImage ? `<div class="piece-modal-image"><img src="${escapeHtml(_thumbUrl(block.ogImage))}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.remove()"></div>` : '' }
       <div class="piece-modal-art" style="display:flex; flex-wrap:wrap; align-items:baseline; gap:12px 18px;">
         <span style="text-transform:uppercase; letter-spacing:0.18em;">${escapeHtml(domain)}</span>
         ${ block.source && block.source !== domain ? `<span class="dur">${escapeHtml(block.source)}</span>` : '' }
@@ -12541,7 +12553,7 @@
         let domain = '';
         try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
         if (p.ogImage) {
-          thumbHtml = `<span class="explore-block-thumb" style="background-image:url('${escapeHtml(p.ogImage)}');"></span>`;
+          thumbHtml = `<span class="explore-block-thumb" style="background-image:url('${escapeHtml(_thumbUrl(p.ogImage))}');"></span>`;
         } else {
           thumbHtml = `<span class="explore-block-thumb">${escapeHtml(domain || 'url')}</span>`;
         }
@@ -13174,7 +13186,7 @@
               try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
               if (!domain) domain = 'link';
               const _urlThumb = p.ogImage
-                ? `<img src="${escapeHtml(p.ogImage)}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+                ? `<img src="${escapeHtml(_thumbUrl(p.ogImage))}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
                 : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
               return `<li data-kind="url" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(id.slice(0, 6))}</span>
@@ -15032,14 +15044,15 @@
   function hideLanding() {
     const el = document.getElementById('landingScreen');
     if (el) { el.classList.remove('is-open'); el.hidden = true; }
-    // Dismiss loading overlay after renders settle (multiple renderMarquees calls)
+    // Mobile: shorter hold + 2.5s slow fade (see CSS). PC: original 1200ms hold + 0.65s fade.
+    const isMob = window.matchMedia('(max-width: 720px)').matches;
     setTimeout(() => {
       const loader = document.getElementById('app-loader');
       if (loader) {
         loader.classList.add('is-done');
-        setTimeout(() => { try { loader.remove(); } catch(e) {} }, 700);
+        setTimeout(() => { try { loader.remove(); } catch(e) {} }, isMob ? 2600 : 700);
       }
-    }, 1200);
+    }, isMob ? 200 : 1200);
   }
   function openAuthModal(which) {
     closeAuthModals();
