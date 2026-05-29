@@ -1250,6 +1250,9 @@
   // user-gesture event handler (e.g. the curtain click) or the browser will
   // silently reject the play() promise.
   function _startFirstAudioInGesture() {
+    _clearAudioWatchdog();
+    _clearDeferredNextAudio();
+    _audioConsecutiveFails = 0;
     if (MODE === 'visual') return false;
     if (!audios.length) return false;
 
