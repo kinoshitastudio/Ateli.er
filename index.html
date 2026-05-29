@@ -356,7 +356,14 @@
      placed" instead of "broken / missing image" — paper aesthetic
      consistent. Mitigates the iOS Safari bitmap-eviction blink on fast
      marquee cycles by softening the re-decode transition. */
-  .image-item img { opacity: 0; transition: opacity 0.45s ease; }
+  .image-item img {
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    /* Promote each image to its own compositor layer so iOS Safari's GPU
+       texture eviction doesn't blank the entire marquee track at once. */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
   .image-item img.is-loaded { opacity: 1; }
   .image-item svg { width: 100%; height: 100%; display: block; }
   .image-item .ii-cap {
@@ -6241,7 +6248,7 @@
       if (!track || track._touchPauseWired) return;
       track._touchPauseWired = true;
       const pause = () => { track.style.animationPlayState = 'paused'; };
-      const resume = () => { track.style.animationPlayState = ''; };
+      const resume = () => { track.style.animationPlayState = 'running'; };
       track.addEventListener('touchstart', pause, { passive: true });
       track.addEventListener('touchend', resume, { passive: true });
       track.addEventListener('touchcancel', resume, { passive: true });
@@ -15705,22 +15712,35 @@
   requestAnimationFrame(loopUI);
 
   // ──────────────── MARQUEE KEEPALIVE ────────────────
-  // iOS Safari (and some battery-saver modes) pause CSS animations after reload
-  // until first user interaction. Force them to keep running on every relevant
-  // event so playback never appears "stuck".
+  // iOS Safari (and some battery-saver modes) pause CSS animations after reload.
+  //
+  // IMPORTANT: do NOT use the animationName='none' → reflow → animationName=''
+  // trick here. That resets the animation to position 0, which is exactly the
+  // "tap → everything jumps back to start + runs faster" bug the user sees.
+  // animationPlayState='running' is sufficient to resume a paused animation
+  // without losing the current scroll position.
   function ensureMarqueesPlaying() {
     document.querySelectorAll('.marquee-track').forEach(track => {
       track.style.animationPlayState = 'running';
-      // Re-trigger the animation in case the browser stopped it entirely
-      track.style.animationName = 'none';
-      // Force reflow, then restore
-      void track.offsetWidth;
-      track.style.animationName = '';
     });
   }
-  // On initial paint, after fonts/images load, on tab refocus, and on first touch
-  if (document.readyState === 'complete') ensureMarqueesPlaying();
-  window.addEventListener('load', ensureMarqueesPlaying);
+
+  // Hard reset — animationName trick is valid ONCE on cold start to unblock
+  // animations that iOS never started. After that, ensureMarqueesPlaying()
+  // handles resume without position loss.
+  function _coldStartMarquees() {
+    document.querySelectorAll('.marquee-track').forEach(track => {
+      track.style.animationName = 'none';
+      void track.offsetWidth;
+      track.style.animationName = '';
+      track.style.animationPlayState = 'running';
+    });
+  }
+
+  // Cold start once after assets load, then only soft-resume on subsequent events
+  if (document.readyState === 'complete') _coldStartMarquees();
+  window.addEventListener('load', _coldStartMarquees, { once: true });
+
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       ensureMarqueesPlaying();
@@ -15739,8 +15759,8 @@
     }
   });
   window.addEventListener('pageshow', ensureMarqueesPlaying);
-  // Single-shot on first interaction (iOS battery-saver wakeup)
-  ['touchstart','click','scroll'].forEach(ev => {
+  // Soft resume only — no animationName reset, no position jump
+  ['click', 'scroll'].forEach(ev => {
     window.addEventListener(ev, ensureMarqueesPlaying, { once: true, passive: true });
   });
 
