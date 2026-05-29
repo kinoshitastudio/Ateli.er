@@ -5959,11 +5959,12 @@
       return;
     }
 
-    // Non-wsrv URL: one cache-buster retry (mobile Safari eviction), then hide
-    if (!img.dataset.imgRetried) {
-      img.dataset.imgRetried = '1';
+    // Non-wsrv URL: first try routing through wsrv.nl (handles MIME/CORS issues),
+    // then hide. Cache-buster alone doesn't help when the source itself is slow.
+    if (!img.dataset.wsrvFallback) {
+      img.dataset.wsrvFallback = '1';
       const clean = src.replace(/[?&]_r=\d+$/, '');
-      img.src = clean + (clean.includes('?') ? '&' : '?') + '_r=' + Date.now();
+      img.src = `https://wsrv.nl/?url=${encodeURIComponent(clean)}&w=400&output=webp&q=60`;
       return;
     }
     img.style.display = 'none';
@@ -5972,7 +5973,7 @@
   // backward compatibility (call-site signatures unchanged) but no longer
   // forces grayscale — colour photos were appearing washed out in the grid.
   function buildPieceImage(track, w=240, h=160, mono=false) {
-    const src = track.imageUrl;
+    const src = _thumbUrl(track.imageUrl || '');
     const brokenBadge = isAudioBroken(track && track.id)
       ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
     if (src) {
@@ -5997,7 +5998,7 @@
       : placeholder;
   }
   function buildBlockImage(block, w=240, h=240) {
-    const src = block.imageUrl;
+    const src = _thumbUrl(block.imageUrl || '');
     if (src) {
       return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
     }
@@ -9474,11 +9475,11 @@
   }
   // Display helper: proxy any ogImage URL through wsrv.nl at 960px max.
   // Prevents heavy OGP images from external sites from blocking render.
-  function _thumbUrl(url) {
+  function _thumbUrl(url, w=400) {
     if (!url) return '';
     if (url.startsWith('https://wsrv.nl/')) return url;
     if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
-    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=400&output=webp&q=65`;
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=65`;
   }
 
   // Merge audio blocks into TRACKS (so they participate in marquees, vein index, etc.)
@@ -11489,7 +11490,7 @@
       ${ block.source ? `<div class="piece-modal-art">${escapeHtml(block.source)}</div>` : '' }
       ${_blockMetaHtml(block)}
       <div class="piece-modal-image" style="aspect-ratio: 4/3;">
-        <img src="${escapeHtml(convertImageUrl(block.imageUrl || ''))}" alt="" style="width:100%;height:100%;object-fit:contain;background:var(--paper-2);" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">
+        <img src="${escapeHtml(_thumbUrl(convertImageUrl(block.imageUrl || ''), 800))}" alt="" style="width:100%;height:100%;object-fit:contain;background:var(--paper-2);" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">
       </div>
       ${ block.description ? `
         <section class="piece-context">
