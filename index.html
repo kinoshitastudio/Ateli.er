@@ -9477,8 +9477,17 @@
   // Prevents heavy OGP images from external sites from blocking render.
   function _thumbUrl(url, w=400) {
     if (!url) return '';
+    // Google Drive share URL → lh3 direct image (no further proxy needed)
+    let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w${w}`;
+    if (url.includes('drive.google.com')) {
+      m = url.match(/[?&]id=([^&]+)/);
+      if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w${w}`;
+    }
     if (url.startsWith('https://wsrv.nl/')) return url;
     if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
+    // All other URLs (including Dropbox with st= token) — proxy via wsrv.nl
+    // preserving the full original URL so access tokens are not stripped.
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=65`;
   }
 
@@ -11490,7 +11499,7 @@
       ${ block.source ? `<div class="piece-modal-art">${escapeHtml(block.source)}</div>` : '' }
       ${_blockMetaHtml(block)}
       <div class="piece-modal-image" style="aspect-ratio: 4/3;">
-        <img src="${escapeHtml(_thumbUrl(convertImageUrl(block.imageUrl || ''), 800))}" alt="" style="width:100%;height:100%;object-fit:contain;background:var(--paper-2);" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">
+        <img src="${escapeHtml(_thumbUrl(block.imageUrl || '', 800))}" alt="" style="width:100%;height:100%;object-fit:contain;background:var(--paper-2);" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">
       </div>
       ${ block.description ? `
         <section class="piece-context">
@@ -12461,7 +12470,9 @@
     if (!r || !r.id) return;
     const p = r.payload;
     if (p) {
-      if (p.imageUrl) p.imageUrl = convertImageUrl(p.imageUrl);
+      // audioUrl needs format conversion for playback (Dropbox raw, Drive uc).
+      // imageUrl is left as-is so access tokens (Dropbox st=) are preserved;
+      // _thumbUrl at render time handles Drive→lh3 and wsrv.nl proxying.
       if (p.audioUrl) p.audioUrl = convertAudioUrl(p.audioUrl);
     }
     _explorePublicCache[r.id] = r;
@@ -12510,7 +12521,6 @@
       // can still drill into the owner's channel detail.
       _externalHostChannelId: channelId || '',
     };
-    if (ext.imageUrl) ext.imageUrl = convertImageUrl(ext.imageUrl);
     if (kind === 'audio') openPieceModal(ext);
     else if (kind === 'image') openImageModal(ext);
     else if (kind === 'text') openTextModal(ext);
