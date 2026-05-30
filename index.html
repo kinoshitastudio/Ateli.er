@@ -6972,6 +6972,18 @@
       saveTrackConnections(conns);
     }
   }
+  const _blockBC = (() => { try { return new BroadcastChannel('atelier_block_edits'); } catch(e) { return null; } })();
+  let _bcApplying = false;
+  if (_blockBC) {
+    _blockBC.onmessage = (e) => {
+      if (e.data?.type !== 'blockEdited') return;
+      _bcApplying = true;
+      try { editBlock(e.data.id, e.data.patch); } catch(_) {}
+      _bcApplying = false;
+      try { if (typeof refreshAllViews === 'function') refreshAllViews(); } catch(_) {}
+    };
+  }
+
   function editBlock(id, patch) {
     const blocks = loadBlocks();
     const i = blocks.findIndex(b => b.id === id);
@@ -6980,6 +6992,10 @@
       saveBlocks(blocks);
       // Phase C-1: keep public_blocks index in sync (fire-and-forget)
       try { atelierPublic?.sync(blocks[i]); } catch (e) {}
+      // Sync same-browser tabs instantly via BroadcastChannel
+      if (!_bcApplying && _blockBC) {
+        try { _blockBC.postMessage({ type: 'blockEdited', id, patch }); } catch(_) {}
+      }
     }
   }
   function deleteBlock(id) {
