@@ -14028,6 +14028,15 @@
     if (!mBlock && !mChannel && !mUser) return;
     window._pendingDeepLink = { mBlock, mChannel, mUser };
     history.replaceState(null, '', location.pathname);
+    // Prefetch block data immediately (parallel with auth+sync) so _resolveDeepLink
+    // doesn't pay an extra Supabase roundtrip after push/pull finish.
+    if (mBlock) {
+      const _bid = decodeURIComponent(mBlock[1]);
+      window._pendingBlockFetch = fetch(
+        'https://boaslcfdjdjaryahpged.supabase.co/rest/v1/public_blocks?id=eq.' + encodeURIComponent(_bid) + '&select=*&limit=1',
+        { headers: { apikey: 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi' } }
+      ).then(r => r.ok ? r.json() : []).catch(() => []);
+    }
   })();
 
   // Resolve a pending deep link after auth is confirmed and data is loaded.
@@ -14079,10 +14088,14 @@
       }
       // Block not in localStorage — fetch from public_blocks.
       try {
-        const rows = await fetch(
-          `${SUPABASE_URL}/rest/v1/public_blocks?id=eq.${encodeURIComponent(bid)}&select=*&limit=1`,
-          { headers: { apikey: SUPABASE_PUB_KEY } }
-        ).then(r => r.ok ? r.json() : []);
+        // Use the prefetch that was fired on page load (parallel with auth/sync) if available.
+        const rows = window._pendingBlockFetch
+          ? await window._pendingBlockFetch
+          : await fetch(
+              `${SUPABASE_URL}/rest/v1/public_blocks?id=eq.${encodeURIComponent(bid)}&select=*&limit=1`,
+              { headers: { apikey: SUPABASE_PUB_KEY } }
+            ).then(r => r.ok ? r.json() : []);
+        window._pendingBlockFetch = null;
         if (rows && rows[0]) {
           const row = rows[0];
           _cachePublicRow(row);
@@ -15582,7 +15595,7 @@
           }
         } catch (e) { console.warn('[atelierSync] sign-in pull failed:', e); }
         // Open any share deep-link that arrived before auth completed.
-        setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 400);
+        setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 50);
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
         // Phase E-prep: prime the cross-user broadcast pool so TOP marquee
@@ -15670,7 +15683,7 @@
       hideLanding();
       try { refreshCrossUserBlocks(); } catch(e) {}
       if (window._pendingDeepLink) {
-        setTimeout(() => { try { _resolveDeepLink(); } catch(e) {} }, 300);
+        setTimeout(() => { try { _resolveDeepLink(); } catch(e) {} }, 50);
       }
       return;
     }
@@ -15687,7 +15700,7 @@
       }
     } catch (e) { console.warn('[atelierSync] reload pull failed:', e); }
     // Open any share deep-link that was in the URL on this page load.
-    setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 400);
+    setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 50);
     // Backfill own public_blocks columns (channel_id / channel_label) on
     // every load. Same one-shot per session reasoning as on SIGNED_IN.
     if (atelierPublic?.backfillOwnPublicBlocks) {
