@@ -8558,7 +8558,7 @@
           <div class="uf-grid">
             <label class="uf-row"><span class="sp-k">${t('fldTitle')}</span><textarea class="uf-input" id="ef-title" rows="1">${escapeHtml(obj.title || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldArtist')}</span><textarea class="uf-input" id="ef-artist" rows="1">${escapeHtml(obj.artist || '')}</textarea></label>
-            <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><textarea class="uf-input" id="ef-phrase" rows="1" maxlength="200">${escapeHtml(phrase0)}</textarea></label>
+            <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><textarea class="uf-input" id="ef-phrase" rows="3" maxlength="3000">${escapeHtml(phrase0)}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldContext')}</span>
               <textarea class="uf-input" id="ef-context" rows="2" placeholder="${escapeHtml(t('contextPh'))}">${escapeHtml(obj.context || '')}</textarea>
               ${ getAllTags().length > 0 ? `
@@ -8589,7 +8589,7 @@
             <label class="uf-row"><span class="sp-k">source</span><textarea class="uf-input" id="ef-source" rows="1">${escapeHtml(obj.source || '')}</textarea></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
-              <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="800">${escapeHtml(obj.description || '')}</textarea>
+              <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="3000">${escapeHtml(obj.description || '')}</textarea>
             </label>
             <label class="uf-row">
               <span class="sp-k">${t('fldContext')}</span>
@@ -8620,7 +8620,7 @@
             </select></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
-              <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="800">${escapeHtml(obj.description || '')}</textarea>
+              <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="3000">${escapeHtml(obj.description || '')}</textarea>
             </label>
             <label class="uf-row">
               <span class="sp-k">${t('fldContext')}</span>
@@ -8649,7 +8649,7 @@
             <label class="uf-row"><span class="sp-k">og image url</span><input class="uf-input" type="url" id="ef-ogImage" value="${escapeHtml(obj.ogImage || '')}" placeholder="https://..."></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
-              <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="800">${escapeHtml(obj.description || '')}</textarea>
+              <textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="3000">${escapeHtml(obj.description || '')}</textarea>
             </label>
             <label class="uf-row">
               <span class="sp-k">${t('fldContext')}</span>
