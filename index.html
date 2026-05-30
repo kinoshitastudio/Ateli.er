@@ -14449,7 +14449,7 @@
           localById.set(r.id, newBlock);
           changed = true;
           console.log('[importFromPublicBlocks] imported missing block:', r.id);
-        } else if ((r.ts || 0) > (local.ts || 0)) {
+        } else if ((r.ts || 0) > (local.ts || 0) || (payload.editedAt || 0) > (local.editedAt || 0)) {
           // リモートの方が新しい → payload を全面採用（ローカルフィールドと混在させない）
           const updated = {
             ...payload,
