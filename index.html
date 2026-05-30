@@ -160,13 +160,15 @@
   a.triggers .trig, .triggers a.trig { text-decoration: none; }
   .triggers .trig .num { display: none; }
 
-  /* Hide the drifting marquees completely when any modal is open — the
-     reading surface stays clean and nothing leaks through the blur. */
-  body.overlay-open .stage,
-  body.overlay-open .marquee,
-  body.overlay-open .marquee-track {
-    display: none !important;
-    visibility: hidden !important;
+  /* Hide the drifting marquees when any modal is open.
+     visibility:hidden (not display:none) — display:none removes the element
+     from layout and resets CSS animation position to 0%, so after modal close
+     the text/image track jumps back to the beginning instead of continuing
+     from where it was. visibility:hidden keeps the animation running offscreen;
+     the track resumes at its current position when the modal closes. */
+  body.overlay-open .stage {
+    visibility: hidden;
+    pointer-events: none;
   }
 
   /* ──────────────── STAGE / LAYOUT ──────────────── */
@@ -6247,6 +6249,12 @@
       if (!html && el._lastRenderedHtml) return;
       el.innerHTML = html;
       el._lastRenderedHtml = html;
+      // Images already in the browser cache won't re-fire onload after
+      // innerHTML replacement, so they stay at opacity:0 forever.
+      // Check img.complete immediately and stamp is-loaded manually.
+      el.querySelectorAll('img').forEach(img => {
+        if (img.complete && img.naturalWidth > 0) img.classList.add('is-loaded');
+      });
     };
     _setTrackIfChanged('phraseTrack', row1Html + row1Html);
     _setTrackIfChanged('titleTrack', titleHtml + titleHtml);
