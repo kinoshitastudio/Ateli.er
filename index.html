@@ -6247,8 +6247,25 @@
       // showing the last good frame instead of flashing empty —
       // animation continues, no 'images suddenly disappeared' moment.
       if (!html && el._lastRenderedHtml) return;
+      // iOS Safari resets the CSS animation position to 0 when innerHTML
+      // changes (even though the animated element itself stays in the DOM).
+      // Save currentTime before the wipe so we can restore it after.
+      let savedPhase = null;
+      try {
+        const anims = el.getAnimations ? el.getAnimations() : [];
+        if (anims[0] && anims[0].currentTime != null) {
+          const dur = parseFloat(getComputedStyle(el).animationDuration) * 1000 || 55000;
+          savedPhase = anims[0].currentTime % dur;
+        }
+      } catch (_) {}
       el.innerHTML = html;
       el._lastRenderedHtml = html;
+      // Restore animation position so the track continues from where it was
+      // rather than jumping back to the beginning.
+      if (savedPhase !== null) {
+        el.style.animationDelay = `-${savedPhase}ms`;
+      }
+      el.style.animationPlayState = 'running';
       // Images already in the browser cache won't re-fire onload after
       // innerHTML replacement, so they stay at opacity:0 forever.
       // Check img.complete immediately and stamp is-loaded manually.
@@ -15799,8 +15816,8 @@
   });
   window.addEventListener('pageshow', ensureMarqueesPlaying);
   // Soft resume only — no animationName reset, no position jump
-  ['click', 'scroll'].forEach(ev => {
-    window.addEventListener(ev, ensureMarqueesPlaying, { once: true, passive: true });
+  ['touchstart', 'touchend', 'click', 'scroll'].forEach(ev => {
+    window.addEventListener(ev, ensureMarqueesPlaying, { passive: true });
   });
 
   // ── OGP Collector integration ─────────────────────────────────────────────
