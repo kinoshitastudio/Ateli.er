@@ -1355,7 +1355,11 @@
     -webkit-user-select: none;
     user-select: none;
     pointer-events: none;
+    color: transparent;
+    opacity: 0;
+    transition: opacity .3s ease;
   }
+  .pane-index .ix-thumb img.is-loaded { opacity: 1; }
   /* Bulk checkbox: custom-painted square so the on/off state is unambiguous and
      not subject to browser-native rendering quirks. Native appearance disabled. */
   .pane-index li > .bulk-check {
@@ -1717,6 +1721,13 @@
   .ch-card-cell svg, .ch-card-cell img {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
+  .ch-card-cell img {
+    color: transparent;
+    background: var(--paper-2);
+    transition: opacity .3s ease;
+    opacity: 0;
+  }
+  .ch-card-cell img.is-loaded { opacity: 1; }
   .ch-card-cell.is-empty {
     background: var(--paper-2);
   }
@@ -2416,6 +2427,8 @@
   }
   .your-uploads .yu-thumb img,
   .your-uploads .yu-thumb svg { width: 100%; height: 100%; object-fit: cover; }
+  .your-uploads .yu-thumb img { color: transparent; opacity: 0; transition: opacity .3s ease; }
+  .your-uploads .yu-thumb img.is-loaded { opacity: 1; }
   .your-uploads .yu-mid {
     font-family: var(--sans-jp);
     font-size: 13px;
@@ -7450,7 +7463,7 @@
       if (b.ogImage) {
         return `<div class="ch-card-cell">
           <span class="ch-card-cell-kind">url</span>
-          <img src="${escapeHtml(_thumbUrl(b.ogImage))}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+          <img src="${escapeHtml(_thumbUrl(b.ogImage))}" alt="" onload="this.classList.add('is-loaded')" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
           <span class="ch-card-cell-url" style="display:none;">${escapeHtml(display)}</span>
         </div>`;
       }
@@ -10009,7 +10022,7 @@
       } else if (b.kind === 'url') {
         const _urlDisplay = b.title || b.source || b.url || '';
         thumb = b.ogImage
-          ? `<img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<div style=padding:8px;font-family:var(--mono);font-size:8px;color:var(--gray);word-break:break-all;line-height:1.3;overflow:hidden>${escapeHtml(_urlDisplay.slice(0,60))}</div>'">`
+          ? `<img src="${escapeHtml(_thumbUrl(b.ogImage))}" style="width:100%;height:100%;object-fit:cover;display:block;" onload="this.classList.add('is-loaded')" onerror="this.outerHTML='<div style=padding:8px;font-family:var(--mono);font-size:8px;color:var(--gray);word-break:break-all;line-height:1.3;overflow:hidden>${escapeHtml(_urlDisplay.slice(0,60))}</div>'">`
           : `<div style="padding:8px; font-family:var(--mono); font-size:8px; color:var(--gray); letter-spacing:0.06em; word-break:break-all; line-height:1.3; overflow:hidden;">${escapeHtml(_urlDisplay.slice(0, 60))}</div>`;
         title = escapeHtml(b.title || b.source || b.url || '(url)');
         meta = `${escapeHtml(b.source || '')} · placed ${ageString(b.ts)}`;
