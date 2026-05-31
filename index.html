@@ -10162,12 +10162,12 @@
       // crashing the whole Feed render mid-loop.
       const tr = item.track || item.block;
       if (!tr) return '';
-      return buildPieceImage(tr, 192, 128, true, true);
+      return buildPieceImage(tr, 640, 480, true, true);
     }
     if (item.kind === 'image') {
       const b = item.block;
       if (!b) return '';
-      return buildBlockImage(b, 192, 128, true);
+      return buildBlockImage(b, 640, 480, true);
     }
     if (item.kind === 'text') {
       const b = item.block;
@@ -10201,7 +10201,7 @@
         // position:relative + overflow:hidden so the overlay can sit on top.
         // A wrapper div with height:100% breaks rendering when the parent
         // height is set via aspect-ratio (Chrome doesn't resolve it).
-        return `<img src="${escapeHtml(_thumbUrl(_ogImage, 240))}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'">` +
+        return `<img src="${escapeHtml(_thumbUrl(_ogImage, 640))}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'">` +
           `<div style="position:absolute;top:0;left:0;right:0;padding:6px 8px;background:rgba(220,219,213,0.82);pointer-events:none;">` +
           `<span style="font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${escapeHtml(domain)}</span>` +
           `</div>`;
@@ -12130,6 +12130,14 @@
     document.querySelectorAll('.modal-pane').forEach(p => {
       p.classList.toggle('is-active', p.dataset.pane === name);
     });
+    // Update URL hash for shareable public tabs; clear for private tabs.
+    try {
+      if (name === 'explore' || name === 'courtyard') {
+        history.replaceState(history.state, '', '#tab=' + name);
+      } else if (location.hash.startsWith('#tab=')) {
+        history.replaceState(history.state, '', location.pathname);
+      }
+    } catch(_) {}
     if (name === 'feed') renderFeed();
     if (name === 'explore') renderExplore();
     if (name === 'courtyard') renderCourtyard();
@@ -14070,6 +14078,14 @@
     }, 200);
   })();
 
+  // On load, detect #tab=explore or #tab=courtyard and open that tab after auth.
+  (function detectTabOnLoad() {
+    const m = location.hash.match(/^#tab=(explore|courtyard)$/);
+    if (!m) return;
+    window._pendingTab = m[1];
+    history.replaceState(null, '', location.pathname);
+  })();
+
   // On load, capture any #b= / #ch= / #u= deep-link params and clear the hash.
   // Actual navigation runs in _resolveDeepLink() after auth + data are ready.
   (function detectDeepLinkOnLoad() {
@@ -14089,6 +14105,14 @@
       ).then(r => r.ok ? r.json() : []).catch(() => []);
     }
   })();
+
+  // Open a pending #tab= deep link after the app is ready.
+  function _resolveTabDeepLink() {
+    const tab = window._pendingTab;
+    if (!tab) return;
+    window._pendingTab = null;
+    openModal(tab);
+  }
 
   // Resolve a pending deep link after auth is confirmed and data is loaded.
   async function _resolveDeepLink() {
@@ -15642,7 +15666,7 @@
           }
         } catch (e) { console.warn('[atelierSync] sign-in pull failed:', e); }
         // Open any share deep-link that arrived before auth completed.
-        setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 50);
+        setTimeout(() => { try { _resolveTabDeepLink(); _resolveDeepLink(); } catch (e) {} }, 50);
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
         // Phase E-prep: delay cross-user fetch so deeplink/block render completes first.
@@ -15735,7 +15759,7 @@
       hideLanding();
       try { refreshCrossUserBlocks(); } catch(e) {}
       if (window._pendingDeepLink) {
-        setTimeout(() => { try { _resolveDeepLink(); } catch(e) {} }, 50);
+        setTimeout(() => { try { _resolveTabDeepLink(); _resolveDeepLink(); } catch(e) {} }, 50);
       }
       return;
     }
@@ -15752,7 +15776,7 @@
       }
     } catch (e) { console.warn('[atelierSync] reload pull failed:', e); }
     // Open any share deep-link that was in the URL on this page load.
-    setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 50);
+    setTimeout(() => { try { _resolveTabDeepLink(); _resolveDeepLink(); } catch (e) {} }, 50);
     // Backfill own public_blocks columns (channel_id / channel_label) on
     // every load. Same one-shot per session reasoning as on SIGNED_IN.
     if (atelierPublic?.backfillOwnPublicBlocks) {
