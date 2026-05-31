@@ -7452,14 +7452,14 @@
       const t = item.track;
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">audio</span>
-        ${ buildPieceImage(t, 480, 480, false, true) }
+        ${ buildPieceImage(t, 720, 720, false, true) }
       </div>`;
     }
     if (item.kind === 'image') {
       const b = item.block;
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">img</span>
-        ${ buildBlockImage(b, 480, 480, true) }
+        ${ buildBlockImage(b, 720, 720, true) }
       </div>`;
     }
     if (item.kind === 'text') {
@@ -7478,7 +7478,7 @@
       if (b.ogImage) {
         return `<div class="ch-card-cell">
           <span class="ch-card-cell-kind">url</span>
-          <img src="${escapeHtml(_thumbUrl(b.ogImage, 160))}" alt="" loading="lazy" onload="this.classList.add('is-loaded')" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+          <img src="${escapeHtml(_thumbUrl(b.ogImage, 720))}" alt="" loading="lazy" onload="this.classList.add('is-loaded')" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
           <span class="ch-card-cell-url" style="display:none;">${escapeHtml(display)}</span>
         </div>`;
       }
