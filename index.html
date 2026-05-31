@@ -12655,7 +12655,7 @@
       let thumbHtml = '';
       let title = '';
       if (r.kind === 'image' || (r.kind === 'audio' && p.imageUrl)) {
-        const src = p.imageUrl ? escapeHtml(convertImageUrl(p.imageUrl)) : '';
+        const src = p.imageUrl ? escapeHtml(_thumbUrl(p.imageUrl, 480)) : '';
         const _epBrokenBadge = (r.kind === 'audio' && (isAudioBroken(r.id) || p.isBroken))
           ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
         thumbHtml = src
