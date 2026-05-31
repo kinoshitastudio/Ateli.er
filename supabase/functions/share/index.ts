@@ -1,13 +1,17 @@
 // Ateli.er — Share Edge Function
-// Bots (Twitterbot, Discordbot, etc.) get OG-tagged HTML.
-// Human browsers get a 302 redirect straight to the SPA.
+//
+// Strategy: serve OG-tagged HTML to EVERYONE.
+// - Search engine bots (Googlebot etc.): no JS redirect → /s URLs get indexed.
+// - SNS bots (LINE, iMessage, Notion, Discord, etc.): don't execute JS → OG tags work.
+// - Human visitors: JS redirect → SPA opens instantly.
 
 const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
 const APP_URL = 'https://atelistudio.com/';
 const DEFAULT_OG_IMAGE = 'https://atelistudio.com/og-image.png';
 
-const BOT_UA = /Twitterbot|facebookexternalhit|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|Pinterest|redditbot|Applebot|Googlebot|bingbot|DuckDuckBot/i;
+// Search engine bots: skip JS redirect so they index the /s URL itself.
+const SEARCH_BOT = /Googlebot|bingbot|DuckDuckBot|YandexBot|Baiduspider|AhrefsBot|SemrushBot/i;
 
 // Same conversion logic as the client-side convertImageUrl().
 function convertImageUrl(url: string): string {
@@ -58,14 +62,19 @@ function buildHtml(opts: {
   image: string;
   appHash: string;
   selfUrl: string;
+  includeRedirect: boolean;
 }): string {
-  const { title, description, image, appHash, selfUrl } = opts;
+  const { title, description, image, appHash, selfUrl, includeRedirect } = opts;
   const dest = APP_URL + appHash;
+  const redirectScript = includeRedirect
+    ? `<script>window.location.replace(${JSON.stringify(dest)});</script>`
+    : '';
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <title>${esc(title)}</title>
+<link rel="canonical" href="${esc(selfUrl)}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:image" content="${esc(image)}">
@@ -96,7 +105,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
   <a href="${esc(dest)}" class="btn">Open in Ateli.er →</a>
   <p class="hint">redirecting…</p>
 </div>
-<script>window.location.replace(${JSON.stringify(dest)});</script>
+${redirectScript}
 </body>
 </html>`;
 }
@@ -108,7 +117,6 @@ Deno.serve(async (req) => {
   const id = url.searchParams.get('id');
   const ownerId = url.searchParams.get('owner');
 
-  // Compute app hash (needed for both bot and human paths).
   let appHash = '';
   if (type === 'block' && id) {
     appHash = `#b=${encodeURIComponent(id)}`;
@@ -118,16 +126,9 @@ Deno.serve(async (req) => {
     appHash = id && id !== '_unkn' ? `#ch=${encodeURIComponent(id)}` : '';
   }
 
-  // Human browsers: 302 straight to the SPA — no HTML rendering issues.
-  if (!BOT_UA.test(ua)) {
-    return new Response(null, {
-      status: 302,
-      headers: { 'Location': APP_URL + appHash },
-    });
-  }
-
-  // Bots: build OG-tagged HTML.
-  const selfUrl = `https://boaslcfdjdjaryahpged.supabase.co/functions/v1/share?${url.searchParams.toString()}`;
+  const isSearchBot = SEARCH_BOT.test(ua);
+  // selfUrl: always use atelistudio.com regardless of which host handled the request
+  const selfUrl = `https://atelistudio.com/s?${url.searchParams.toString()}`;
 
   let title = 'Ateli.er';
   let description = '未完成のまま、そっと置いておく場所。';
@@ -141,10 +142,11 @@ Deno.serve(async (req) => {
     if (row) {
       const p = (row.payload as Record<string, string>) || {};
       title = p.title || p.caption || `${row.kind} — Ateli.er`;
-      description = (p.text as string)?.slice(0, 200)
-        || p.caption
-        || `by @${row.owner_handle || 'artist'} on Ateli.er`;
-      if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
+      description = (
+        (p.description || p.text || p.caption || `by @${(row.owner_handle as string) || 'artist'} on Ateli.er`)
+      ).slice(0, 200);
+      if (p.ogImage) image = convertOgImageUrl(p.ogImage);
+      else if (p.imageUrl) image = convertOgImageUrl(p.imageUrl);
     }
   } else if (type === 'user' && id) {
     const rows = await sbGet(
@@ -189,11 +191,11 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    buildHtml({ title, description, image, appHash, selfUrl }),
+    buildHtml({ title, description, image, appHash, selfUrl, includeRedirect: !isSearchBot }),
     {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'public, max-age=60',
+        'Cache-Control': isSearchBot ? 'public, max-age=3600' : 'public, max-age=300',
       },
     }
   );

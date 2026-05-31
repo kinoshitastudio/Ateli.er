@@ -1,14 +1,18 @@
 // Ateli.er — Share Cloudflare Worker
 // Route: atelistudio.com/s?type=block&id=xxx  (or type=user / type=channel)
-// Bots  → OG-tagged HTML (fetches data from Supabase)
-// Human → 302 redirect to atelistudio.com/#b=xxx
+//
+// Strategy: serve OG-tagged HTML to EVERYONE.
+// - Search engine bots (Googlebot etc.): no JS redirect → /s URLs get indexed.
+// - SNS bots (LINE, iMessage, Notion, Discord, etc.): don't execute JS → OG tags work.
+// - Human visitors: JS redirect → SPA opens instantly.
 
 const SUPABASE_URL = 'https://boaslcfdjdjaryahpged.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_063kSonhC4HBJu-Dr3kUaw_4dRD7vPi';
 const APP_URL = 'https://atelistudio.com/';
 const DEFAULT_OG_IMAGE = 'https://atelistudio.com/og-image.png';
 
-const BOT_UA = /Twitterbot|facebookexternalhit|meta-externalagent|Slackbot|Discordbot|LinkedInBot|WhatsApp|TelegramBot|Pinterest|redditbot|Applebot|Googlebot|bingbot|DuckDuckBot/i;
+// Search engine bots: skip JS redirect so they index the /s URL itself.
+const SEARCH_BOT = /Googlebot|bingbot|DuckDuckBot|YandexBot|Baiduspider|AhrefsBot|SemrushBot/i;
 
 function convertImageUrl(url) {
   if (!url) return '';
@@ -53,13 +57,17 @@ async function sbGet(path) {
   }
 }
 
-function buildHtml({ title, description, image, appHash, selfUrl }) {
+function buildHtml({ title, description, image, appHash, selfUrl, includeRedirect }) {
   const dest = APP_URL + appHash;
+  const redirectScript = includeRedirect
+    ? `<script>window.location.replace(${JSON.stringify(dest)});</script>`
+    : '';
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <title>${esc(title)}</title>
+<link rel="canonical" href="${esc(selfUrl)}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:image" content="${esc(image)}">
@@ -70,9 +78,27 @@ function buildHtml({ title, description, image, appHash, selfUrl }) {
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
 <meta name="twitter:image" content="${esc(image)}">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#faf8f4;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{max-width:420px;width:100%;text-align:center}
+.logo{font-family:Georgia,serif;font-size:13px;letter-spacing:.18em;color:#888;margin-bottom:24px}
+.title{font-size:20px;font-weight:500;line-height:1.4;margin-bottom:8px;color:#1a1a1a}
+.desc{font-size:13px;color:#888;margin-bottom:32px;line-height:1.5}
+.btn{display:inline-block;padding:12px 28px;border:1px solid #1a1a1a;color:#1a1a1a;text-decoration:none;font-size:13px;letter-spacing:.06em;transition:background .15s,color .15s}
+.btn:hover{background:#1a1a1a;color:#faf8f4}
+.hint{margin-top:16px;font-size:11px;color:#aaa;letter-spacing:.04em}
+</style>
 </head>
 <body>
-<script>window.location.replace(${JSON.stringify(dest)});</script>
+<div class="card">
+  <p class="logo">Ateli.er</p>
+  <p class="title">${esc(title)}</p>
+  <p class="desc">${esc(description)}</p>
+  <a href="${esc(dest)}" class="btn">Open in Ateli.er →</a>
+  <p class="hint">redirecting…</p>
+</div>
+${redirectScript}
 </body>
 </html>`;
 }
@@ -94,11 +120,10 @@ export default {
       appHash = id && id !== '_unkn' ? `#ch=${encodeURIComponent(id)}` : '';
     }
 
-    if (!BOT_UA.test(ua)) {
-      return Response.redirect(APP_URL + appHash, 302);
-    }
-
+    const isSearchBot = SEARCH_BOT.test(ua);
+    // selfUrl: request.url is always the atelistudio.com URL in Cloudflare Worker
     const selfUrl = request.url;
+
     let title = 'Ateli.er';
     let description = '未完成のまま、そっと置いておく場所。';
     let image = DEFAULT_OG_IMAGE;
@@ -148,11 +173,11 @@ export default {
     }
 
     return new Response(
-      buildHtml({ title, description, image, appHash, selfUrl }),
+      buildHtml({ title, description, image, appHash, selfUrl, includeRedirect: !isSearchBot }),
       {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'public, max-age=60',
+          'Cache-Control': isSearchBot ? 'public, max-age=3600' : 'public, max-age=300',
         },
       }
     );
