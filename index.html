@@ -768,7 +768,7 @@
   }
   .explore-block-thumb {
     aspect-ratio: 4/3;
-    background: var(--paper-2) center/cover no-repeat;
+    background-color: var(--paper-2);
     border: 1px solid var(--line-soft);
     display: flex;
     align-items: center;
@@ -4309,7 +4309,21 @@
     background-size: 200% 100%;
     animation: _shimmer 1.4s ease infinite;
   }
-  /* explore-block-thumb uses inline background-image (not <img>), so shimmer conflicts — omitted */
+  .explore-block-thumb img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .explore-block-thumb img.is-loaded { opacity: 1; }
+  .explore-block-thumb:not(.is-text):not(:has(img.is-loaded)) {
+    background: linear-gradient(90deg, var(--paper-2) 25%, var(--line-soft) 50%, var(--paper-2) 75%);
+    background-size: 200% 100%;
+    animation: _shimmer 1.4s ease infinite;
+  }
+  .ch-card-cell:has(img):not(:has(img.is-loaded)) {
+    background: linear-gradient(90deg, var(--paper-2) 25%, var(--line-soft) 50%, var(--paper-2) 75%);
+    background-size: 200% 100%;
+    animation: _shimmer 1.4s ease infinite;
+  }
   .your-uploads .yu-thumb:not(:has(img.is-loaded)) {
     background: linear-gradient(90deg, var(--paper-2) 25%, var(--line-soft) 50%, var(--paper-2) 75%);
     background-size: 200% 100%;
@@ -12666,7 +12680,7 @@
         const _epBrokenBadge = (r.kind === 'audio' && (isAudioBroken(r.id) || p.isBroken))
           ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
         thumbHtml = src
-          ? `<span class="explore-block-thumb" style="background-image:url('${src}');">${_epBrokenBadge}</span>`
+          ? `<span class="explore-block-thumb"><img src="${src}" onload="this.classList.add('is-loaded')" onerror="this.remove()">${_epBrokenBadge}</span>`
           : `<span class="explore-block-thumb">${_epBrokenBadge || r.kind}</span>`;
         title = (r.kind === 'audio' ? p.title : p.caption) || '(untitled)';
       } else if (r.kind === 'text') {
@@ -12680,7 +12694,7 @@
         let domain = '';
         try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
         if (p.ogImage) {
-          thumbHtml = `<span class="explore-block-thumb" style="background-image:url('${escapeHtml(_thumbUrl(p.ogImage, 800))}');"></span>`;
+          thumbHtml = `<span class="explore-block-thumb"><img src="${escapeHtml(_thumbUrl(p.ogImage, 800))}" onload="this.classList.add('is-loaded')" onerror="this.remove()"></span>`;
         } else {
           thumbHtml = `<span class="explore-block-thumb">${escapeHtml(domain || 'url')}</span>`;
         }
