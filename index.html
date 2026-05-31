@@ -10983,6 +10983,7 @@
     if (currentBlockModalId !== track.id) connectPickerOpen = false;
     const wasOpen = $('#pieceModal').classList.contains('is-open');
     if (!wasOpen) navOpen('pieceModal');
+    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(track.id)); } catch(_) {}
     const inner = $('#pieceModalInner');
     // texture removed; process is rendered inline below as free-form text
     const _trackPhrases = (track.phrases && track.phrases.length)
@@ -11140,6 +11141,7 @@
     $('#pieceModal').classList.remove('is-open');
     currentPieceModalTrack = null;
     currentBlockModalId = null;
+    try { history.replaceState(history.state, '', location.pathname); } catch(_) {}
   }
   function closePieceModal() {
     if (navStack.includes('pieceModal')) navCloseExternal('pieceModal');
@@ -11567,6 +11569,7 @@
   function openImageModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(block.id)); } catch(_) {}
     const inner = $('#pieceModalInner');
     inner.innerHTML = `
       ${_blockTabsHtml()}
@@ -11598,6 +11601,7 @@
   function openUrlModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(block.id)); } catch(_) {}
     const inner = $('#pieceModalInner');
     let domain = '';
     try { if (block.url) domain = new URL(block.url).hostname.replace(/^www\./, ''); } catch (e) {}
@@ -11641,6 +11645,7 @@
   function openTextModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(block.id)); } catch(_) {}
     const inner = $('#pieceModalInner');
     const styleLabel = t('modalLabelText');
     inner.innerHTML = `
@@ -12718,6 +12723,7 @@
     // Phase A-refactor 2 (2026-04-30): keep parent #modal Explore-active.
     if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    try { history.replaceState(history.state, '', '#u=' + encodeURIComponent(ownerId)); } catch(_) {}
     const inner = $('#pieceModalInner');
     // Resolve bio/sns/avatar/joined from cache if not passed (caller may know
     // them already). Without this, [data-bc="user"] generic handlers that
@@ -13171,6 +13177,7 @@
         return (a.ts || 0) - (b.ts || 0);
       });
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    try { history.replaceState(history.state, '', channelId && channelId !== '_unkn' ? '#ch=' + encodeURIComponent(channelId) : '#u=' + encodeURIComponent(ownerId)); } catch(_) {}
     const inner = $('#pieceModalInner');
     // Build the head — mirrors the owner's ch-detail-head exactly (search +
     // share icons, meta + meta-times) but skips edit / delete / select-all
