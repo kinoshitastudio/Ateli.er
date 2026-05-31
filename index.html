@@ -9561,7 +9561,14 @@
       m = url.match(/[?&]id=([^&]+)/);
       if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w${w}`;
     }
-    if (url.startsWith('https://wsrv.nl/')) return url;
+    if (url.startsWith('https://wsrv.nl/')) {
+      // Re-wrap with the requested w so stored low-res wsrv.nl URLs get upscaled correctly.
+      try {
+        const orig = new URL(url).searchParams.get('url');
+        if (orig) return `https://wsrv.nl/?url=${encodeURIComponent(orig)}&w=${w}&output=webp&q=65`;
+      } catch(_) {}
+      return url;
+    }
     if (url.startsWith('https://lh3.googleusercontent.com/')) return url;
     // All other URLs (including Dropbox with st= token) — proxy via wsrv.nl
     // preserving the full original URL so access tokens are not stripped.
