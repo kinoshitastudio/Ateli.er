@@ -5987,16 +5987,14 @@
   // All images render in their original colour. The `mono` flag is kept for
   // backward compatibility (call-site signatures unchanged) but no longer
   // forces grayscale — colour photos were appearing washed out in the grid.
-  function buildPieceImage(track, w=240, h=160, mono=false) {
-    const src = _thumbUrl(track.imageUrl || '');
+  function buildPieceImage(track, w=240, h=160, mono=false, lazy=false) {
+    const src = _thumbUrl(track.imageUrl || '', w);
     const brokenBadge = isAudioBroken(track && track.id)
       ? `<span class="audio-broken-badge" title="source unreachable">⚠ source</span>` : '';
     if (src) {
-      // No loading=lazy: marquee is above the fold and lazy-load triggers
+      // loading=lazy is opt-in: marquee is above the fold so lazy triggers
       // late paints that look like images flickering in/out of the lane.
-      // onload class swap fades the img in so a still-decoding frame
-      // doesn't slide in as a gray rectangle.
-      const imgHtml = `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
+      const imgHtml = `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;"${lazy ? ' loading="lazy"' : ''} onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
       return brokenBadge
         ? `<span class="audio-thumb-wrap">${brokenBadge}${imgHtml}</span>`
         : imgHtml;
@@ -6012,10 +6010,10 @@
       ? `<span class="audio-thumb-wrap">${brokenBadge}${placeholder}</span>`
       : placeholder;
   }
-  function buildBlockImage(block, w=240, h=240) {
-    const src = _thumbUrl(block.imageUrl || '');
+  function buildBlockImage(block, w=240, h=240, lazy=false) {
+    const src = _thumbUrl(block.imageUrl || '', w);
     if (src) {
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;" onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;"${lazy ? ' loading="lazy"' : ''} onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
     }
     // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
     // as buildPieceImage. Image blocks should always have imageUrl, but if
@@ -7437,14 +7435,14 @@
       const t = item.track;
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">audio</span>
-        ${ buildPieceImage(t, 240, 240, /*mono=*/false) }
+        ${ buildPieceImage(t, 240, 240, false, true) }
       </div>`;
     }
     if (item.kind === 'image') {
       const b = item.block;
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">img</span>
-        ${ buildBlockImage(b, 240, 240) }
+        ${ buildBlockImage(b, 240, 240, true) }
       </div>`;
     }
     if (item.kind === 'text') {
@@ -7817,7 +7815,7 @@
             return `<li class="${ownClass}" data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(tr.id)}</span>
-              <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
+              <span class="ix-thumb">${buildPieceImage(tr, 160, 110, true, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${connectBadge}${escapeHtml(tr.title)}</span>
                 <span class="ix-phrase">— ${escapeHtml((tr.phrases && tr.phrases[0]) || '')} —</span>
@@ -7833,7 +7831,7 @@
             return `<li class="${ownClass}" data-kind="image" data-bid="${escapeHtml(b.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb">${buildBlockImage(b, 160, 110)}</span>
+              <span class="ix-thumb">${buildBlockImage(b, 160, 110, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${connectBadge}${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
@@ -10007,11 +10005,11 @@
       let title = '';
       let meta = '';
       if (b.kind === 'audio') {
-        thumb = buildPieceImage({ imageUrl: b.imageUrl, imgSeed: b.id, id: b.id }, 120, 80);
+        thumb = buildPieceImage({ imageUrl: b.imageUrl, imgSeed: b.id, id: b.id }, 120, 80, false, true);
         title = escapeHtml(b.title || '(untitled)');
         meta = `${escapeHtml(b.artist || '')} · ${fmtDur(b.sec || 0)} · placed ${ageString(b.ts)}`;
       } else if (b.kind === 'image') {
-        thumb = buildBlockImage(b, 120, 80);
+        thumb = buildBlockImage(b, 120, 80, true);
         title = escapeHtml(b.caption || '(image)');
         meta = `${escapeHtml(b.source || '')} · placed ${ageString(b.ts)}`;
       } else if (b.kind === 'text') {
@@ -10118,12 +10116,12 @@
       // crashing the whole Feed render mid-loop.
       const tr = item.track || item.block;
       if (!tr) return '';
-      return buildPieceImage(tr, 192, 128, /*mono=*/true);
+      return buildPieceImage(tr, 192, 128, true, true);
     }
     if (item.kind === 'image') {
       const b = item.block;
       if (!b) return '';
-      return buildBlockImage(b, 192, 128);
+      return buildBlockImage(b, 192, 128, true);
     }
     if (item.kind === 'text') {
       const b = item.block;
@@ -10157,7 +10155,7 @@
         // position:relative + overflow:hidden so the overlay can sit on top.
         // A wrapper div with height:100% breaks rendering when the parent
         // height is set via aspect-ratio (Chrome doesn't resolve it).
-        return `<img src="${escapeHtml(_thumbUrl(_ogImage))}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">` +
+        return `<img src="${escapeHtml(_thumbUrl(_ogImage, 240))}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.style.display='none'">` +
           `<div style="position:absolute;top:0;left:0;right:0;padding:6px 8px;background:rgba(220,219,213,0.82);pointer-events:none;">` +
           `<span style="font-family:var(--mono);font-size:8.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${escapeHtml(domain)}</span>` +
           `</div>`;
@@ -10664,10 +10662,10 @@
         const obj = resolved.obj;
         if (resolved.kind === 'audio') {
           blockLabel = obj.title || 'untitled audio';
-          thumbHtml = buildPieceImage(obj, 64, 64, /*mono=*/false);
+          thumbHtml = buildPieceImage(obj, 64, 64, false, true);
         } else if (resolved.kind === 'image') {
           blockLabel = obj.caption || obj.title || '(image)';
-          thumbHtml = buildBlockImage(obj, 64, 64);
+          thumbHtml = buildBlockImage(obj, 64, 64, true);
         } else if (resolved.kind === 'text') {
           const excerpt = (obj.text || '').slice(0, 40);
           blockLabel = obj.title || excerpt || '(text)';
@@ -10786,11 +10784,11 @@
         if (resolved.kind === 'audio') {
           title = obj.title || '(untitled)';
           metaLine = `${escapeHtml(obj.artist || '')} · ${traces.length} trace${traces.length === 1 ? '' : 's'}`;
-          thumbHtml = buildPieceImage(obj, 120, 80);
+          thumbHtml = buildPieceImage(obj, 120, 80, false, true);
         } else if (resolved.kind === 'image') {
           title = obj.caption || obj.title || '(image)';
           metaLine = `image · ${traces.length} trace${traces.length === 1 ? '' : 's'}`;
-          thumbHtml = buildBlockImage(obj, 120, 80);
+          thumbHtml = buildBlockImage(obj, 120, 80, true);
         } else if (resolved.kind === 'text') {
           const excerpt = (obj.text || '').slice(0, 40);
           title = obj.title || excerpt || '(text)';
@@ -11433,7 +11431,7 @@
             const phrase = (tr.phrases && tr.phrases[0]) || tr.phrase || '';
             return `<li data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(tr.id)}</span>
-              <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
+              <span class="ix-thumb">${buildPieceImage(tr, 160, 110, true, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(tr.title || '(untitled)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(phrase)} —</span>
@@ -11446,7 +11444,7 @@
           if (m.kind === 'image') {
             return `<li data-kind="image" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb">${buildBlockImage(b, 160, 110)}</span>
+              <span class="ix-thumb">${buildBlockImage(b, 160, 110, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
@@ -13230,7 +13228,7 @@
               const tr = { ...p, id, kind: 'audio' };
               return `<li data-kind="audio" data-tid="${escapeHtml(id)}" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb">${buildPieceImage(tr, 160, 110, /*mono=*/true)}</span>
+                <span class="ix-thumb">${buildPieceImage(tr, 160, 110, true, true)}</span>
                 <span class="ix-mid">
                   <span class="ix-title">${_connBadge}${escapeHtml(p.title || '(untitled)')}</span>
                   <span class="ix-phrase">— ${escapeHtml((p.phrases && p.phrases[0]) || p.catchphrase || '')} —</span>
@@ -13244,7 +13242,7 @@
               const b = { ...p, id, kind: 'image' };
               return `<li data-kind="image" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb">${buildBlockImage(b, 160, 110)}</span>
+                <span class="ix-thumb">${buildBlockImage(b, 160, 110, true)}</span>
                 <span class="ix-mid">
                   <span class="ix-title">${_connBadge}${escapeHtml(p.caption || '(image)')}</span>
                   <span class="ix-phrase">${escapeHtml(p.source || '')}</span>
@@ -13278,7 +13276,7 @@
               try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
               if (!domain) domain = 'link';
               const _urlThumb = p.ogImage
-                ? `<img src="${escapeHtml(_thumbUrl(p.ogImage))}" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+                ? `<img src="${escapeHtml(_thumbUrl(p.ogImage, 120))}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
                 : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
               return `<li data-kind="url" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(id.slice(0, 6))}</span>
