@@ -4309,11 +4309,7 @@
     background-size: 200% 100%;
     animation: _shimmer 1.4s ease infinite;
   }
-  .explore-block-thumb:not(.is-text):not(:has(img.is-loaded)) {
-    background: linear-gradient(90deg, var(--paper-2) 25%, var(--line-soft) 50%, var(--paper-2) 75%);
-    background-size: 200% 100%;
-    animation: _shimmer 1.4s ease infinite;
-  }
+  /* explore-block-thumb uses inline background-image (not <img>), so shimmer conflicts — omitted */
   .your-uploads .yu-thumb:not(:has(img.is-loaded)) {
     background: linear-gradient(90deg, var(--paper-2) 25%, var(--line-soft) 50%, var(--paper-2) 75%);
     background-size: 200% 100%;
