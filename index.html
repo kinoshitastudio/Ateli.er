@@ -12132,7 +12132,7 @@
     });
     // Update URL hash for shareable public tabs; clear for private tabs.
     try {
-      if (name === 'explore' || name === 'courtyard') {
+      if (name === 'explore' || name === 'courtyard' || name === 'feed') {
         history.replaceState(history.state, '', '#tab=' + name);
       } else if (location.hash.startsWith('#tab=')) {
         history.replaceState(history.state, '', location.pathname);
@@ -14080,7 +14080,7 @@
 
   // On load, detect #tab=explore or #tab=courtyard and open that tab after auth.
   (function detectTabOnLoad() {
-    const m = location.hash.match(/^#tab=(explore|courtyard)$/);
+    const m = location.hash.match(/^#tab=(explore|courtyard|feed)$/);
     if (!m) return;
     window._pendingTab = m[1];
     history.replaceState(null, '', location.pathname);
