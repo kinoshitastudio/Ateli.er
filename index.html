@@ -4301,13 +4301,9 @@
     background: var(--paper);
     z-index: 9990;
     pointer-events: none;
-    transition: opacity 0.65s ease;
+    transition: opacity 0.4s ease;
   }
   #app-loader.is-done { opacity: 0; }
-  /* Mobile: slow, gentle fade-in instead of blank → sudden reveal */
-  @media (max-width: 720px) {
-    #app-loader { transition: opacity 2.5s ease; }
-  }
 </style>
 </head>
 <body>
@@ -15149,15 +15145,11 @@
   function hideLanding() {
     const el = document.getElementById('landingScreen');
     if (el) { el.classList.remove('is-open'); el.hidden = true; }
-    // Mobile: shorter hold + 2.5s slow fade (see CSS). PC: original 1200ms hold + 0.65s fade.
-    const isMob = window.matchMedia('(max-width: 720px)').matches;
-    setTimeout(() => {
-      const loader = document.getElementById('app-loader');
-      if (loader) {
-        loader.classList.add('is-done');
-        setTimeout(() => { try { loader.remove(); } catch(e) {} }, isMob ? 2600 : 700);
-      }
-    }, isMob ? 200 : 1200);
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+      loader.classList.add('is-done');
+      setTimeout(() => { try { loader.remove(); } catch(e) {} }, 450);
+    }
   }
   function openAuthModal(which) {
     closeAuthModals();
@@ -15671,6 +15663,14 @@
       history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
     }
     if (!supabaseClient) { showLanding(); return; }
+    // Optimistic reveal: if a Supabase session token exists in localStorage the user
+    // is almost certainly logged in. Show the app immediately so the loader disappears
+    // while getSession() validates the token over the network in the background.
+    const _cachedTokenKey = !params.has('logout') && !params.has('landing')
+      ? Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+      : null;
+    const _hasLocalSession = !!(_cachedTokenKey && (() => { try { return JSON.parse(localStorage.getItem(_cachedTokenKey) || 'null')?.access_token; } catch(_) { return null; } })());
+    if (_hasLocalSession) hideLanding();
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateUserMenu(session);
     if (params.has('landing')) {
@@ -15678,7 +15678,7 @@
       return;
     }
     if (!session) {
-      // Guest mode: show the app directly (marquee + explore visible to all).
+      // Guest mode (or expired token): show the app directly.
       // ?landing=1 remains as an escape hatch to reach the landing page.
       hideLanding();
       try { refreshCrossUserBlocks(); } catch(e) {}
