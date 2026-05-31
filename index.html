@@ -638,9 +638,27 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: var(--paper-2) center 30%/cover no-repeat;
+    background: var(--paper-2);
     border: 1px solid var(--line);
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--gray);
+    text-transform: uppercase;
+  }
+  .explore-card-avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+    opacity: 0;
+    transition: opacity .25s;
   }
   .explore-card-mid {
     display: flex;
@@ -12484,14 +12502,14 @@
       const rawHandle = p.handle || (p.display_name || '').toLowerCase() || 'visitor';
       const handle = String(rawHandle).replace(/^@+/, '');
       const avatarUrl = p.avatar_url ? _thumbUrl(p.avatar_url, 96) : '';
-      const avatarBg = avatarUrl ? `style="background-image:url('${escapeHtml(avatarUrl)}');"` : '';
+      const initial = escapeHtml(handle.charAt(0) || '?');
       const joined = p.created_at ? ageString(new Date(p.created_at).getTime()) : '';
       // Phase E-prep: residents clickable → user portfolio overlay.
       // Self link is also valid; opens current user's own portfolio view
       // (read-only mode preview of how others see their work).
       return `
         <li class="explore-card" data-uid="${escapeHtml(p.id)}" data-handle="${escapeHtml(handle)}" data-avatar="${escapeHtml(avatarUrl)}" data-joined="${escapeHtml(joined)}" style="cursor:pointer;">
-          <span class="explore-card-avatar" ${avatarBg}></span>
+          <span class="explore-card-avatar">${initial}${ avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="" onload="this.style.opacity=1" onerror="this.remove()">` : '' }</span>
           <span class="explore-card-mid">
             <span class="explore-card-handle">@${escapeHtml(handle)}</span>
             <span class="explore-card-meta">joined ${escapeHtml(joined)}</span>
