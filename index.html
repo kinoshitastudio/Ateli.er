@@ -15617,17 +15617,14 @@
         setTimeout(() => { try { _resolveDeepLink(); } catch (e) {} }, 50);
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
-        // Phase E-prep: prime the cross-user broadcast pool so TOP marquee
-        // and Feed feel alive on first paint.
-        refreshCrossUserBlocks();
+        // Phase E-prep: delay cross-user fetch so deeplink/block render completes first.
+        setTimeout(() => { try { refreshCrossUserBlocks(); } catch(e) {} }, 3000);
         // One-shot backfill: re-upsert this user's public blocks so the
         // channel_id / channel_label columns are populated for legacy
         // rows. Idempotent — runs in background, surfaces correct
         // channel labels in other users' Feed once it lands.
         if (atelierPublic?.backfillOwnPublicBlocks) {
-          atelierPublic.backfillOwnPublicBlocks().then(() => {
-            try { refreshCrossUserBlocks(); } catch (e) {}
-          }).catch(() => {});
+          atelierPublic.backfillOwnPublicBlocks().catch(() => {});
         }
         // One-shot sync: push localStorage block_order / channel_grid_order
         // to profiles so visitors see the owner's intended order even for
@@ -15731,9 +15728,7 @@
     // Backfill own public_blocks columns (channel_id / channel_label) on
     // every load. Same one-shot per session reasoning as on SIGNED_IN.
     if (atelierPublic?.backfillOwnPublicBlocks) {
-      atelierPublic.backfillOwnPublicBlocks().then(() => {
-        try { refreshCrossUserBlocks(); } catch (e) {}
-      }).catch(() => {});
+      atelierPublic.backfillOwnPublicBlocks().catch(() => {});
     }
     // One-shot sync of local ordering (block_order / channel_grid_order)
     // into profiles columns so visitor views reflect the owner's saved
@@ -15761,9 +15756,8 @@
     // same tab without a full reload.
     if (typeof window._appIntervalIds === 'undefined') window._appIntervalIds = [];
     window._appIntervalIds.push(setInterval(() => atelierTraces.refreshUnreadBadge(), 60_000));
-    // Phase E-prep: prime cross-user broadcast pool, then refresh every 5 min
-    // so TOP marquee and Feed reflect new public posts without reload.
-    refreshCrossUserBlocks();
+    // Phase E-prep: delay cross-user fetch so deeplink/block render completes first.
+    setTimeout(() => { try { refreshCrossUserBlocks(); } catch(e) {} }, 3000);
     window._appIntervalIds.push(setInterval(() => refreshCrossUserBlocks(), 300_000));
     // Fix B: periodically push localStorage block order to Supabase (5 min)
     window._appIntervalIds.push(setInterval(() => syncLocalOrderingToProfile(), 300_000));
