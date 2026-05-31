@@ -10335,7 +10335,7 @@
         );
         const ownerId = profile?.id || actorEl.dataset.uid || (handle === _currentHandle() ? currentUser?.id : null);
         if (!ownerId) return;
-        const avatarUrl = profile?.avatar_url ? convertImageUrl(profile.avatar_url) : '';
+        const avatarUrl = profile?.avatar_url ? _thumbUrl(profile.avatar_url, 120) : '';
         const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
         openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
         // Phase A-refactor 2: stop bubbling so the global [data-bc="user"]
@@ -11765,7 +11765,7 @@
           // _isOwnAuthor is set.
           const authorId = f.author_id || (f._isOwnAuthor && currentUser?.id) || null;
           const cachedProfile = (authorId && typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[authorId] : null;
-          const avatarUrl = cachedProfile?.avatar_url ? convertImageUrl(cachedProfile.avatar_url) : '';
+          const avatarUrl = cachedProfile?.avatar_url ? _thumbUrl(cachedProfile.avatar_url, 44) : '';
           const avatarStyle = avatarUrl ? `style="background-image:url('${escapeHtml(avatarUrl)}');"` : '';
           const avatarClass = avatarUrl ? 'ptc-avatar' : 'ptc-avatar is-empty';
           // Show first letter of the handle as fallback when no avatar URL
@@ -12454,7 +12454,7 @@
     list.innerHTML = data.map(p => {
       const rawHandle = p.handle || (p.display_name || '').toLowerCase() || 'visitor';
       const handle = String(rawHandle).replace(/^@+/, '');
-      const avatarUrl = p.avatar_url ? convertImageUrl(p.avatar_url) : '';
+      const avatarUrl = p.avatar_url ? _thumbUrl(p.avatar_url, 96) : '';
       const avatarBg = avatarUrl ? `style="background-image:url('${escapeHtml(avatarUrl)}');"` : '';
       const joined = p.created_at ? ageString(new Date(p.created_at).getTime()) : '';
       // Phase E-prep: residents clickable → user portfolio overlay.
@@ -12733,7 +12733,7 @@
       if (cached) {
         if (bio === undefined) bio = cached.bio || '';
         if (snsUrl === undefined) snsUrl = cached.sns_url || '';
-        if (!avatarUrl && cached.avatar_url) avatarUrl = convertImageUrl(cached.avatar_url);
+        if (!avatarUrl && cached.avatar_url) avatarUrl = _thumbUrl(cached.avatar_url, 120);
         if (!joinedLabel && cached.created_at) joinedLabel = ageString(new Date(cached.created_at).getTime());
       }
     }
@@ -13336,7 +13336,7 @@
     document.querySelector('.piece-modal-shell').scrollTop = 0;
     const _backToPortfolio = () => {
       const profile = _exploreProfilesCache[ownerId];
-      const avatarUrl = profile?.avatar_url ? convertImageUrl(profile.avatar_url) : '';
+      const avatarUrl = profile?.avatar_url ? _thumbUrl(profile.avatar_url, 120) : '';
       const joinedLabel = profile?.created_at ? ageString(new Date(profile.created_at).getTime()) : '';
       openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel });
     };
@@ -14088,7 +14088,7 @@
         openModal('explore');
         openUserPortfolio({
           id: pr.id, handle: pr.handle,
-          avatarUrl: pr.avatar_url ? convertImageUrl(pr.avatar_url) : '',
+          avatarUrl: pr.avatar_url ? _thumbUrl(pr.avatar_url, 120) : '',
           joinedLabel: pr.created_at ? ageString(new Date(pr.created_at).getTime()) : '',
           bio: pr.bio || '', snsUrl: pr.sns_url || '',
         });
