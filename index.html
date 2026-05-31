@@ -7510,7 +7510,7 @@
       if (b.ogImage) {
         return `<div class="ch-card-cell">
           <span class="ch-card-cell-kind">url</span>
-          <img src="${escapeHtml(_thumbUrl(b.ogImage, 720))}" alt="" loading="lazy" onload="this.classList.add('is-loaded')" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+          <img src="${escapeHtml(_thumbUrl(b.ogImage, 720))}" alt="" loading="lazy" onload="this.classList.add('is-loaded')" onerror="this.style.display='none';this.classList.add('is-loaded');this.nextElementSibling.style.display=''">
           <span class="ch-card-cell-url" style="display:none;">${escapeHtml(display)}</span>
         </div>`;
       }
@@ -9598,8 +9598,10 @@
       return url;
     }
     if (url.startsWith('https://lh3.googleusercontent.com/')) {
-      // Rewrite =wNNN size suffix if present so the requested w is respected.
+      // Drive direct image: rewrite =wNNN suffix
       if (/=w\d+/.test(url)) return url.replace(/=w\d+(-h\d+(-c)?)?$/, `=w${w}`);
+      // Google OAuth profile photo: rewrite =sNNN-c suffix (square size)
+      if (/=s\d+-c/.test(url)) return url.replace(/=s\d+-c/, `=s${w}-c`);
       return url;
     }
     // All other URLs (including Dropbox with st= token) — proxy via wsrv.nl
