@@ -4299,6 +4299,19 @@
     .img-zoom-close { top: 8px; right: 10px; font-size: 24px; }
   }
 
+  /* ── Image load progress bar ── */
+  #img-load-bar {
+    position: fixed; top: 0; left: 0;
+    height: 2px; width: 0%;
+    background: var(--ink);
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: width 0.2s ease, opacity 0.3s ease;
+  }
+  #img-load-bar.active { opacity: 1; }
+  #img-load-bar.finishing { width: 100% !important; transition: width 0.25s ease, opacity 0.4s ease 0.3s; opacity: 0; }
+
   /* ── App loading overlay ── */
   #app-loader {
     position: fixed; inset: 0;
@@ -4312,6 +4325,7 @@
 </head>
 <body>
 <div id="app-loader"></div>
+<div id="img-load-bar"></div>
 
 <!-- ──────────────── LANDING ──────────────── -->
 <section class="landing" id="landingScreen" hidden>
@@ -5994,7 +6008,7 @@
     if (src) {
       // loading=lazy is opt-in: marquee is above the fold so lazy triggers
       // late paints that look like images flickering in/out of the lane.
-      const imgHtml = `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;"${lazy ? ' loading="lazy"' : ''} onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)" />`;
+      const imgHtml = `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;"${lazy ? ' loading="lazy"' : ''} onload="window._imgBar&&window._imgBar.finish();this.classList.add('is-loaded')" onerror="window._imgBar&&window._imgBar.finish();window._imgRetry(this)" />`;
       return brokenBadge
         ? `<span class="audio-thumb-wrap">${brokenBadge}${imgHtml}</span>`
         : imgHtml;
@@ -6013,7 +6027,7 @@
   function buildBlockImage(block, w=240, h=240, lazy=false) {
     const src = _thumbUrl(block.imageUrl || '', w);
     if (src) {
-      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;"${lazy ? ' loading="lazy"' : ''} onload="this.classList.add('is-loaded')" onerror="window._imgRetry(this)">`;
+      return `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;"${lazy ? ' loading="lazy"' : ''} onload="window._imgBar&&window._imgBar.finish();this.classList.add('is-loaded')" onerror="window._imgBar&&window._imgBar.finish();window._imgRetry(this)">`;
     }
     // Phase A-refactor 2 (2026-04-29): same neutral-placeholder treatment
     // as buildPieceImage. Image blocks should always have imageUrl, but if
@@ -7815,7 +7829,7 @@
             return `<li class="${ownClass}" data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(tr.id)}</span>
-              <span class="ix-thumb">${buildPieceImage(tr, 160, 110, true, true)}</span>
+              <span class="ix-thumb">${buildPieceImage(tr, 400, 300, true, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${connectBadge}${escapeHtml(tr.title)}</span>
                 <span class="ix-phrase">— ${escapeHtml((tr.phrases && tr.phrases[0]) || '')} —</span>
@@ -7831,7 +7845,7 @@
             return `<li class="${ownClass}" data-kind="image" data-bid="${escapeHtml(b.id)}">
               ${cbox}
               <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb">${buildBlockImage(b, 160, 110, true)}</span>
+              <span class="ix-thumb">${buildBlockImage(b, 400, 300, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${connectBadge}${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
@@ -7870,7 +7884,7 @@
             try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
             if (!domain) domain = 'link';
             const _ownUrlThumb = b.ogImage
-              ? `<img src="${escapeHtml(_thumbUrl(b.ogImage, 120))}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+              ? `<img src="${escapeHtml(_thumbUrl(b.ogImage, 400))}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
               : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
             return `<li class="${ownClass}" data-kind="url" data-bid="${escapeHtml(b.id)}">
               ${cbox}
@@ -9525,6 +9539,60 @@
     }
     return url;
   }
+  // ── Image load progress bar ──
+  const _imgBar = (() => {
+    let total = 0, done = 0, timer = null;
+    const el = () => document.getElementById('img-load-bar');
+    function _update() {
+      const bar = el(); if (!bar) return;
+      const pct = total > 0 ? Math.min(95, Math.round((done / total) * 100)) : 0;
+      bar.style.width = pct + '%';
+    }
+    function start() {
+      total++; done = 0;
+      const bar = el(); if (!bar) return;
+      if (timer) { clearTimeout(timer); timer = null; }
+      bar.classList.remove('finishing');
+      bar.classList.add('active');
+      _update();
+    }
+    function finish() {
+      done++;
+      _update();
+      if (done >= total) {
+        const bar = el(); if (!bar) return;
+        bar.classList.add('finishing');
+        timer = setTimeout(() => {
+          bar.classList.remove('active', 'finishing');
+          bar.style.width = '0%';
+          total = 0; done = 0; timer = null;
+        }, 700);
+      }
+    }
+    return { start, finish };
+  })();
+  window._imgBar = _imgBar;
+
+  // Watch for images added inside pane-index / explore-blocks and register them
+  // with the progress bar before they start loading.
+  (() => {
+    const WATCH_SEL = '.pane-index img, .explore-blocks img, .your-uploads img';
+    const obs = new MutationObserver(muts => {
+      muts.forEach(m => {
+        m.addedNodes.forEach(n => {
+          if (n.nodeType !== 1) return;
+          const imgs = n.matches('img') ? [n] : Array.from(n.querySelectorAll('img'));
+          imgs.forEach(img => {
+            if (!img.src || img.complete) return;
+            if (!img.closest('.pane-index, .explore-blocks, .your-uploads')) return;
+            _imgBar.start();
+          });
+        });
+      });
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  })();
+
   // Display helper: proxy any ogImage URL through wsrv.nl at 960px max.
   // Prevents heavy OGP images from external sites from blocking render.
   function _thumbUrl(url, w=400) {
@@ -11431,7 +11499,7 @@
             const phrase = (tr.phrases && tr.phrases[0]) || tr.phrase || '';
             return `<li data-kind="audio" data-tid="${escapeHtml(tr.id)}" data-bid="${escapeHtml(tr.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(tr.id)}</span>
-              <span class="ix-thumb">${buildPieceImage(tr, 160, 110, true, true)}</span>
+              <span class="ix-thumb">${buildPieceImage(tr, 400, 300, true, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(tr.title || '(untitled)')}</span>
                 <span class="ix-phrase">— ${escapeHtml(phrase)} —</span>
@@ -11444,7 +11512,7 @@
           if (m.kind === 'image') {
             return `<li data-kind="image" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(b.id)}</span>
-              <span class="ix-thumb">${buildBlockImage(b, 160, 110, true)}</span>
+              <span class="ix-thumb">${buildBlockImage(b, 400, 300, true)}</span>
               <span class="ix-mid">
                 <span class="ix-title">${escapeHtml(b.caption || '(image)')}</span>
                 <span class="ix-phrase">${escapeHtml(b.source || '')}</span>
@@ -13228,7 +13296,7 @@
               const tr = { ...p, id, kind: 'audio' };
               return `<li data-kind="audio" data-tid="${escapeHtml(id)}" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('audio')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb">${buildPieceImage(tr, 160, 110, true, true)}</span>
+                <span class="ix-thumb">${buildPieceImage(tr, 400, 300, true, true)}</span>
                 <span class="ix-mid">
                   <span class="ix-title">${_connBadge}${escapeHtml(p.title || '(untitled)')}</span>
                   <span class="ix-phrase">— ${escapeHtml((p.phrases && p.phrases[0]) || p.catchphrase || '')} —</span>
@@ -13242,7 +13310,7 @@
               const b = { ...p, id, kind: 'image' };
               return `<li data-kind="image" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('image')}</span>${escapeHtml(id.slice(0, 6))}</span>
-                <span class="ix-thumb">${buildBlockImage(b, 160, 110, true)}</span>
+                <span class="ix-thumb">${buildBlockImage(b, 400, 300, true)}</span>
                 <span class="ix-mid">
                   <span class="ix-title">${_connBadge}${escapeHtml(p.caption || '(image)')}</span>
                   <span class="ix-phrase">${escapeHtml(p.source || '')}</span>
@@ -13276,7 +13344,7 @@
               try { if (p.url) domain = new URL(p.url).hostname.replace(/^www\./, ''); } catch (e) {}
               if (!domain) domain = 'link';
               const _urlThumb = p.ogImage
-                ? `<img src="${escapeHtml(_thumbUrl(p.ogImage, 120))}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
+                ? `<img src="${escapeHtml(_thumbUrl(p.ogImage, 400))}" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy" onerror="this.outerHTML='<span class=\\'ix-thumb-url\\'>${escapeHtml(domain)}</span>'">`
                 : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
               return `<li data-kind="url" data-bid="${escapeHtml(id)}" data-pb-id="${escapeHtml(id)}">
                 <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(id.slice(0, 6))}</span>
