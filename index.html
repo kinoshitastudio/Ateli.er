@@ -7456,14 +7456,14 @@
       const t = item.track;
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">audio</span>
-        ${ buildPieceImage(t, 240, 240, false, true) }
+        ${ buildPieceImage(t, 320, 320, false, true) }
       </div>`;
     }
     if (item.kind === 'image') {
       const b = item.block;
       return `<div class="ch-card-cell">
         <span class="ch-card-cell-kind">img</span>
-        ${ buildBlockImage(b, 240, 240, true) }
+        ${ buildBlockImage(b, 320, 320, true) }
       </div>`;
     }
     if (item.kind === 'text') {
