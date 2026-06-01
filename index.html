@@ -1336,6 +1336,12 @@
     position: relative;
     align-items: stretch;
   }
+  /* openUserChannel: entire li is the tap target → needs cursor:pointer so iOS
+     registers the first tap as a click instead of requiring a second tap. */
+  .pane-index li[data-pb-id] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
   /* Title and thumb are both navigation targets. Hover styling is gated to
      actual hover devices so iPhone Safari doesn't fire a "first-tap = hover"
      affordance before the click registers. */
