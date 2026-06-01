@@ -212,7 +212,11 @@
     transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    /* Fade in after cross-user data is ready — prevents empty-then-full flash */
+    opacity: 0;
+    transition: opacity 0.5s ease;
   }
+  .marquee-track.is-ready { opacity: 1; }
   /* Mobile: only the image lane needs the heavy slowdown — text lanes
      scroll smoothly on mobile too. Image lane gets the most paint work
      per frame because of decoded-image compositing. */
@@ -6349,6 +6353,13 @@
     _setTrackIfChanged('titleTrack', titleHtml + titleHtml);
     _setTrackIfChanged('phraseTrack2', row3Html + row3Html);
     _setTrackIfChanged('imageTrack', imageHtml + imageHtml);
+    // cross-user data が揃った後の renderMarquees で is-ready を付与してフェードイン
+    if (crossUserBlocksCache && crossUserBlocksCache.length > 0) {
+      ['phraseTrack','titleTrack','phraseTrack2','imageTrack'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('is-ready');
+      });
+    }
 
     // ─── Pause-on-touch for the image marquee (mobile tap accuracy) ───
     // Without this, the 150-300ms iOS tap-confirm delay lets the marquee
@@ -15703,7 +15714,7 @@
         // Phase D-1: prime the unread-traces badge.
         atelierTraces.refreshUnreadBadge();
         // Phase E-prep: delay cross-user fetch so deeplink/block render completes first.
-        setTimeout(() => { try { refreshCrossUserBlocks(); } catch(e) {} }, 3000);
+        setTimeout(() => { try { refreshCrossUserBlocks(); } catch(e) {} }, 500);
         // One-shot backfill: re-upsert this user's public blocks so the
         // channel_id / channel_label columns are populated for legacy
         // rows. Idempotent — runs in background, surfaces correct
@@ -15842,7 +15853,7 @@
     if (typeof window._appIntervalIds === 'undefined') window._appIntervalIds = [];
     window._appIntervalIds.push(setInterval(() => atelierTraces.refreshUnreadBadge(), 60_000));
     // Phase E-prep: delay cross-user fetch so deeplink/block render completes first.
-    setTimeout(() => { try { refreshCrossUserBlocks(); } catch(e) {} }, 3000);
+    setTimeout(() => { try { refreshCrossUserBlocks(); } catch(e) {} }, 500);
     window._appIntervalIds.push(setInterval(() => refreshCrossUserBlocks(), 300_000));
     // Fix B: periodically push localStorage block order to Supabase (5 min)
     window._appIntervalIds.push(setInterval(() => syncLocalOrderingToProfile(), 300_000));
