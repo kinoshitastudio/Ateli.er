@@ -4,7 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ateli.er — about / アトリエとは</title>
-<meta name="description" content="未完成のまま、そっと置いておく場所。アルゴリズムも、ランキングも、いいね数もない、静かな対話のための小さな中庭。">
+<meta name="description" content="未完成のまま、そっと置いておく場所。アルゴリズムも、ランキングも、いいね数もない、静かな音楽空間。木下 貴博（kinoshita studio / 滋賀）が作ったWebアプリ。">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Ateli.er",
+  "alternateName": "Atelier",
+  "url": "https://atelistudio.com/",
+  "description": "未完成のまま、そっと置いておく場所。アルゴリズムも、ランキングも、いいね数もない、静かな音楽空間。",
+  "applicationCategory": "MusicApplication",
+  "operatingSystem": "Any",
+  "inLanguage": ["ja", "en"],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "JPY"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "木下 貴博",
+    "alternateName": "Takahiro Kinoshita",
+    "url": "https://kinoshita.studio/",
+    "jobTitle": "デザイナー・プロダクト開発者",
+    "worksFor": {
+      "@type": "Organization",
+      "name": "kinoshita studio",
+      "url": "https://kinoshita.studio/"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressRegion": "滋賀県",
+      "addressCountry": "JP"
+    }
+  }
+}
+</script>
 <meta name="theme-color" content="#DCDBD5">
 
 <!-- Favicons -->
@@ -1012,6 +1047,107 @@ footer.foot {
     </div>
     <p class="lang-ja" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</p>
     <p class="lang-en" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">Works on Chrome, Edge, Brave and other Chromium browsers.</p>
+  </div>
+</section>
+
+<!-- ──────── MAKER ──────── -->
+<section class="block is-alt" id="maker">
+  <style>
+    .maker-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 52px;
+      align-items: center;
+      margin-top: 32px;
+    }
+    .maker-photo {
+      width: 100%;
+      aspect-ratio: 4/5;
+      object-fit: cover;
+      display: block;
+      border: 1.5px solid var(--ink);
+    }
+    .maker-body h3 {
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: clamp(20px, 2.8vw, 30px);
+      line-height: 1.4;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+      color: var(--ink);
+    }
+    .maker-body h3 span { color: var(--gray); font-weight: 400; }
+    .maker-story {
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 2;
+      color: var(--gray);
+      margin-bottom: 24px;
+    }
+    .maker-story strong { color: var(--ink); }
+    .maker-byline-name {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .maker-byline-role {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--gray-2);
+      margin-bottom: 18px;
+    }
+    .maker-site-link {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--gray-3);
+      padding-bottom: 2px;
+    }
+    .maker-site-link:hover { border-color: var(--ink); }
+    @media (max-width: 640px) {
+      .maker-grid { grid-template-columns: 1fr; gap: 28px; }
+      .maker-photo { aspect-ratio: 4/3; max-width: 300px; }
+    }
+  </style>
+  <div class="block-inner">
+    <span class="block-num">08 — <span class="lang-ja">作った人</span><span class="lang-en">the maker</span></span>
+    <div class="maker-grid">
+      <img
+        src="assets/founder.jpg"
+        alt="木下 貴博 — kinoshita studio"
+        class="maker-photo"
+        loading="lazy"
+      >
+      <div class="maker-body">
+        <h3 class="lang-ja">完成品しか置けない世界に、<br><span>未完成の場所を作りたかった。</span></h3>
+        <h3 class="lang-en">I wanted a place for the unfinished<br><span>in a world built only for the complete.</span></h3>
+        <p class="maker-story lang-ja">
+          音楽を作っていた頃、再生数を何度も確認していた自分に気づいた。<br>
+          作りたいから作る、ではなく、評価されたいから作る——<br>
+          そのループから抜け出せない人を何人か知っていた。<br><br>
+          <strong>数字のない場所があれば、もっと自由に置いておけるはずだ。</strong><br>
+          未完成のまま、誰かに評価されなくていい、静かな中庭。<br>
+          それがAtelierをつくった理由だ。
+        </p>
+        <p class="maker-story lang-en">
+          I used to check play counts over and over after releasing something.<br>
+          Not creating because I wanted to — but because I wanted to be seen.<br>
+          I knew others stuck in that same loop.<br><br>
+          <strong>If there were a place without numbers, things could rest more freely.</strong><br>
+          Unfinished. Unjudged. A quiet courtyard.<br>
+          That is why Atelier exists.
+        </p>
+        <p class="maker-byline-name">木下 貴博 / Takahiro Kinoshita</p>
+        <p class="maker-byline-role">Designer &amp; Developer — kinoshita studio · 滋賀</p>
+        <a href="https://kinoshita.studio/" target="_blank" rel="noopener" class="maker-site-link">kinoshita.studio →</a>
+      </div>
+    </div>
   </div>
 </section>
 
