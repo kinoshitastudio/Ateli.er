@@ -4451,9 +4451,14 @@
         <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="off" required>
       </div>
       <div class="auth-form-row">
-        <label for="suHandle" class="is-required">handle</label>
-        <input type="text" id="suHandle" data-i18n-ph="authHandlePh" placeholder="your handle (letters / numbers)" autocomplete="off" required>
-        <span class="auth-form-hint" data-i18n="authHandleHint">your display name in Ateli.er. can be changed later.</span>
+        <label for="suDisplayName" class="is-required">name</label>
+        <input type="text" id="suDisplayName" placeholder="your name (any language OK)" autocomplete="off" required>
+        <span class="auth-form-hint">displayed in Ateli.er. any language OK.</span>
+      </div>
+      <div class="auth-form-row">
+        <label for="suHandle" class="is-required">url name</label>
+        <input type="text" id="suHandle" placeholder="url-name (a-z, 0-9, - _)" autocomplete="off" required>
+        <span class="auth-form-hint">your page URL: atelistudio.com/ch/[url-name]/. letters, numbers, hyphens and underscores only.</span>
       </div>
       <label class="auth-form-tos">
         <input type="checkbox" id="suTos" required>
@@ -4553,11 +4558,18 @@
       <span class="settings-hint" data-i18n="settingsAvatarHint">paste any image URL (Drive / Dropbox / direct link). it will be auto-cropped to a circle. for Google Drive: set sharing to "anyone with the link can view".</span>
     </div>
 
-    <!-- Handle -->
+    <!-- Display Name -->
     <div class="settings-row">
-      <label class="settings-label is-required" for="settingsHandle">handle</label>
-      <input type="text" id="settingsHandle" class="settings-input" data-i18n-ph="authHandlePh" placeholder="your handle (letters / numbers)">
-      <span class="settings-hint" data-i18n="authHandleHint">your display name in Ateli.er. can be changed later.</span>
+      <label class="settings-label is-required" for="settingsDisplayName">name</label>
+      <input type="text" id="settingsDisplayName" class="settings-input" placeholder="your name (any language OK)">
+      <span class="settings-hint">displayed in Ateli.er. any language OK. can be changed anytime.</span>
+    </div>
+
+    <!-- Handle (URL name) -->
+    <div class="settings-row">
+      <label class="settings-label is-required" for="settingsHandle">url name</label>
+      <input type="text" id="settingsHandle" class="settings-input" placeholder="url-name (a-z, 0-9, - _)">
+      <span class="settings-hint">used in your page URL: atelistudio.com/ch/[url-name]/. letters, numbers, hyphens and underscores only.</span>
     </div>
 
     <!-- Email (read-only) -->
@@ -15324,11 +15336,15 @@
   document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!supabaseClient) { setAuthStatus('signupStatus', 'バックエンドが読み込めていません。再読み込みしてください。', 'err'); return; }
-    const email  = document.getElementById('suEmail')?.value.trim();
-    const handle = document.getElementById('suHandle')?.value.trim();
-    const tosAgreed = document.getElementById('suTos')?.checked;
-    if (!email || !handle) {
+    const email       = document.getElementById('suEmail')?.value.trim();
+    const displayName = document.getElementById('suDisplayName')?.value.trim();
+    const handle      = document.getElementById('suHandle')?.value.trim().replace(/^@+/, '');
+    const tosAgreed   = document.getElementById('suTos')?.checked;
+    if (!email || !displayName || !handle) {
       setAuthStatus('signupStatus', 'すべての項目を入力してください。', 'err'); return;
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(handle)) {
+      setAuthStatus('signupStatus', 'url name は英数字・ハイフン・アンダースコアのみ使用できます。', 'err'); return;
     }
     if (!tosAgreed) {
       setAuthStatus('signupStatus', '利用規約・プライバシーポリシー・コミュニティガイドラインへの同意が必要です。', 'err'); return;
@@ -15341,7 +15357,7 @@
       email,
       options: {
         emailRedirectTo: redirectTo,
-        data: { handle, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion },
+        data: { handle, display_name: displayName, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion },
       },
     });
     if (error) {
@@ -15462,12 +15478,14 @@
     }
     const md = user.user_metadata || {};
     const cleanH = (h) => String(h || '').replace(/^@+/, '');
-    const handleInput = document.getElementById('settingsHandle');
-    const avatarInput = document.getElementById('settingsAvatar');
-    const emailLabel  = document.getElementById('settingsEmail');
+    const handleInput      = document.getElementById('settingsHandle');
+    const displayNameInput = document.getElementById('settingsDisplayName');
+    const avatarInput      = document.getElementById('settingsAvatar');
+    const emailLabel       = document.getElementById('settingsEmail');
     if (emailLabel) emailLabel.textContent = user.email || '';
     // Pre-fill from metadata for instant paint
     if (handleInput) handleInput.value = cleanH(md.handle);
+    if (displayNameInput) displayNameInput.value = md.display_name || cleanH(md.handle) || '';
     if (avatarInput) avatarInput.value = '';
     _setSettingsAvatarPreview('');
     // Pre-clear about/sns inputs so a slow fetch doesn't show stale prior values.
@@ -15478,12 +15496,13 @@
     // Then fetch canonical from profiles (best-effort, won't block UI)
     supabaseClient
       .from('profiles')
-      .select('handle, avatar_url, bio, sns_url')
+      .select('handle, display_name, avatar_url, bio, sns_url')
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data: profile }) => {
         if (!profile) return;
         if (handleInput && profile.handle) handleInput.value = cleanH(profile.handle);
+        if (displayNameInput) displayNameInput.value = profile.display_name || cleanH(profile.handle) || '';
         if (avatarInput) avatarInput.value = profile.avatar_url || '';
         _setSettingsAvatarPreview(profile.avatar_url || '');
         if (aboutInput) aboutInput.value = profile.bio || '';
@@ -15520,23 +15539,26 @@
 
   // Save settings (handle + avatar_url + bio + sns_url) — Settings → save button
   document.getElementById('settingsSave')?.addEventListener('click', async () => {
-    const handleInput = document.getElementById('settingsHandle');
-    const avatarInput = document.getElementById('settingsAvatar');
-    const aboutInput  = document.getElementById('settingsAbout');
-    const snsInput    = document.getElementById('settingsSns');
-    const status      = document.getElementById('settingsStatus');
-    // Normalize: strip any leading @ so we never double-up the prefix.
-    const newHandle   = (handleInput?.value || '').trim().replace(/^@+/, '');
-    const newAvatarUrl = (avatarInput?.value || '').trim();
-    const newBio      = (aboutInput?.value || '').trim();
-    const newSnsUrl   = (snsInput?.value || '').trim();
+    const handleInput      = document.getElementById('settingsHandle');
+    const displayNameInput = document.getElementById('settingsDisplayName');
+    const avatarInput      = document.getElementById('settingsAvatar');
+    const aboutInput       = document.getElementById('settingsAbout');
+    const snsInput         = document.getElementById('settingsSns');
+    const status           = document.getElementById('settingsStatus');
+    const newHandle      = (handleInput?.value || '').trim().replace(/^@+/, '');
+    const newDisplayName = (displayNameInput?.value || '').trim();
+    const newAvatarUrl   = (avatarInput?.value || '').trim();
+    const newBio         = (aboutInput?.value || '').trim();
+    const newSnsUrl      = (snsInput?.value || '').trim();
     const setStatus = (msg, kind) => {
       if (!status) return;
       status.textContent = msg;
       status.className = 'settings-status' + (kind ? ` is-${kind}` : '');
     };
-    if (!supabaseClient) { setStatus('バックエンドが読み込めていません。', 'err'); return; }
-    if (!newHandle)      { setStatus('handle を入力してください。', 'err'); return; }
+    if (!supabaseClient)  { setStatus('バックエンドが読み込めていません。', 'err'); return; }
+    if (!newDisplayName)  { setStatus('name を入力してください。', 'err'); return; }
+    if (!newHandle)       { setStatus('url name を入力してください。', 'err'); return; }
+    if (!/^[a-zA-Z0-9_-]+$/.test(newHandle)) { setStatus('url name は英数字・ハイフン・アンダースコアのみ使用できます。', 'err'); return; }
     setStatus('保存中…');
 
     // Helper: race any awaitable against a timeout so nothing hangs forever
@@ -15573,7 +15595,7 @@
           },
           body: JSON.stringify({
             handle: newHandle,
-            display_name: newHandle,
+            display_name: newDisplayName,
             avatar_url: newAvatarUrl || null,
             bio: newBio || null,
             sns_url: newSnsUrl || null,
@@ -15593,7 +15615,7 @@
       try {
         console.log('[settings] mirroring handle to auth.updateUser…');
         await withTimeout(
-          supabaseClient.auth.updateUser({ data: { handle: newHandle } }),
+          supabaseClient.auth.updateUser({ data: { handle: newHandle, display_name: newDisplayName } }),
           5000,
           'auth.updateUser'
         );
