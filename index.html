@@ -4840,16 +4840,11 @@
                   <input class="uf-input" type="text" id="bArtist" placeholder="your alias" maxlength="40">
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k is-required">audio url</span>
-                  <input class="uf-input" type="url" id="bAudioUrl" placeholder="paste Drive / Dropbox / direct mp3 url">
-                  <span class="uf-hint" id="bAudioUrlHint">⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams. · max 20:00 per track.</span>
-                </label>
-                <label class="uf-row">
                   <span class="sp-k is-required" data-i18n="fldPhrase">catchphrase</span>
                   <textarea class="uf-input" id="bPhrase" data-i18n-placeholder="phrasePh" rows="3" placeholder="a catchphrase, or the story behind this track" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
-                  <span class="sp-k" data-i18n="descriptionLabel">description</span>
+                  <span class="sp-k" data-i18n="fldDescription">description</span>
                   <textarea class="uf-input" id="bDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this track" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
@@ -4859,6 +4854,11 @@
                     <span class="tag-suggest-label">— click to add · click again to remove</span>
                     <div class="tag-suggest-list"></div>
                   </div>
+                </label>
+                <label class="uf-row">
+                  <span class="sp-k is-required">audio url</span>
+                  <input class="uf-input" type="url" id="bAudioUrl" placeholder="paste Drive / Dropbox / direct mp3 url">
+                  <span class="uf-hint" id="bAudioUrlHint">⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams. · max 20:00 per track.</span>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">image url</span>
@@ -8693,7 +8693,7 @@
             <label class="uf-row"><span class="sp-k">${t('fldTitle')}</span><textarea class="uf-input" id="ef-title" rows="1">${escapeHtml(obj.title || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldArtist')}</span><textarea class="uf-input" id="ef-artist" rows="1">${escapeHtml(obj.artist || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><textarea class="uf-input" id="ef-phrase" rows="3" maxlength="3000">${escapeHtml(phrase0)}</textarea></label>
-            <label class="uf-row"><span class="sp-k">${t('descriptionLabel') || 'description'}</span><textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="3000">${escapeHtml(obj.description || '')}</textarea></label>
+            <label class="uf-row"><span class="sp-k">${t('fldDescription')}</span><textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="3000">${escapeHtml(obj.description || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldContext')}</span>
               <textarea class="uf-input" id="ef-context" rows="2" placeholder="${escapeHtml(t('contextPh'))}">${escapeHtml(obj.context || '')}</textarea>
               ${ getAllTags().length > 0 ? `
