@@ -4865,7 +4865,7 @@
                   <span class="sp-k is-required">image url</span>
                   <input class="uf-input" type="url" id="iUrl" placeholder="https://… (drive / dropbox / direct image url)">
                   <p id="iUrlWarn" hidden style="font-family:var(--mono);font-size:10.5px;color:#b85c00;margin-top:4px;line-height:1.5;">X / Twitter のメディアURL（pbs.twimg.com）はSNSシェア時にサムネイルが表示されません。画像をファイルで直接アップロードすることをお勧めします。</p>
-                  <p style="font-family:var(--mono);font-size:10px;color:var(--gray-2);margin-top:4px;line-height:1.6;">⚠ google drive / dropbox 以外の外部 URL は、SNS シェア時にプレビューカードが表示されない場合があります。</p>
+                  <p style="font-family:var(--mono);font-size:10px;color:var(--gray-2);margin-top:4px;line-height:1.7;">推奨: <strong>Google Drive</strong>（共有設定を「リンクを知っている全員」に）· SNSシェア時のサムネイルにも対応。<br>代替: <strong>imgur.com</strong>（無料・公開・SNS対応）— 画像をアップ→「Direct Link」をコピー。<br>⚠ Dropbox・Facebookは画像URLとして使用不可（SNSサムネイル非対応）。</p>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k">source</span>
@@ -5290,7 +5290,7 @@
       fldUrl:     'url',
       placeBtn:   '↳ place in channel',
       audioUrlHint: '⚠ google drive does NOT work for audio (CORP policy blocks playback). use dropbox.com — share links auto-convert to direct streams. · max 20:00 per track.',
-      imageHint: 'optional · monochrome image url',
+      imageHint: 'recommended: Google Drive (share → anyone with link) or imgur.com (free, SNS-ready). ⚠ Dropbox / Facebook URLs do not work for images.',
       audioImageHint: 'optional · monochrome, a texture, a smudge',
       phrasePh: 'a catchphrase, or the story behind this track — how it was made, what you felt',
       contextPh: 'comma-separated tags (e.g. ambient, lo-fi, winter)',
@@ -5303,7 +5303,7 @@
       supportPh: 'paypal.me / buymeacoffee.com (optional)',
       supportHint: 'if you\'d like to receive support from listeners, paste your paypal.me or buymeacoffee.com link here.',
       audioUrlPh: 'paste Drive / Dropbox / direct mp3 url',
-      imageUrlPh: 'https://… (drive / dropbox / direct image url)',
+      imageUrlPh: 'Google Drive または imgur.com の直リンク',
       iCaptionPh: 'berlin, march · wet pavement',
       iSourcePh: 'photo by · or original article',
       tTextPh: 'a fragment, a thought, a half-lyric',
@@ -5546,7 +5546,7 @@
       fldUrl:     'URL',
       placeBtn:   '↳ チャンネルに置く',
       audioUrlHint: '⚠ Google Drive は音声再生不可（CORP ポリシーでブロックされる）。Dropbox を使ってください — 共有リンクが自動で直リンクに変換されます。· 1曲あたり最大 20:00 まで。',
-      imageHint: '任意 · モノクロ画像の URL',
+      imageHint: '推奨: Google Drive（共有→リンクを知っている全員）または imgur.com（無料・SNS対応）。⚠ Dropbox / Facebook の URL は画像として使用不可。',
       audioImageHint: '任意 · モノクロ、質感、滲み',
       phrasePh: 'キャッチコピー、または制作背景・込めた思いなど自由に',
       contextPh: 'カンマ区切りでタグ（例: ambient, lo-fi, winter）',
@@ -5559,7 +5559,7 @@
       supportPh: 'paypal.me / buymeacoffee.com（任意）',
       supportHint: 'リスナーからのサポートを受け取りたい場合は、paypal.me または buymeacoffee.com のリンクをここに貼り付けてください。',
       audioUrlPh: 'Drive / Dropbox / 直 mp3 の URL を貼る',
-      imageUrlPh: 'https://… (drive / dropbox / 直画像 URL)',
+      imageUrlPh: 'Google Drive または imgur.com の直リンク',
       iCaptionPh: 'ベルリン、3月 · 濡れた舗道',
       iSourcePh: '撮影者 · または引用元',
       tTextPh: '断片、想い、未完の歌詞',
@@ -8660,7 +8660,7 @@
             <label class="uf-row"><span class="sp-k">${t('pmProcessHead').replace(/^—\s*/, '')}</span><textarea class="uf-input" id="ef-process" rows="3" placeholder="${escapeHtml(t('processPh'))}">${escapeHtml((obj.process || []).join('\n'))}</textarea></label>
             <label class="uf-row"><span class="sp-k">audio url</span><input class="uf-input" type="url" id="ef-audioUrl" placeholder=".mp3 — Drive / Dropbox / direct url" value="${escapeHtml(obj.sourceAudioUrl || obj.audioUrl || '')}"><span class="uf-hint">.mp3 only. blocks without an audio url are not playable.</span></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" placeholder="https://…" value="${escapeHtml(obj.imageUrl || '')}" oninput="(function(v){var h=document.getElementById('ef-imageUrl-hint');if(h)h.style.display=v.includes('fbcdn.net')||v.includes('facebook.com')?'':'none';})(this.value)"></label>
-            <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLはサムネイル表示に使用できません。Dropbox またはDriveのURLを使用してください。</span>
+            <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLは表示不可。Google Drive または imgur.com を使用してください。</span>
             <label class="uf-row"><span class="sp-k">${t('fldSupport')}</span><input class="uf-input" type="url" id="ef-support" placeholder="${escapeHtml(t('supportPh'))}" value="${escapeHtml(obj.support || '')}"></label>
             <p class="uf-hint">${t('supportHint')}</p>
             ${_editChannelSelectHtml(obj.channelId)}
@@ -8674,7 +8674,7 @@
           <div class="uf-grid">
             <label class="uf-row"><span class="sp-k">title</span><textarea class="uf-input" id="ef-caption" rows="1">${escapeHtml(obj.caption || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" value="${escapeHtml(obj.imageUrl || '')}" oninput="(function(v){var h=document.getElementById('ef-imageUrl-hint');if(h)h.style.display=v.includes('fbcdn.net')||v.includes('facebook.com')?'':'none';})(this.value)"></label>
-            <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLはサムネイル表示に使用できません。Dropbox またはDriveのURLを使用してください。</span>
+            <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLは表示不可。Google Drive または imgur.com を使用してください。</span>
             <label class="uf-row"><span class="sp-k">source</span><textarea class="uf-input" id="ef-source" rows="1">${escapeHtml(obj.source || '')}</textarea></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
@@ -11119,7 +11119,7 @@
         </div>` : '' }
       <div class="piece-modal-image">${buildPieceImage(track, 1200, 900, /*mono=*/false)}</div>
       ${ (track.imageUrl||'').includes('fbcdn.net') || (track.imageUrl||'').includes('facebook.com')
-        ? `<p class="uf-hint" style="margin-top:6px">⚠ このサムネイルはFacebookのURLのため表示できません。編集画面でDropboxまたはDriveのURLに変更してください。</p>`
+        ? `<p class="uf-hint" style="margin-top:6px">⚠ このサムネイルはFacebookのURLのため表示できません。編集画面で Google Drive または imgur.com のURLに変更してください。</p>`
         : '' }
 
       <section class="piece-phrases">
