@@ -45,24 +45,24 @@ function extractBlockText(block) {
 
   if (kind === 'audio') {
     return {
-      kind: 'audio',
+      kind:    'audio',
       title:   payload.title  || '',
       artist:  payload.artist || '',
       context: payload.context || payload.phrase || '',
-      ogImage: payload.ogImage || null,
+      ogImage: payload.imageUrl || payload.ogImage || null,
     };
   }
   if (kind === 'url') {
     return {
-      kind: 'url',
+      kind:    'url',
       title:   payload.title  || payload.source || '',
       context: payload.description || payload.context || '',
-      ogImage: payload.ogImage || null,
+      ogImage: payload.ogImage || payload.imageUrl || null,
     };
   }
   if (kind === 'text') {
     return {
-      kind: 'text',
+      kind:    'text',
       title:   (payload.text || '').slice(0, 120),
       context: '',
       ogImage: null,
@@ -70,13 +70,13 @@ function extractBlockText(block) {
   }
   if (kind === 'image') {
     return {
-      kind: 'image',
+      kind:    'image',
       title:   payload.caption || payload.title || '',
       context: '',
-      ogImage: payload.ogImage || payload.url || null,
+      ogImage: payload.imageUrl || payload.ogImage || payload.url || null,
     };
   }
-  return { kind, title: payload.title || '', context: '', ogImage: payload.ogImage || null };
+  return { kind, title: payload.title || '', context: '', ogImage: payload.imageUrl || payload.ogImage || null };
 }
 
 // ユーザープロフィールページ
@@ -209,6 +209,19 @@ function buildSitemap(urls) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${items}\n</urlset>`;
 }
 
+// ハンドルをURLセーフなスラグに変換
+function toSlug(handle) {
+  return handle
+    .replace(/^@+/, '')
+    .replace(/\s+/g, '-')        // スペース → ハイフン
+    .replace(/[^\w.\-]/g, '-')   // 英数字・.・- 以外 → ハイフン（日本語等も）
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// スキップすべきチャンネルID
+const SKIP_CHANNEL_IDS = new Set(['__new__', '_unkn', '']);
+
 async function main() {
   console.log('Fetching profiles...');
   const profiles = await fetchJSON(
@@ -224,7 +237,8 @@ async function main() {
 
   for (const p of profiles) {
     const rawHandle = (p.handle || '').replace(/^@+/, '');
-    const handle    = rawHandle || p.id.slice(0, 8);
+    const slug      = rawHandle ? toSlug(rawHandle) : p.id.slice(0, 8);
+    const handle    = slug || p.id.slice(0, 8);
     if (!handle) continue;
 
     // public_blocks から distinct チャンネル取得（RLSで誰でも読める）
@@ -237,11 +251,11 @@ async function main() {
       console.warn(`  blocks list fetch failed for ${handle}:`, e.message);
     }
 
-    // distinct channel_id（channel_label は最初に出てきたものを採用）
+    // distinct channel_id（__new__ 等スキップ）
     const seen = new Set();
     const channels = [];
     for (const b of allBlocks) {
-      if (b.channel_id && !seen.has(b.channel_id)) {
+      if (b.channel_id && !seen.has(b.channel_id) && !SKIP_CHANNEL_IDS.has(b.channel_id)) {
         seen.add(b.channel_id);
         channels.push({ channel_id: b.channel_id, channel_label: b.channel_label });
       }
@@ -252,7 +266,7 @@ async function main() {
       path.join(OUT_DIR, handle, 'index.html'),
       buildUserPage({
         handle,
-        displayName:  p.display_name,
+        displayName:  p.display_name || rawHandle || handle,
         avatarUrl:    p.avatar_url,
         bio:          p.bio,
         userId:       p.id,
@@ -277,7 +291,7 @@ async function main() {
         path.join(OUT_DIR, handle, ch.channel_id, 'index.html'),
         buildChannelPage({
           handle,
-          displayName:  p.display_name,
+          displayName:  p.display_name || rawHandle || handle,
           userId:       p.id,
           channelId:    ch.channel_id,
           channelLabel: label,
@@ -287,7 +301,7 @@ async function main() {
       sitemapUrls.push(`${SITE_URL}/ch/${handle}/${ch.channel_id}/`);
     }
 
-    console.log(`  ✓ ${handle} (${channels.length} channels)`);
+    console.log(`  ✓ ${handle} (raw: ${rawHandle}) — ${channels.length} channels`);
   }
 
   // sitemap-channels.xml
