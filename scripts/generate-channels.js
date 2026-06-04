@@ -28,6 +28,21 @@ function esc(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// Google Drive / Dropbox URL を SNS OGP に使える直接画像 URL に変換
+function convertOgImageUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  // Google Drive: /file/d/[id]/ or open?id=[id]
+  const gdriveM = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/);
+  if (gdriveM) return `https://lh3.googleusercontent.com/d/${gdriveM[1]}`;
+  // Dropbox shared link → direct download URL
+  if (url.includes('dropbox.com')) {
+    return url
+      .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+      .replace(/[?&]dl=0/, '').replace(/[?&]raw=0/, '');
+  }
+  return url;
+}
+
 function writeFile(filePath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, 'utf8');
@@ -97,7 +112,7 @@ function buildUserPage({ handle, displayName, avatarUrl, bio, userId, channelCou
   const name      = displayName || handle;
   const title     = `${esc(name)} — Ateli.er`;
   const desc      = esc(bio || `${name}のチャンネル。Ateli.erで音楽・動画・画像をキュレーション。`);
-  const ogImage   = avatarUrl || DEFAULT_OGP;
+  const ogImage   = convertOgImageUrl(avatarUrl) || DEFAULT_OGP;
   const canonical = `${SITE_URL}/ch/${handle}/`;
   const redirect  = `${SITE_URL}/#u=${encodeURIComponent(userId)}`;
 
@@ -147,7 +162,7 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
   const blockTexts = blocks.map(extractBlockText);
 
   // OGP画像: ogImageを持つ最初のブロック
-  const ogImage = blockTexts.find(b => b.ogImage)?.ogImage || DEFAULT_OGP;
+  const ogImage = convertOgImageUrl(blockTexts.find(b => b.ogImage)?.ogImage) || DEFAULT_OGP;
 
   // description: タイトル群を連結
   const snippets = blockTexts
@@ -341,7 +356,7 @@ async function main() {
   for (const block of allPublicBlocks) {
     const bt      = extractBlockText(block);
     const owner   = profileMap[block.owner_id] || { slug: block.owner_id?.slice(0, 8) || 'unknown', displayName: 'unknown' };
-    const ogImage = bt.ogImage || DEFAULT_OGP;
+    const ogImage = convertOgImageUrl(bt.ogImage) || DEFAULT_OGP;
     const title   = bt.title || `(${block.kind})`;
     const desc    = [bt.artist, bt.context].filter(Boolean).join(' — ').slice(0, 200) || `${title} — Ateli.er`;
     const canonical = `${SITE_URL}/b/${block.id}/`;
