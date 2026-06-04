@@ -4845,7 +4845,7 @@
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldDescription">description</span>
-                  <textarea class="uf-input" id="bDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this track" maxlength="3000"></textarea>
+                  <textarea class="uf-input" id="bDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="what this is, what it means — this text appears in Google search results (1–3 sentences recommended)" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
@@ -4889,7 +4889,7 @@
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldDescription">description</span>
-                  <textarea class="uf-input" id="iDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this block" maxlength="3000"></textarea>
+                  <textarea class="uf-input" id="iDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="what this is, what it means — this text appears in Google search results (1–3 sentences recommended)" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
@@ -4913,7 +4913,7 @@
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldDescription">description</span>
-                  <textarea class="uf-input" id="tDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this block" maxlength="3000"></textarea>
+                  <textarea class="uf-input" id="tDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="what this is, what it means — this text appears in Google search results (1–3 sentences recommended)" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
@@ -4942,7 +4942,7 @@
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldDescription">description</span>
-                  <textarea class="uf-input" id="uDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this block" maxlength="3000"></textarea>
+                  <textarea class="uf-input" id="uDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="what this is, what it means — this text appears in Google search results (1–3 sentences recommended)" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
@@ -5296,7 +5296,7 @@
       fldPhrase:  'catchphrase',
       fldContext: 'tags',
       fldDescription: 'description',
-      descriptionPh: 'the story behind this — context, process, feelings, or anything you want to leave here',
+      descriptionPh: 'what this is, what it means — this text appears in Google search results (1–3 sentences recommended)',
       fldImageUrl: 'image url',
       fldSupport: 'support',
       fldText:    'text',
@@ -5309,7 +5309,7 @@
       imageHint: 'recommended: Google Drive (share → anyone with link) or imgur.com (free, SNS-ready). ⚠ Dropbox / Facebook URLs do not work for images.',
       audioImageHint: 'optional · monochrome, a texture, a smudge',
       phrasePh: 'a catchphrase, or the story behind this track — how it was made, what you felt',
-      contextPh: 'comma-separated tags (e.g. ambient, lo-fi, winter)',
+      contextPh: 'comma-separated search tags (e.g. ambient, lo-fi, winter)',
       processPh: 'describe the production process — recording setup, mood, choices…',
       tagSuggestLabel: '— click to add · click again to remove',
       blockOwnerMine:    'mine',
@@ -5552,7 +5552,7 @@
       fldPhrase:  'キャッチコピー',
       fldContext: 'タグ',
       fldDescription: '説明',
-      descriptionPh: 'このブロックの背景・経緯・込めた思い・エピソードなど、残しておきたいことを自由に',
+      descriptionPh: 'Google検索結果に表示される説明文。この内容・背景・込めた思いを1〜3文で',
       fldImageUrl: '画像 URL',
       fldSupport: '支援先',
       fldText:    '本文',
@@ -5565,7 +5565,7 @@
       imageHint: '推奨: Google Drive（共有→リンクを知っている全員）または imgur.com（無料・SNS対応）。⚠ Dropbox / Facebook の URL は画像として使用不可。',
       audioImageHint: '任意 · モノクロ、質感、滲み',
       phrasePh: 'キャッチコピー、または制作背景・込めた思いなど自由に',
-      contextPh: 'カンマ区切りでタグ（例: ambient, lo-fi, winter）',
+      contextPh: 'カンマ区切りのタグ（検索キーワード。例: ambient, lo-fi, winter）',
       processPh: '制作のプロセスを書く — 録音環境・空気・判断の経緯など',
       tagSuggestLabel: '— クリックで追加 · もう一度クリックで外す',
       blockOwnerMine:    '自分',
@@ -14469,6 +14469,10 @@
               if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
               try { await push(true); } catch (e) { /* fire and continue */ }
             }
+            // user_state row なし → public_blocks から自分のブロックを補完して push
+            // (新デバイスログイン・row 消失どちらにも対応)
+            console.log('[atelierSync] pull: user_state empty — importing from public_blocks');
+            try { await _importFromPublicBlocks(); } catch(e) {}
             lastPushedJson = JSON.stringify(_snapshot());
             localStorage.setItem(LAST_USER_KEY, currentUser.id);
             isPulling = false;
