@@ -317,6 +317,129 @@ async function main() {
     console.log(`  ✓ ${handle} (raw: ${rawHandle}) — ${channels.length} channels`);
   }
 
+  // ── Courtyard ページ ──────────────────────────────────────
+  console.log('Generating courtyard page...');
+  let courtyardBlocks = [];
+  try {
+    courtyardBlocks = await fetchJSON(
+      `${SUPABASE_URL}/rest/v1/public_blocks?select=kind,payload,owner_id&order=ts.desc&limit=60`
+    );
+  } catch (e) { console.warn('courtyard blocks fetch failed:', e.message); }
+
+  const courtyardItems = courtyardBlocks
+    .map(extractBlockText)
+    .filter(b => b.title);
+
+  const courtyardListHtml = courtyardItems.length
+    ? `<ul style="list-style:none;padding:0;margin:0">${
+        courtyardItems.map(b => {
+          const sub = [b.artist, b.context].filter(Boolean).join(' — ').slice(0, 120);
+          return `<li style="padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:.85rem">${esc(b.title)}</span>${sub ? `<br><span style="font-size:.75rem;opacity:.5">${esc(sub)}</span>` : ''}</li>`;
+        }).join('')
+      }</ul>`
+    : '';
+
+  const courtyardOgImage = courtyardItems.find(b => b.ogImage)?.ogImage || DEFAULT_OGP;
+  const courtyardHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Courtyard — Ateli.er | 木下スタジオ（木下貴博 / 滋賀）</title>
+<meta name="description" content="アルゴリズムもタイムラインもない、静かな中庭。誰かが丁寧に選んだ音楽・テキスト・画像が、ただ静かに積み重なっている場所。滋賀・琵琶湖を拠点に木下 貴博（木下スタジオ）が開発したAteli.erのCourtyardへようこそ。">
+<meta name="keywords" content="Ateli.er,Courtyard,中庭,アルゴリズムなし,キュレーション,音楽,木下スタジオ,木下貴博,滋賀,琵琶湖,Kinoshita Studio">
+<link rel="canonical" href="${SITE_URL}/courtyard/">
+<meta property="og:title" content="Courtyard — Ateli.er">
+<meta property="og:description" content="アルゴリズムもタイムラインもない、静かな中庭。誰かが丁寧に選んだものが、ただ積み重なっている。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${SITE_URL}/courtyard/">
+<meta property="og:image" content="${esc(courtyardOgImage)}">
+<meta property="og:site_name" content="Ateli.er">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Courtyard — Ateli.er">
+<meta name="twitter:description" content="アルゴリズムもタイムラインもない、静かな中庭。">
+<meta name="twitter:image" content="${esc(courtyardOgImage)}">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CollectionPage","name":"Courtyard — Ateli.er","description":"アルゴリズムもタイムラインもない、静かな中庭。誰かが丁寧に選んだ音楽・テキスト・画像が積み重なる場所。","url":"${SITE_URL}/courtyard/","author":{"@type":"Person","name":"木下 貴博","alternateName":"Takahiro Kinoshita","url":"https://kinoshita.studio/about.html","worksFor":{"@type":"Organization","name":"木下スタジオ","url":"https://kinoshita.studio/"}}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ateli.er","item":"${SITE_URL}/"},{"@type":"ListItem","position":2,"name":"Courtyard","item":"${SITE_URL}/courtyard/"}]}
+</script>
+<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:640px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.5rem}p{font-size:.85rem;line-height:1.8;margin-bottom:1rem;opacity:.7}.section{margin:2rem 0}.redirect{font-size:.75rem;opacity:.4;margin-top:2rem}</style>
+</head>
+<body>
+<h1>Courtyard — Ateli.er</h1>
+<div class="section">
+<p>アルゴリズムも、タイムラインも、バズもない。<br>ただ静かに、誰かのチャンネルが並んでいる場所。</p>
+<p>音楽の断片、書きかけの文章、ふと撮ったままの写真——未完成のままで置いておける、小さな中庭。キュレーションは、創作だと思う。何を選び、何を並べるか、それ自体が表現だ。</p>
+<p>次の投稿を促す通知もなく、エンゲージメントを計測する数字もない。ただ、誰かが丁寧に選んだものが、静かに積み重なっている。琵琶湖のそばで、この中庭を育てている。</p>
+<p style="opacity:.5;font-size:.8rem">by 木下 貴博 / <a href="https://kinoshita.studio/">木下スタジオ</a> · 滋賀・琵琶湖</p>
+</div>
+${courtyardListHtml}
+<p class="redirect">Redirecting to Ateli.er Courtyard…</p>
+<script>location.replace("${SITE_URL}/#tab=courtyard");</script>
+</body>
+</html>`;
+
+  writeFile(path.join(__dirname, '..', 'courtyard', 'index.html'), courtyardHtml);
+  sitemapUrls.push(`${SITE_URL}/courtyard/`);
+  console.log(`  ✓ courtyard (${courtyardItems.length} items)`);
+
+  // ── Explore ページ ────────────────────────────────────────
+  console.log('Generating explore page...');
+  const exploreUserListHtml = profiles
+    .filter(p => (p.handle || '').replace(/^@+/, ''))
+    .map(p => {
+      const rawH = (p.handle || '').replace(/^@+/, '');
+      const slug  = rawH ? toSlug(rawH) : p.id.slice(0, 8);
+      const name  = p.display_name || rawH;
+      return `<li style="padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.06)"><a href="${SITE_URL}/ch/${esc(slug)}/" style="color:#a89060;text-decoration:none">${esc(name)}</a>${p.bio ? `<br><span style="font-size:.75rem;opacity:.5">${esc(p.bio.slice(0, 80))}</span>` : ''}</li>`;
+    }).join('');
+
+  const exploreHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore — Ateli.er | 木下スタジオ（木下貴博 / 滋賀）</title>
+<meta name="description" content="Ateli.erのユーザーとチャンネルを探索する。アルゴリズムなし、数字なし。感性でつながる静かなキュレーターたちのコレクション。滋賀・木下 貴博（木下スタジオ）開発。">
+<meta name="keywords" content="Ateli.er,Explore,キュレーション,音楽,コレクション,木下スタジオ,木下貴博,滋賀,琵琶湖,Kinoshita Studio">
+<link rel="canonical" href="${SITE_URL}/explore/">
+<meta property="og:title" content="Explore — Ateli.er">
+<meta property="og:description" content="感性でつながるキュレーターたちのコレクションを探索する。アルゴリズムなし、数字なし。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${SITE_URL}/explore/">
+<meta property="og:image" content="${DEFAULT_OGP}">
+<meta property="og:site_name" content="Ateli.er">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Explore — Ateli.er">
+<meta name="twitter:description" content="感性でつながるキュレーターたちのコレクションを探索する。">
+<meta name="twitter:image" content="${DEFAULT_OGP}">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CollectionPage","name":"Explore — Ateli.er","description":"感性でつながるキュレーターたちのコレクションを探索する。アルゴリズムなし、数字なし。","url":"${SITE_URL}/explore/","author":{"@type":"Person","name":"木下 貴博","alternateName":"Takahiro Kinoshita","url":"https://kinoshita.studio/about.html","worksFor":{"@type":"Organization","name":"木下スタジオ","url":"https://kinoshita.studio/"}}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ateli.er","item":"${SITE_URL}/"},{"@type":"ListItem","position":2,"name":"Explore","item":"${SITE_URL}/explore/"}]}
+</script>
+<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:640px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.5rem}p{font-size:.85rem;line-height:1.8;margin-bottom:1rem;opacity:.7}.section{margin:2rem 0}.redirect{font-size:.75rem;opacity:.4;margin-top:2rem}</style>
+</head>
+<body>
+<h1>Explore — Ateli.er</h1>
+<div class="section">
+<p>感性でつながるキュレーターたちのコレクション。</p>
+<p>いいね数もフォロワー数も前面に出さない。ユーザーが見るのは、他者の数字ではなく、他者の選択そのものだ。音楽でも、動画でも、画像でも、テキストでも——自分が「これだ」と思ったものを、チャンネルに積み上げていく。</p>
+<p style="opacity:.5;font-size:.8rem">by 木下 貴博 / <a href="https://kinoshita.studio/">木下スタジオ</a> · 滋賀・琵琶湖</p>
+</div>
+<ul style="list-style:none;padding:0;margin:0">${exploreUserListHtml}</ul>
+<p class="redirect">Redirecting to Ateli.er Explore…</p>
+<script>location.replace("${SITE_URL}/#tab=explore");</script>
+</body>
+</html>`;
+
+  writeFile(path.join(__dirname, '..', 'explore', 'index.html'), exploreHtml);
+  sitemapUrls.push(`${SITE_URL}/explore/`);
+  console.log(`  ✓ explore (${profiles.length} users)`);
+
   // sitemap-channels.xml
   writeFile(
     path.join(__dirname, '..', 'sitemap-channels.xml'),
