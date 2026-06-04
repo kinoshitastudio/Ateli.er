@@ -1,0 +1,30 @@
+name: Generate Channel Pages
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # 6時間ごとに自動実行
+  workflow_dispatch:          # 手動実行も可
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate channel pages
+        run: node scripts/generate-channels.js
+
+      - name: Commit and push
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: regenerate channel pages'
+          file_pattern: 'ch/** sitemap-channels.xml'
