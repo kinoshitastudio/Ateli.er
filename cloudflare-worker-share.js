@@ -106,6 +106,12 @@ ${redirectScript}
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+
+    // /s 以外はGitHub Pages にパススルー（sitemap, robots, ch/ 等）
+    if (url.pathname !== '/s') {
+      return fetch(request);
+    }
+
     const ua = request.headers.get('user-agent') || '';
     const type = url.searchParams.get('type');
     const id = url.searchParams.get('id');
