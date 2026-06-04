@@ -11069,6 +11069,7 @@
     if (currentBlockModalId !== track.id) connectPickerOpen = false;
     const wasOpen = $('#pieceModal').classList.contains('is-open');
     if (!wasOpen) navOpen('pieceModal');
+    _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + track.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     // texture removed; process is rendered inline below as free-form text
@@ -11230,7 +11231,8 @@
     $('#pieceModal').classList.remove('is-open');
     currentPieceModalTrack = null;
     currentBlockModalId = null;
-    try { history.replaceState(history.state, '', location.pathname); } catch(_) {}
+    try { history.replaceState(history.state, '', _prevPathBeforeBlock || '/'); } catch(_) {}
+    _prevPathBeforeBlock = '/';
   }
   function closePieceModal() {
     if (navStack.includes('pieceModal')) navCloseExternal('pieceModal');
@@ -11658,6 +11660,7 @@
   function openImageModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     inner.innerHTML = `
@@ -11690,6 +11693,7 @@
   function openUrlModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     let domain = '';
@@ -11734,6 +11738,7 @@
   function openTextModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
+    _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     const styleLabel = t('modalLabelText');
@@ -14345,6 +14350,7 @@
   // (auth.getSession / getUser have been observed to hang on some environments).
   let currentUser = null;
   let _myHandle = '';
+  let _prevPathBeforeBlock = '/';
 
   // ──────────────── SYNC — atelierSync (Phase B-3b) ────────────────
   // Stores the entire localStorage snapshot as one JSONB blob in user_state.
