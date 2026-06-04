@@ -12232,9 +12232,9 @@
     // Update URL hash for shareable public tabs; clear for private tabs.
     try {
       if (['explore', 'courtyard', 'feed', 'traces', 'upload'].includes(name)) {
-        history.replaceState(history.state, '', '#tab=' + name);
+        history.replaceState(history.state, '', '/#tab=' + name);
       } else if (location.hash.startsWith('#tab=')) {
-        history.replaceState(history.state, '', location.pathname);
+        history.replaceState(history.state, '', '/');
       }
     } catch(_) {}
     if (name === 'feed') renderFeed();
@@ -13783,7 +13783,9 @@
       // Last overlay closed — replace the overlay history entry in-place
       // so we stay on atelistudio.com instead of navigating back to wherever
       // the browser came from (iOS Safari exits the site otherwise).
-      history.replaceState(null, '');
+      // Also clean up any /b/ or #tab= path left by a block/tab navigation.
+      const _cleanPath = (location.pathname.startsWith('/b/') || location.hash.startsWith('#tab=')) ? '/' : location.pathname;
+      history.replaceState(null, '', _cleanPath);
     } else {
       _navIgnorePopstate = true;
       for (let i = 0; i < toPop; i++) history.back();
