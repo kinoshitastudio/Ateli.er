@@ -7841,6 +7841,7 @@
       _chSearchOpen = false;
     }
     currentChannelDetailId = cid;
+    if (_myHandle) try { history.replaceState(history.state, '', '/ch/' + _myHandle + '/' + cid + '/'); } catch(_) {}
     const allItems = _itemsInChannel(cid);
     const q = (_chSearchQuery || '').trim().toLowerCase();
     const items = q
@@ -11068,7 +11069,7 @@
     if (currentBlockModalId !== track.id) connectPickerOpen = false;
     const wasOpen = $('#pieceModal').classList.contains('is-open');
     if (!wasOpen) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(track.id)); } catch(_) {}
+    try { history.replaceState(history.state, '', '/b/' + track.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     // texture removed; process is rendered inline below as free-form text
     const _trackPhrases = (track.phrases && track.phrases.length)
@@ -11657,7 +11658,7 @@
   function openImageModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(block.id)); } catch(_) {}
+    try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     inner.innerHTML = `
       ${_blockTabsHtml()}
@@ -11689,7 +11690,7 @@
   function openUrlModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(block.id)); } catch(_) {}
+    try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     let domain = '';
     try { if (block.url) domain = new URL(block.url).hostname.replace(/^www\./, ''); } catch (e) {}
@@ -11733,7 +11734,7 @@
   function openTextModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', '#b=' + encodeURIComponent(block.id)); } catch(_) {}
+    try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     const styleLabel = t('modalLabelText');
     inner.innerHTML = `
