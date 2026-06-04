@@ -552,8 +552,8 @@ footer.foot a:hover { color: var(--ink); }
     </summary>
     <div class="acc-body">
       <div class="section-desc">
-        <p class="lang-ja">Atelier は音源も画像もホストしません。<strong>Dropbox / Google Drive</strong> に置いたファイルの <strong>共有リンク</strong>を貼るだけです。おすすめは <strong>音源 = Dropbox</strong>、<strong>画像 = Google Drive または Dropbox</strong>。</p>
-        <p class="lang-en">Atelier doesn't host audio or images. You paste a <strong>share link</strong> to a file in your own <strong>Dropbox / Google Drive</strong>. Recommended: <strong>audio → Dropbox</strong>, <strong>images → Drive or Dropbox</strong>.</p>
+        <p class="lang-ja">Atelier は音源も画像もホストしません。外部サービスの <strong>共有リンク</strong>を貼るだけです。<br>おすすめ: <strong>音源 = Dropbox</strong>、<strong>画像 = Google Drive または imgur.com</strong>。<br>⚠ DropboxおよびFacebook のURLは <strong>画像には使用不可</strong>（SNSサムネイルが表示されない・ホットリンクブロックのため）。</p>
+        <p class="lang-en">Atelier doesn't host audio or images. Just paste a <strong>share link</strong> from an external service.<br>Recommended: <strong>audio → Dropbox</strong>, <strong>images → Google Drive or imgur.com</strong>.<br>⚠ Dropbox and Facebook URLs <strong>cannot be used for images</strong> (hotlink blocked / SNS thumbnails won't display).</p>
       </div>
       <div class="section-desc">
         <p class="lang-ja"><strong>① 音源 (audio block) → Dropbox を使う</strong></p>
@@ -588,21 +588,29 @@ footer.foot a:hover { color: var(--ink); }
         </figcaption>
       </figure>
       <div class="section-desc" style="margin-top:4px;">
-        <p class="lang-ja"><strong>② 画像 (image block) → Google Drive を使う</strong></p>
-        <p class="lang-en"><strong>② Images → use Google Drive</strong></p>
+        <p class="lang-ja"><strong>② 画像 (image block) → Google Drive または imgur.com を使う</strong></p>
+        <p class="lang-en"><strong>② Images → use Google Drive or imgur.com</strong></p>
         <div class="notice">
-          <span class="lang-ja"><b>手順:</b><br>
+          <span class="lang-ja"><b>Google Drive の手順:</b><br>
             1. 画像を Google Drive にアップロード<br>
             2. 右クリック →「<b>共有</b>」→ 一般的なアクセスを <b>「リンクを知っている全員」</b> に変更 →「<b>リンクをコピー</b>」<br>
             3. Atelier: Upload → <code>IMAGE LINK</code> → <b>image url</b> 欄に貼る<br>
             → 自動で直接表示できる URL に変換されます。<br><br>
-            <b>⚠ 共有を「リンクを知っている全員」にしないと画像が表示されません。</b></span>
-          <span class="lang-en"><b>Steps:</b><br>
+            <b>imgur.com の手順（SNSシェア用に最も安定）:</b><br>
+            1. <a href="https://imgur.com" target="_blank" rel="noopener">imgur.com</a> にアクセス → 画像をドラッグ＆ドロップでアップロード<br>
+            2. アップロード後に表示される「<b>Direct Link</b>」をコピー（末尾が <code>.jpg</code> / <code>.png</code> のURL）<br>
+            3. Atelier の <b>image url</b> 欄に貼る<br><br>
+            <b>⚠ Dropbox / Facebookの URL は画像に使用不可。</b> Dropboxは「noimageindex」ポリシーにより、SNSシェア時のサムネイルとして表示されません。</span>
+          <span class="lang-en"><b>Google Drive steps:</b><br>
             1. Upload image to Google Drive<br>
             2. Right-click → "Share" → set access to <b>"Anyone with the link"</b> → "Copy link"<br>
             3. Atelier: Upload → <code>IMAGE LINK</code> → paste into <b>image url</b><br>
             → Atelier auto-converts to a directly-viewable URL.<br><br>
-            <b>⚠ The image won't show unless sharing is "Anyone with the link".</b></span>
+            <b>imgur.com steps (most reliable for SNS sharing):</b><br>
+            1. Go to <a href="https://imgur.com" target="_blank" rel="noopener">imgur.com</a> → drag and drop your image<br>
+            2. After upload, copy the "<b>Direct Link</b>" (URL ending in <code>.jpg</code> / <code>.png</code>)<br>
+            3. Paste into Atelier's <b>image url</b> field<br><br>
+            <b>⚠ Do NOT use Dropbox or Facebook URLs for images.</b> Dropbox applies a "noimageindex" policy — SNS thumbnails won't display.</span>
         </div>
       </div>
       <figure class="shot">
@@ -620,8 +628,8 @@ footer.foot a:hover { color: var(--ink); }
         </div>
         <div class="callout">
           <span class="callout-tag">image</span>
-          <span class="lang-ja"><b>画像</b> = Google Drive か Dropbox。Drive は「リンクを知っている全員」に。</span>
-          <span class="lang-en"><b>image</b> = Drive or Dropbox. On Drive, "Anyone with the link".</span>
+          <span class="lang-ja"><b>画像</b> = Google Drive または imgur.com。⚠ Dropbox / Facebook は使用不可。</span>
+          <span class="lang-en"><b>image</b> = Google Drive or imgur.com. ⚠ Dropbox / Facebook not supported.</span>
         </div>
         <div class="callout">
           <span class="callout-tag">link</span>
