@@ -9247,6 +9247,7 @@
         });
         if (typeof _syncBodyOverlay === 'function') _syncBodyOverlay();
         if (typeof openModal === 'function') openModal('pieces');
+        if (_myHandle) try { history.replaceState(history.state, '', '/ch/' + _myHandle + '/'); } catch(_) {}
       }
     } else if (action === 'channel') {
       const cid = bc.dataset.cid;
@@ -11069,7 +11070,7 @@
     if (currentBlockModalId !== track.id) connectPickerOpen = false;
     const wasOpen = $('#pieceModal').classList.contains('is-open');
     if (!wasOpen) navOpen('pieceModal');
-    _prevPathBeforeBlock = location.pathname;
+    if (!location.pathname.startsWith('/b/')) _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + track.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     // texture removed; process is rendered inline below as free-form text
@@ -11660,7 +11661,7 @@
   function openImageModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    _prevPathBeforeBlock = location.pathname;
+    if (!location.pathname.startsWith('/b/')) _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     inner.innerHTML = `
@@ -11693,7 +11694,7 @@
   function openUrlModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    _prevPathBeforeBlock = location.pathname;
+    if (!location.pathname.startsWith('/b/')) _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     let domain = '';
@@ -11738,7 +11739,7 @@
   function openTextModal(block) {
     if (currentBlockModalId !== block.id) connectPickerOpen = false;
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    _prevPathBeforeBlock = location.pathname;
+    if (!location.pathname.startsWith('/b/')) _prevPathBeforeBlock = location.pathname;
     try { history.replaceState(history.state, '', '/b/' + block.id + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     const styleLabel = t('modalLabelText');
