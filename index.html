@@ -6928,6 +6928,33 @@
       try { atelierPublic?.syncChannelLabel?.(id); } catch (e) {}
     }
   }
+  async function _syncChannelMeta(c) {
+    if (!currentUser?.id) return;
+    const token = _getAccessToken();
+    if (!token) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/channels`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_PUB_KEY,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          id: c.id,
+          owner_id: currentUser.id,
+          label: c.label || '',
+          main_phrase: c.mainPhrase || '',
+          meta: c.meta || '',
+          lang: c.lang || 'mixed',
+          is_public: c.isPublic !== false,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+    } catch (e) { /* fire and forget */ }
+  }
+
   function deleteChannel(id) {
     const idx = CHANNELS.findIndex(x => x.id === id);
     if (idx < 0) return;
@@ -8348,9 +8375,9 @@
       </div>
       <div class="upload-form" style="margin-top: 32px;">
         <div class="uf-grid">
-          <label class="uf-row"><span class="sp-k">${t('fldLabelCh')}</span><textarea class="uf-input" id="ch-label" rows="1">${escapeHtml(c.label || '')}</textarea></label>
-          <label class="uf-row"><span class="sp-k">${t('fldMainPhrase')}</span><textarea class="uf-input" id="ch-phrase" rows="1">${escapeHtml(c.mainPhrase || '')}</textarea></label>
-          <label class="uf-row"><span class="sp-k">${t('fldMeta')}</span><textarea class="uf-input" id="ch-meta" rows="1" placeholder="${escapeHtml(t('fldMetaPh'))}">${escapeHtml(c.meta || '')}</textarea></label>
+          <label class="uf-row"><span class="sp-k">${t('fldLabelCh')}</span><textarea class="uf-input" id="ch-label" rows="1" maxlength="80">${escapeHtml(c.label || '')}</textarea></label>
+          <label class="uf-row"><span class="sp-k">${t('fldMainPhrase')}</span><textarea class="uf-input" id="ch-phrase" rows="4" maxlength="3000" placeholder="describe this channel — what it holds, what it means">${escapeHtml(c.mainPhrase || '')}</textarea></label>
+          <label class="uf-row"><span class="sp-k">${t('fldMeta')}</span><textarea class="uf-input" id="ch-meta" rows="1" maxlength="200" placeholder="${escapeHtml(t('fldMetaPh'))}">${escapeHtml(c.meta || '')}</textarea></label>
           <label class="uf-row"><span class="sp-k">${t('fldLangCh')}</span><select class="uf-input" id="ch-lang">
             <option value="mixed"${c.lang === 'mixed' ? ' selected' : ''}>${t('langMixed')}</option>
             <option value="ja"${c.lang === 'ja' ? ' selected' : ''}>JP</option>
@@ -8540,6 +8567,8 @@
     editingChannelId = null;
     refreshAllViews();
     try { if (typeof atelierSync !== 'undefined' && currentUser) atelierSync.push(true); } catch(e) {}
+    // Sync channel metadata to Supabase for SEO static page generation.
+    _syncChannelMeta(c);
   }
 
   // ──────────────── DELETE PROMPTS ────────────────

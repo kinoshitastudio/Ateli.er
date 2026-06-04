@@ -154,7 +154,7 @@ ${bio ? `<p>${esc(bio)}</p>` : ''}
 }
 
 // チャンネルページ（ブロックテキスト一覧込み）
-function buildChannelPage({ handle, displayName, userId, channelId, channelLabel, blocks }) {
+function buildChannelPage({ handle, displayName, userId, channelId, channelLabel, mainPhrase, metaLine, blocks }) {
   const name      = displayName || handle;
   const title     = `${esc(channelLabel)} by ${esc(name)} — Ateli.er`;
 
@@ -164,15 +164,17 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
   // OGP画像: ogImageを持つ最初のブロック
   const ogImage = convertOgImageUrl(blockTexts.find(b => b.ogImage)?.ogImage) || DEFAULT_OGP;
 
-  // description: タイトル群を連結
+  // description: mainPhrase優先、なければブロックタイトル群を連結
   const snippets = blockTexts
     .filter(b => b.title)
     .slice(0, 5)
     .map(b => b.title)
     .join(' / ');
-  const desc = esc(snippets
-    ? `${channelLabel} — ${snippets}`
-    : `${name}のチャンネル「${channelLabel}」。Ateli.erでキュレーションされたコレクション。`);
+  const desc = esc(mainPhrase
+    ? mainPhrase.slice(0, 300)
+    : (snippets
+      ? `${channelLabel} — ${snippets}`
+      : `${name}のチャンネル「${channelLabel}」。Ateli.erでキュレーションされたコレクション。`));
 
   const canonical = `${SITE_URL}/ch/${handle}/${channelId}/`;
   const redirect  = `${SITE_URL}/#ch=${encodeURIComponent(channelId)}`;
@@ -221,6 +223,8 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
 <body>
 <h1>${esc(channelLabel)}</h1>
 <p class="by">by <a href="${SITE_URL}/ch/${esc(handle)}/">${esc(name)}</a> on Ateli.er</p>
+${mainPhrase ? `<p style="font-size:.9rem;line-height:1.7;margin-bottom:1.5rem">${esc(mainPhrase)}</p>` : ''}
+${metaLine ? `<p style="font-size:.8rem;opacity:.5;margin-bottom:1rem">${esc(metaLine)}</p>` : ''}
 ${blockListHtml}
 <p class="redirect">Redirecting to Ateli.er…</p>
 <script>location.replace(${JSON.stringify(redirect)});</script>
@@ -256,6 +260,18 @@ async function main() {
     `${SUPABASE_URL}/rest/v1/profiles?select=id,handle,display_name,avatar_url,bio&order=created_at.asc&limit=500`
   );
   console.log(`  ${profiles.length} profiles found`);
+
+  // channels テーブルからメタデータ（label・main_phrase・meta）を取得
+  console.log('Fetching channel metadata...');
+  let channelMetaRows = [];
+  try {
+    channelMetaRows = await fetchJSON(
+      `${SUPABASE_URL}/rest/v1/channels?select=id,label,main_phrase,meta,is_public&is_public=eq.true&limit=1000`
+    );
+  } catch (e) { console.warn('channel meta fetch failed:', e.message); }
+  const channelMeta = {};
+  for (const r of channelMetaRows) channelMeta[r.id] = r;
+  console.log(`  ${channelMetaRows.length} channel meta rows found`);
 
   const sitemapUrls = [];
 
@@ -315,6 +331,7 @@ async function main() {
       }
 
       const label = ch.channel_label || ch.channel_id;
+      const cmeta = channelMeta[ch.channel_id] || {};
       writeFile(
         path.join(OUT_DIR, handle, ch.channel_id, 'index.html'),
         buildChannelPage({
@@ -322,7 +339,9 @@ async function main() {
           displayName:  p.display_name || rawHandle || handle,
           userId:       p.id,
           channelId:    ch.channel_id,
-          channelLabel: label,
+          channelLabel: cmeta.label || label,
+          mainPhrase:   cmeta.main_phrase || '',
+          metaLine:     cmeta.meta || '',
           blocks,
         })
       );
