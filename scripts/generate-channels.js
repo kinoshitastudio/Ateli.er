@@ -147,7 +147,7 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
     : `${name}のチャンネル「${channelLabel}」。Ateli.erでキュレーションされたコレクション。`);
 
   const canonical = `${SITE_URL}/ch/${handle}/${channelId}/`;
-  const redirect  = `${SITE_URL}/#u=${encodeURIComponent(userId)}`;
+  const redirect  = `${SITE_URL}/#ch=${encodeURIComponent(channelId)}`;
 
   // ブロック一覧HTML
   const blockListHtml = blockTexts.length
