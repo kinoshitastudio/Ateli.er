@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /
 
+Sitemap: https://atelistudio.com/sitemap-channels.xml
+
 User-agent: Twitterbot
 Allow: /
 
