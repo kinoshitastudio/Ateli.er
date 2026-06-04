@@ -12690,6 +12690,9 @@
   // openUserChannel reads this to merge curated blocks into the channel
   // detail view without re-fetching.
   let _userConnectionsCache = {};
+  // Supabase channels テーブルから取得した mainPhrase/meta をキャッシュ
+  // { channelId: { main_phrase, meta } | null }
+  let _channelMetaCache = {};
   // Cap _explorePublicCache so a long browsing session (many portfolios
   // visited) doesn't balloon the cache with thousands of full block
   // payloads. FIFO eviction by insertion order — Object.keys yields keys
@@ -13364,8 +13367,9 @@
     }
     const createdLabel = createdTs ? ageString(createdTs) : '—';
     const editedLabel  = editedTs ? ageString(editedTs) : '—';
-    const channelMeta = channel?.meta || '';
-    const channelMainPhrase = channel?.mainPhrase || '';
+    const _cachedMeta = _channelMetaCache[channelId];
+    const channelMeta = channel?.meta || (_cachedMeta ? _cachedMeta.meta || '' : '');
+    const channelMainPhrase = channel?.mainPhrase || (_cachedMeta ? _cachedMeta.main_phrase || '' : '');
     // mainPhrase / meta line: pull from any one block's channel_label (we
     // don't have channel.meta or channel.mainPhrase from public_blocks).
     const headHtml = `
@@ -13485,6 +13489,34 @@
           }).join('')
         }</ol>`;
     inner.innerHTML = headHtml + bodyHtml;
+    // ユーザー作成チャンネルの mainPhrase は CHANNELS に入っていないので
+    // channels テーブルから非同期で取得してキャッシュ + DOM補完する
+    if (!channelMainPhrase && channelId && _channelMetaCache[channelId] === undefined) {
+      _channelMetaCache[channelId] = null; // フェッチ中フラグ
+      (async () => {
+        try {
+          const _mr = await fetch(
+            `${SUPABASE_URL}/rest/v1/channels?id=eq.${encodeURIComponent(channelId)}&select=label,main_phrase,meta&limit=1`,
+            { headers: { apikey: SUPABASE_PUB_KEY } }
+          );
+          if (!_mr.ok) return;
+          const _mrows = await _mr.json();
+          if (!Array.isArray(_mrows) || _mrows.length === 0) return;
+          _channelMetaCache[channelId] = _mrows[0];
+          const _phrase = _mrows[0].main_phrase;
+          if (!_phrase) return;
+          const _dh = inner.querySelector('.ch-detail-head');
+          if (!_dh || _dh.querySelector('.ch-detail-mainphrase')) return;
+          const _h4 = _dh.querySelector('h4');
+          if (!_h4 || !_h4.parentElement) return;
+          const _p = document.createElement('p');
+          _p.className = 'ch-detail-mainphrase';
+          _p.style.cssText = 'font-family: var(--sans-jp); font-size: 14px; color: var(--ink-2); margin: 4px 0 8px; line-height: 1.55;';
+          _p.textContent = _phrase;
+          _h4.parentElement.insertAdjacentElement('afterend', _p);
+        } catch (_e) {}
+      })();
+    }
     // Phase A-refactor 2 (2026-04-29): explicitly add is-open. The function
     // previously assumed pieceModal was already open (caller flow:
     // openUserPortfolio → openUserChannel keeps the modal up). When called
