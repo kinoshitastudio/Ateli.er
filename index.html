@@ -5845,7 +5845,7 @@
     // Form labels (sp-k spans inside each uf-row)
     const setLabel = (sel, key) => { const el = document.querySelector(sel); if (el) el.textContent = t(key); };
     document.querySelectorAll('.bf-fields[data-kind="audio"] .uf-row').forEach((row, i) => {
-      const key = ['fldTitle','fldArtist','fldAudioUrl','fldPhrase','fldContext','fldImageUrl','fldSupport'][i];
+      const key = ['fldTitle','fldArtist','fldPhrase','fldDescription','fldContext','fldAudioUrl','fldImageUrl','fldSupport'][i];
       const k = row.querySelector('.sp-k');
       if (k && key) k.textContent = t(key);
     });
