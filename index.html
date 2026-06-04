@@ -12844,7 +12844,7 @@
     // Phase A-refactor 2 (2026-04-30): keep parent #modal Explore-active.
     if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', '#u=' + encodeURIComponent(ownerId)); } catch(_) {}
+    try { history.replaceState(history.state, '', '/ch/' + _handleToSlug(handle) + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     // Resolve bio/sns/avatar/joined from cache if not passed (caller may know
     // them already). Without this, [data-bc="user"] generic handlers that
@@ -13299,7 +13299,7 @@
         return (a.ts || 0) - (b.ts || 0);
       });
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', channelId && channelId !== '_unkn' ? '#ch=' + encodeURIComponent(channelId) : '#u=' + encodeURIComponent(ownerId)); } catch(_) {}
+    try { history.replaceState(history.state, '', channelId && channelId !== '_unkn' ? '/ch/' + _handleToSlug(handle) + '/' + channelId + '/' : '/ch/' + _handleToSlug(handle) + '/'); } catch(_) {}
     const inner = $('#pieceModalInner');
     // Build the head — mirrors the owner's ch-detail-head exactly (search +
     // share icons, meta + meta-times) but skips edit / delete / select-all
