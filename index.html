@@ -8659,7 +8659,8 @@
             </label>
             <label class="uf-row"><span class="sp-k">${t('pmProcessHead').replace(/^—\s*/, '')}</span><textarea class="uf-input" id="ef-process" rows="3" placeholder="${escapeHtml(t('processPh'))}">${escapeHtml((obj.process || []).join('\n'))}</textarea></label>
             <label class="uf-row"><span class="sp-k">audio url</span><input class="uf-input" type="url" id="ef-audioUrl" placeholder=".mp3 — Drive / Dropbox / direct url" value="${escapeHtml(obj.sourceAudioUrl || obj.audioUrl || '')}"><span class="uf-hint">.mp3 only. blocks without an audio url are not playable.</span></label>
-            <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" placeholder="https://…" value="${escapeHtml(obj.imageUrl || '')}"></label>
+            <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" placeholder="https://…" value="${escapeHtml(obj.imageUrl || '')}" oninput="(function(v){var h=document.getElementById('ef-imageUrl-hint');if(h)h.style.display=v.includes('fbcdn.net')||v.includes('facebook.com')?'':'none';})(this.value)"></label>
+            <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLはサムネイル表示に使用できません。Dropbox またはDriveのURLを使用してください。</span>
             <label class="uf-row"><span class="sp-k">${t('fldSupport')}</span><input class="uf-input" type="url" id="ef-support" placeholder="${escapeHtml(t('supportPh'))}" value="${escapeHtml(obj.support || '')}"></label>
             <p class="uf-hint">${t('supportHint')}</p>
             ${_editChannelSelectHtml(obj.channelId)}
@@ -8672,7 +8673,8 @@
         <div class="upload-form" style="margin-top: 24px;">
           <div class="uf-grid">
             <label class="uf-row"><span class="sp-k">title</span><textarea class="uf-input" id="ef-caption" rows="1">${escapeHtml(obj.caption || '')}</textarea></label>
-            <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" value="${escapeHtml(obj.imageUrl || '')}"></label>
+            <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" value="${escapeHtml(obj.imageUrl || '')}" oninput="(function(v){var h=document.getElementById('ef-imageUrl-hint');if(h)h.style.display=v.includes('fbcdn.net')||v.includes('facebook.com')?'':'none';})(this.value)"></label>
+            <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLはサムネイル表示に使用できません。Dropbox またはDriveのURLを使用してください。</span>
             <label class="uf-row"><span class="sp-k">source</span><textarea class="uf-input" id="ef-source" rows="1">${escapeHtml(obj.source || '')}</textarea></label>
             <label class="uf-row">
               <span class="sp-k">${t('fldDescription')}</span>
@@ -11116,6 +11118,9 @@
           ${t('audioBrokenBanner')}
         </div>` : '' }
       <div class="piece-modal-image">${buildPieceImage(track, 1200, 900, /*mono=*/false)}</div>
+      ${ (track.imageUrl||'').includes('fbcdn.net') || (track.imageUrl||'').includes('facebook.com')
+        ? `<p class="uf-hint" style="margin-top:6px">⚠ このサムネイルはFacebookのURLのため表示できません。編集画面でDropboxまたはDriveのURLに変更してください。</p>`
+        : '' }
 
       <section class="piece-phrases">
         <h4>${t('pmPhrasesHead')}</h4>
