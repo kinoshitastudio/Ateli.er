@@ -317,6 +317,80 @@ async function main() {
     console.log(`  ✓ ${handle} (raw: ${rawHandle}) — ${channels.length} channels`);
   }
 
+  // プロフィールキャッシュ（owner_id → handle/display_name）
+  const profileMap = {};
+  for (const p of profiles) {
+    const rawH = (p.handle || '').replace(/^@+/, '');
+    const slug  = rawH ? toSlug(rawH) : p.id.slice(0, 8);
+    profileMap[p.id] = { slug, displayName: p.display_name || rawH };
+  }
+
+  // ── ブロック個別ページ (/b/[blockId]/) ──────────────────
+  console.log('Generating block pages...');
+  const B_DIR = path.join(__dirname, '..', 'b');
+  if (fs.existsSync(B_DIR)) fs.rmSync(B_DIR, { recursive: true });
+  fs.mkdirSync(B_DIR, { recursive: true });
+
+  let allPublicBlocks = [];
+  try {
+    allPublicBlocks = await fetchJSON(
+      `${SUPABASE_URL}/rest/v1/public_blocks?select=id,kind,payload,owner_id&order=ts.desc&limit=500`
+    );
+  } catch (e) { console.warn('all blocks fetch failed:', e.message); }
+
+  for (const block of allPublicBlocks) {
+    const bt      = extractBlockText(block);
+    const owner   = profileMap[block.owner_id] || { slug: block.owner_id?.slice(0, 8) || 'unknown', displayName: 'unknown' };
+    const ogImage = bt.ogImage || DEFAULT_OGP;
+    const title   = bt.title || `(${block.kind})`;
+    const desc    = [bt.artist, bt.context].filter(Boolean).join(' — ').slice(0, 200) || `${title} — Ateli.er`;
+    const canonical = `${SITE_URL}/b/${block.id}/`;
+    const redirect  = `${SITE_URL}/#b=${encodeURIComponent(block.id)}`;
+
+    const blockHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(title)} — Ateli.er</title>
+<meta name="description" content="${esc(desc)}">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="${esc(canonical)}">
+<meta property="og:title" content="${esc(title)} — Ateli.er">
+<meta property="og:description" content="${esc(desc)}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${esc(canonical)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Ateli.er">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${esc(title)} — Ateli.er">
+<meta name="twitter:description" content="${esc(desc)}">
+<meta name="twitter:image" content="${esc(ogImage)}">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CreativeWork","name":"${esc(title)}","description":"${esc(desc)}","url":"${esc(canonical)}","author":{"@type":"Person","name":"${esc(owner.displayName)}","url":"${SITE_URL}/ch/${esc(owner.slug)}/"}}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ateli.er","item":"${SITE_URL}/"},{"@type":"ListItem","position":2,"name":"${esc(owner.displayName)}","item":"${SITE_URL}/ch/${esc(owner.slug)}/"},{"@type":"ListItem","position":3,"name":"${esc(title)}","item":"${esc(canonical)}"}]}
+</script>
+<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:600px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.25rem}.by{font-size:.8rem;opacity:.5;margin-bottom:1rem}.body-text{font-size:.85rem;line-height:1.8;opacity:.8;margin-bottom:1rem;white-space:pre-wrap}.redirect{font-size:.75rem;opacity:.4;margin-top:2rem}</style>
+</head>
+<body>
+<h1>${esc(title)}</h1>
+<p class="by">by <a href="${SITE_URL}/ch/${esc(owner.slug)}/">${esc(owner.displayName)}</a> on Ateli.er</p>
+${bt.context ? `<p class="body-text">${esc(bt.context)}</p>` : ''}
+${bt.artist ? `<p style="font-size:.8rem;opacity:.5">${esc(bt.artist)}</p>` : ''}
+<p class="redirect">Redirecting to Ateli.er…</p>
+<script>location.replace(${JSON.stringify(redirect)});</script>
+</body>
+</html>`;
+
+    writeFile(path.join(B_DIR, block.id, 'index.html'), blockHtml);
+    sitemapUrls.push(canonical);
+  }
+  console.log(`  ✓ ${allPublicBlocks.length} block pages generated`);
+
   // ── Courtyard ページ ──────────────────────────────────────
   console.log('Generating courtyard page...');
   let courtyardBlocks = [];
