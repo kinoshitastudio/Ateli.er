@@ -13780,12 +13780,8 @@
     }
     _syncBodyOverlay();
     if (navStack.length === 0) {
-      // Last overlay closed — replace the overlay history entry in-place
-      // so we stay on atelistudio.com instead of navigating back to wherever
-      // the browser came from (iOS Safari exits the site otherwise).
-      // Also clean up any /b/ or #tab= path left by a block/tab navigation.
-      const _cleanPath = (location.pathname.startsWith('/b/') || location.hash.startsWith('#tab=')) ? '/' : location.pathname;
-      history.replaceState(null, '', _cleanPath);
+      // Last overlay closed — reset to root so no stale /ch/ /b/ #tab= remains.
+      history.replaceState(null, '', '/');
     } else {
       _navIgnorePopstate = true;
       for (let i = 0; i < toPop; i++) history.back();
