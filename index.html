@@ -14748,6 +14748,25 @@
         }
       }
 
+      // public_blocks の channel_id からチャンネルが atelier_user_channels_v1 にない場合は自動作成
+      // (別デバイス・新デバイスでログインした時にブロックだけ復元されてチャンネルがない状態を防ぐ)
+      if (typeof loadUserChannels === 'function' && typeof saveUserChannels === 'function') {
+        const ucList = loadUserChannels();
+        const existingUcIds = new Set(ucList.map(c => c.id));
+        const existingCIds = new Set(CHANNELS.map(c => c.id));
+        let channelAdded = false;
+        for (const r of rows) {
+          const cid = r.channel_id;
+          if (!cid || existingUcIds.has(cid) || existingCIds.has(cid)) continue;
+          const now = Date.now();
+          ucList.push({ id: cid, label: r.channel_label || cid, mainPhrase: '', lang: 'mixed', meta: '', isPublic: true, userCreated: true, createdAt: now, updatedAt: now });
+          existingUcIds.add(cid);
+          channelAdded = true;
+          console.log('[importFromPublicBlocks] created missing channel:', cid, r.channel_label);
+        }
+        if (channelAdded) { saveUserChannels(ucList); changed = true; }
+      }
+
       if (changed) {
         if (typeof saveBlocks === 'function') saveBlocks(localBlocks);
         if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
