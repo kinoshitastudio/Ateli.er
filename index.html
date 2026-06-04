@@ -12020,6 +12020,16 @@
     const editedPart = (editedTs && editedTs !== b.ts) ? ` · ${t('blockMetaEdited')} ${ageString(editedTs)}` : '';
     return `<p class="block-meta-line">${t('blockMetaPlaced')} ${escapeHtml(placed)}${editedPart}</p>`;
   }
+  // Convert a handle to a URL-safe slug — must match generate-channels.js toSlug().
+  function _handleToSlug(h) {
+    return String(h || '')
+      .replace(/^@+/, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^\w.\-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
   // Copy a static path URL to clipboard (Web Share API fallback on mobile).
   // Used for ch/handle/channelId/ and b/blockId/ — OGP is already in the static shell.
   async function _sharePathUrl(url, fallbackTitle) {
@@ -12908,7 +12918,7 @@
     // Share this resident's page via static path URL (OGP already in static shell).
     const _upShareBtn = document.getElementById('upShareBtn');
     if (_upShareBtn) _upShareBtn.addEventListener('click', () => {
-      _sharePathUrl(`https://atelistudio.com/ch/${handle}/`, `@${handle || 'resident'} — Ateli.er`);
+      _sharePathUrl(`https://atelistudio.com/ch/${_handleToSlug(handle)}/`, `@${handle || 'resident'} — Ateli.er`);
     });
     // Fetch all public_blocks for this owner.
     // Phase G: sort_order.asc.nullslast が単一ソース。sort_order 未設定行は ts.asc にフォールバック
@@ -13157,7 +13167,7 @@
         const shareBtn = e.target.closest('.explore-share-btn[data-share-type="channel"]');
         if (shareBtn) {
           e.stopPropagation();
-          _sharePathUrl(`https://atelistudio.com/ch/${handle}/${shareBtn.dataset.shareCid}/`, 'Ateli.er');
+          _sharePathUrl(`https://atelistudio.com/ch/${_handleToSlug(handle)}/${shareBtn.dataset.shareCid}/`, 'Ateli.er');
           return;
         }
         openUserChannel({ ownerId, handle, channelId: el.dataset.pbCid, channelLabel: el.dataset.pbClabel });
@@ -13491,7 +13501,7 @@
     const shareBtn = document.getElementById('ucShareBtn');
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
-        _sharePathUrl(`https://atelistudio.com/ch/${handle}/${channelId}/`, `${channelLabel} — Ateli.er`);
+        _sharePathUrl(`https://atelistudio.com/ch/${_handleToSlug(handle)}/${channelId}/`, `${channelLabel} — Ateli.er`);
       });
     }
     inner.querySelectorAll('.pane-index li[data-pb-id]').forEach(el => {
@@ -15440,7 +15450,7 @@
     let handle = cleanH(md.handle) || session.user.email?.split('@')[0] || 'visitor';
     let avatar = '';
     if (handleEl) handleEl.textContent = '@' + handle;
-    _myHandle = handle;
+    _myHandle = _handleToSlug(handle);
     setAccountAvatar(avatar);
     menu.hidden = false;
 
@@ -15456,7 +15466,7 @@
           const ph = cleanH(profile.handle);
           if (ph) {
             handle = ph;
-            _myHandle = ph;
+            _myHandle = _handleToSlug(ph);
             if (handleEl) handleEl.textContent = '@' + handle;
           }
           if (profile.avatar_url) setAccountAvatar(profile.avatar_url);
