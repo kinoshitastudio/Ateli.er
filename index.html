@@ -6035,8 +6035,9 @@
           if (original) { img.src = decodeURIComponent(original); return; }
         } catch (e) {}
       }
-      // All wsrv.nl paths exhausted — hide, let paper-2 bg show as placeholder
+      // All wsrv.nl paths exhausted — hide, stamp is-loaded to stop shimmer
       img.style.display = 'none';
+      img.classList.add('is-loaded');
       return;
     }
 
@@ -6048,7 +6049,9 @@
       img.src = `https://wsrv.nl/?url=${encodeURIComponent(clean)}&w=400&output=webp&q=60`;
       return;
     }
+    // All retries exhausted — hide and stamp is-loaded to stop shimmer
     img.style.display = 'none';
+    img.classList.add('is-loaded');
   };
   // All images render in their original colour. The `mono` flag is kept for
   // backward compatibility (call-site signatures unchanged) but no longer
@@ -9606,6 +9609,8 @@
   // Prevents heavy OGP images from external sites from blocking render.
   function _thumbUrl(url, w=400) {
     if (!url) return '';
+    // Facebook CDN URLs block hotlinking — return empty so placeholder shows immediately
+    if (url.includes('fbcdn.net') || url.includes('facebook.com/photo')) return '';
     // Google Drive share URL → lh3 direct image (no further proxy needed)
     let m = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
     if (m) return `https://lh3.googleusercontent.com/d/${m[1]}=w${w}`;
