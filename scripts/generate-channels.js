@@ -119,6 +119,7 @@ function buildUserPage({ handle, displayName, avatarUrl, bio, userId, channelCou
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>location.replace(${JSON.stringify(redirect)});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
@@ -147,8 +148,6 @@ function buildUserPage({ handle, displayName, avatarUrl, bio, userId, channelCou
 <h1>${esc(name)}</h1>
 ${bio ? `<p>${esc(bio)}</p>` : ''}
 <p>${channelCount} channel${channelCount !== 1 ? 's' : ''} on <a href="${esc(canonical)}">Ateli.er</a></p>
-<p class="redirect">Redirecting to Ateli.er…</p>
-<script>location.replace(${JSON.stringify(redirect)});</script>
 </body>
 </html>`;
 }
@@ -194,6 +193,7 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>location.replace(${JSON.stringify(redirect)});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
@@ -218,7 +218,7 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ateli.er","item":"${SITE_URL}/"},{"@type":"ListItem","position":2,"name":"${esc(name)}","item":"${SITE_URL}/ch/${esc(handle)}/"},{"@type":"ListItem","position":3,"name":"${esc(channelLabel)}","item":"${esc(canonical)}"}]}
 </script>
-<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:600px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.25rem}.by{font-size:.8rem;opacity:.5;margin-bottom:1.5rem}.redirect{font-size:.75rem;opacity:.4;margin-top:2rem}</style>
+<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:600px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.25rem}.by{font-size:.8rem;opacity:.5;margin-bottom:1.5rem}</style>
 </head>
 <body>
 <h1>${esc(channelLabel)}</h1>
@@ -226,8 +226,6 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
 ${mainPhrase ? `<p style="font-size:.9rem;line-height:1.7;margin-bottom:1.5rem">${esc(mainPhrase)}</p>` : ''}
 ${metaLine ? `<p style="font-size:.8rem;opacity:.5;margin-bottom:1rem">${esc(metaLine)}</p>` : ''}
 ${blockListHtml}
-<p class="redirect">Redirecting to Ateli.er…</p>
-<script>location.replace(${JSON.stringify(redirect)});</script>
 </body>
 </html>`;
 }
@@ -384,6 +382,7 @@ async function main() {
     const blockHtml = `<!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>location.replace(${JSON.stringify(redirect)});</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)} — Ateli.er</title>
@@ -408,15 +407,13 @@ async function main() {
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ateli.er","item":"${SITE_URL}/"},{"@type":"ListItem","position":2,"name":"${esc(owner.displayName)}","item":"${SITE_URL}/ch/${esc(owner.slug)}/"},{"@type":"ListItem","position":3,"name":"${esc(title)}","item":"${esc(canonical)}"}]}
 </script>
-<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:600px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.25rem}.by{font-size:.8rem;opacity:.5;margin-bottom:1rem}.body-text{font-size:.85rem;line-height:1.8;opacity:.8;margin-bottom:1rem;white-space:pre-wrap}.redirect{font-size:.75rem;opacity:.4;margin-top:2rem}</style>
+<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:600px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.25rem}.by{font-size:.8rem;opacity:.5;margin-bottom:1rem}.body-text{font-size:.85rem;line-height:1.8;opacity:.8;margin-bottom:1rem;white-space:pre-wrap}</style>
 </head>
 <body>
 <h1>${esc(title)}</h1>
 <p class="by">by <a href="${SITE_URL}/ch/${esc(owner.slug)}/">${esc(owner.displayName)}</a> on Ateli.er</p>
 ${bt.context ? `<p class="body-text">${esc(bt.context)}</p>` : ''}
 ${bt.artist ? `<p style="font-size:.8rem;opacity:.5">${esc(bt.artist)}</p>` : ''}
-<p class="redirect">Redirecting to Ateli.er…</p>
-<script>location.replace(${JSON.stringify(redirect)});</script>
 </body>
 </html>`;
 
