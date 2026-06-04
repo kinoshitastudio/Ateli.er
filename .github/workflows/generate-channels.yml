@@ -27,4 +27,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: regenerate channel pages'
-          file_pattern: 'ch/** sitemap-channels.xml'
+          file_pattern: 'ch/** b/** sitemap-channels.xml'
