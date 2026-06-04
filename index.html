@@ -8081,6 +8081,35 @@
     `;
     $('#channelGridView').hidden = true;
     $('#channelDetailView').hidden = false;
+    // If mainPhrase is empty (e.g. after user_state restore from public_blocks),
+    // fetch from Supabase channels table and patch DOM + in-memory CHANNELS.
+    if (!c.mainPhrase && cid && _channelMetaCache[cid] === undefined) {
+      _channelMetaCache[cid] = null;
+      (async () => {
+        try {
+          const _mr = await fetch(
+            `${SUPABASE_URL}/rest/v1/channels?id=eq.${encodeURIComponent(cid)}&select=label,main_phrase,meta&limit=1`,
+            { headers: { apikey: SUPABASE_PUB_KEY } }
+          );
+          if (!_mr.ok) return;
+          const _mrows = await _mr.json();
+          if (!Array.isArray(_mrows) || _mrows.length === 0) return;
+          _channelMetaCache[cid] = _mrows[0];
+          const _phrase = _mrows[0].main_phrase;
+          if (!_phrase) return;
+          const _ch = CHANNELS.find(x => x.id === cid);
+          if (_ch) _ch.mainPhrase = _phrase;
+          const _dh = detail.querySelector('.ch-detail-head');
+          if (!_dh || _dh.querySelector('.ch-main-phrase')) return;
+          const _h4 = _dh.querySelector('h4');
+          if (!_h4) return;
+          const _p = document.createElement('p');
+          _p.className = 'ch-main-phrase';
+          _p.textContent = _phrase;
+          _h4.insertAdjacentElement('afterend', _p);
+        } catch (_e) {}
+      })();
+    }
     // Removed: the @handle next to "← back to channels" was redundant
     // (handle is already shown in the h4 breadcrumb below).
     const backOwner = document.getElementById('channelDetailBackOwner');
@@ -13507,13 +13536,13 @@
           if (!_phrase) return;
           const _dh = inner.querySelector('.ch-detail-head');
           if (!_dh || _dh.querySelector('.ch-detail-mainphrase')) return;
-          const _h4 = _dh.querySelector('h4');
-          if (!_h4 || !_h4.parentElement) return;
+          const _chHeadTitle = _dh.querySelector('.ch-head-title');
+          if (!_chHeadTitle) return;
           const _p = document.createElement('p');
           _p.className = 'ch-detail-mainphrase';
           _p.style.cssText = 'font-family: var(--sans-jp); font-size: 14px; color: var(--ink-2); margin: 4px 0 8px; line-height: 1.55;';
           _p.textContent = _phrase;
-          _h4.parentElement.insertAdjacentElement('afterend', _p);
+          _chHeadTitle.insertAdjacentElement('afterend', _p);
         } catch (_e) {}
       })();
     }
