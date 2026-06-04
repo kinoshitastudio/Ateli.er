@@ -61,22 +61,35 @@ function extractBlockText(block) {
     };
   }
   if (kind === 'text') {
+    // payload.text が本文（最大2000文字）、titleがタイトル、descriptionが補足
+    const bodyText = [payload.text, payload.description].filter(Boolean).join('\n');
     return {
       kind:    'text',
-      title:   (payload.text || '').slice(0, 120),
-      context: '',
+      title:   payload.title || payload.text || '',
+      artist:  payload.context || '',
+      context: bodyText,
       ogImage: null,
+    };
+  }
+  if (kind === 'url') {
+    return {
+      kind:    'url',
+      title:   payload.title || payload.source || '',
+      artist:  payload.context || payload.source || '',
+      context: payload.description || '',
+      ogImage: payload.ogImage || payload.imageUrl || null,
     };
   }
   if (kind === 'image') {
     return {
       kind:    'image',
       title:   payload.caption || payload.title || '',
-      context: '',
+      artist:  payload.context || '',
+      context: payload.description || '',
       ogImage: payload.imageUrl || payload.ogImage || payload.url || null,
     };
   }
-  return { kind, title: payload.title || '', context: '', ogImage: payload.imageUrl || payload.ogImage || null };
+  return { kind, title: payload.title || '', artist: payload.context || '', context: payload.description || '', ogImage: payload.imageUrl || payload.ogImage || null };
 }
 
 // ユーザープロフィールページ
