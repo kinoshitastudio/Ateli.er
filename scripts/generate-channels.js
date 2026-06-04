@@ -63,7 +63,7 @@ function extractBlockText(block) {
       kind:    'audio',
       title:   payload.title  || '',
       artist:  payload.artist || '',
-      context: payload.context || payload.phrase || '',
+      context: [payload.description, payload.phrase].filter(Boolean).join(' — ') || payload.context || '',
       ogImage: payload.imageUrl || payload.ogImage || null,
     };
   }

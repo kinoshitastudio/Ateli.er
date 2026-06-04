@@ -4849,6 +4849,10 @@
                   <textarea class="uf-input" id="bPhrase" data-i18n-placeholder="phrasePh" rows="3" placeholder="a catchphrase, or the story behind this track" maxlength="3000"></textarea>
                 </label>
                 <label class="uf-row">
+                  <span class="sp-k" data-i18n="descriptionLabel">description</span>
+                  <textarea class="uf-input" id="bDescription" data-i18n-placeholder="descriptionPh" rows="3" placeholder="a short note — context, source, or thought behind this track" maxlength="3000"></textarea>
+                </label>
+                <label class="uf-row">
                   <span class="sp-k" data-i18n="fldContext">tags</span>
                   <textarea class="uf-input" id="bContext" data-i18n-placeholder="contextPh" rows="2" placeholder="comma-separated tags" maxlength="200"></textarea>
                   <div class="tag-suggest" data-upload-suggest="bContext" hidden>
@@ -8689,6 +8693,7 @@
             <label class="uf-row"><span class="sp-k">${t('fldTitle')}</span><textarea class="uf-input" id="ef-title" rows="1">${escapeHtml(obj.title || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldArtist')}</span><textarea class="uf-input" id="ef-artist" rows="1">${escapeHtml(obj.artist || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldPhrase')}</span><textarea class="uf-input" id="ef-phrase" rows="3" maxlength="3000">${escapeHtml(phrase0)}</textarea></label>
+            <label class="uf-row"><span class="sp-k">${t('descriptionLabel') || 'description'}</span><textarea class="uf-input" id="ef-description" rows="3" placeholder="${escapeHtml(t('descriptionPh'))}" maxlength="3000">${escapeHtml(obj.description || '')}</textarea></label>
             <label class="uf-row"><span class="sp-k">${t('fldContext')}</span>
               <textarea class="uf-input" id="ef-context" rows="2" placeholder="${escapeHtml(t('contextPh'))}">${escapeHtml(obj.context || '')}</textarea>
               ${ getAllTags().length > 0 ? `
@@ -8893,6 +8898,7 @@
       const newTitle    = ($('#ef-title')?.value || '').trim();
       const newArtist   = ($('#ef-artist')?.value || '').trim();
       const newPhrase   = ($('#ef-phrase')?.value || '').trim();
+      const newDescription = ($('#ef-description')?.value || '').trim();
       const newContext  = ($('#ef-context')?.value || '').trim();
       const newAudioUrl = ($('#ef-audioUrl')?.value || '').trim();
       const newImageUrl = ($('#ef-imageUrl')?.value || '').trim();
@@ -8919,6 +8925,7 @@
         artist: newArtist,
         phrases,
         phrase: newPhrase,
+        description: newDescription,
         context: newContext,
         metadata: { ...((tr && tr.metadata) || {}), tags: newTags },
         process: newProcess,
@@ -9986,6 +9993,7 @@
         const artist = document.getElementById('bArtist').value.trim();
         const audioUrl = document.getElementById('bAudioUrl').value.trim();
         const phrase = document.getElementById('bPhrase').value.trim();
+        const description = document.getElementById('bDescription')?.value.trim() || '';
         const context = document.getElementById('bContext').value.trim();
         const imageUrl = document.getElementById('bImageUrl').value.trim();
         const support = document.getElementById('bSupport').value.trim();
@@ -10012,7 +10020,7 @@
         block = {
           id: genBlockId('audio'),
           kind: 'audio', channelId,
-          title, artist, audioUrl, phrase, context,
+          title, artist, audioUrl, phrase, description, context,
           imageUrl: convertImageUrl(imageUrl) || '', support,
           sec, ts: Date.now(),
         };
