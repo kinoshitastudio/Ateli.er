@@ -8705,7 +8705,6 @@
                 </div>
               ` : '' }
             </label>
-            <label class="uf-row"><span class="sp-k">${t('pmProcessHead').replace(/^—\s*/, '')}</span><textarea class="uf-input" id="ef-process" rows="3" placeholder="${escapeHtml(t('processPh'))}">${escapeHtml((obj.process || []).join('\n'))}</textarea></label>
             <label class="uf-row"><span class="sp-k">audio url</span><input class="uf-input" type="url" id="ef-audioUrl" placeholder=".mp3 — Drive / Dropbox / direct url" value="${escapeHtml(obj.sourceAudioUrl || obj.audioUrl || '')}"><span class="uf-hint">.mp3 only. blocks without an audio url are not playable.</span></label>
             <label class="uf-row"><span class="sp-k">image url</span><input class="uf-input" type="url" id="ef-imageUrl" placeholder="https://…" value="${escapeHtml(obj.imageUrl || '')}" oninput="(function(v){var h=document.getElementById('ef-imageUrl-hint');if(h)h.style.display=v.includes('fbcdn.net')||v.includes('facebook.com')?'':'none';})(this.value)"></label>
             <span class="uf-hint" id="ef-imageUrl-hint" style="display:${(obj.imageUrl||'').includes('fbcdn.net')||(obj.imageUrl||'').includes('facebook.com')?'':'none'}">⚠ FacebookのURLは表示不可。Google Drive または imgur.com を使用してください。</span>
@@ -11193,12 +11192,6 @@
           `;
         })() }
 
-      ${ (track.process && track.process.length && (track.process || []).join('').trim()) ? `
-        <section class="piece-context">
-          <h4>${t('pmProcessHead')}</h4>
-          <p style="white-space: pre-wrap;">${escapeHtml((track.process || []).join('\n'))}</p>
-        </section>
-      ` : '' }
 
       ${ (track.layers && track.layers.length) ? `
         <section class="piece-layers-block">
