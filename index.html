@@ -13921,6 +13921,9 @@
       const _cl  = _cr?.channel_label || _cx?._externalChannelLabel || '';
       if (_cid && _oid && typeof openUserChannel === 'function') {
         currentBlockModalId = null; currentBlockModalKind = null;
+        // Reset _prevPathBeforeBlock so the next back (channel → close)
+        // restores URL to root instead of the now-stale block URL.
+        _prevPathBeforeBlock = '/';
         try { history.replaceState({ atelierNav: 'pieceModal' }, ''); } catch (_) {}
         openUserChannel({ ownerId: _oid, handle: _oh, channelId: _cid, channelLabel: _cl });
         _syncBodyOverlay();
