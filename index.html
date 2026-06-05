@@ -10479,7 +10479,7 @@
 
       return `
         <li class="feed-group" data-cid="${escapeHtml(g.channelId)}">
-          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> placed ${escapeHtml(summary)} in </span><span class="target" data-cid="${escapeHtml(g.channelId)}" data-clabel="${escapeHtml(chLabel || g.channelId)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}" data-handle="${escapeHtml(actorHandle)}"` : ''}>${escapeHtml(chLabel)}</span></div>
+          <div class="feed-group-header"><a class="actor bc-h4-user${actorIsExternal ? ' bc-external' : ''}" href="#" data-bc="user" data-handle="${escapeHtml(actorHandle)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}"` : ''} style="text-decoration:underline; cursor:pointer;">@${escapeHtml(actorHandle)}</a><span class="connector"> placed ${escapeHtml(summary)} in </span><span class="target" data-cid="${escapeHtml(g.channelId)}" data-clabel="${escapeHtml(chLabel || g.channelId)}"${actorOwnerId ? ` data-uid="${escapeHtml(actorOwnerId)}" data-handle="${escapeHtml(actorHandle)}"` : ''}>${escapeHtml(chLabel)}</span></div>
           <div class="feed-group-time">${escapeHtml(when)}</div>
           <div class="feed-group-grid">${cards}</div>
         </li>
@@ -10877,7 +10877,7 @@
       ].filter(Boolean).join(' ');
       const authorId = r.author_id || '';
       const handleHtml = authorId
-        ? `<a class="fpi-handle" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}" style="color:inherit; text-decoration:none; cursor:pointer;">@${escapeHtml(handle)}</a>`
+        ? `<a class="fpi-handle" href="#" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}" style="color:inherit; text-decoration:none; cursor:pointer;">@${escapeHtml(handle)}</a>`
         : `<span class="fpi-handle">@${escapeHtml(handle)}</span>`;
       return `
         <li class="${liClasses}" data-block-id="${escapeHtml(blockId)}" data-id="${escapeHtml(r.id || '')}">
@@ -11943,7 +11943,7 @@
           // Make the @handle clickable when we have an author_id — the
           // global [data-bc="user"] handler routes to the right portfolio.
           const nameHtml = authorId
-            ? `<a class="ptc-name-link" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}"><span class="${avatarClass}" ${avatarStyle}>${avatarInner}</span><span class="ptc-handle">@${escapeHtml(handle)}</span></a>`
+            ? `<a class="ptc-name-link" href="#" data-bc="user" data-uid="${escapeHtml(authorId)}" data-handle="${escapeHtml(handle)}" title="@${escapeHtml(handle)}"><span class="${avatarClass}" ${avatarStyle}>${avatarInner}</span><span class="ptc-handle">@${escapeHtml(handle)}</span></a>`
             : `<span class="ptc-name-link"><span class="${avatarClass}" ${avatarStyle}>${avatarInner}</span><span class="ptc-handle">${escapeHtml(handle)}</span></span>`;
           const isOwnAuthor = (f.author_id && f.author_id === currentUser?.id) || f._isOwnAuthor === true;
           const canDelete = isOwnAuthor || isBlockOwner;
@@ -12339,10 +12339,10 @@
   function _breadcrumbHtml({ channel, block } = {}) {
     const handle = _currentHandle();
     const parts = [];
-    parts.push(`<a class="bc-part" data-bc="home" title="home">Ateli.er</a>`);
-    parts.push(`<a class="bc-part" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`);
+    parts.push(`<a class="bc-part" href="#" data-bc="home" title="home">Ateli.er</a>`);
+    parts.push(`<a class="bc-part" href="#" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`);
     if (channel) {
-      parts.push(`<a class="bc-part" data-bc="channel" data-cid="${escapeHtml(channel.id)}" title="${escapeHtml(channel.label)}">${escapeHtml(channel.label)}</a>`);
+      parts.push(`<a class="bc-part" href="#" data-bc="channel" data-cid="${escapeHtml(channel.id)}" title="${escapeHtml(channel.label)}">${escapeHtml(channel.label)}</a>`);
     }
     if (block) {
       parts.push(`<span class="bc-part bc-current">${escapeHtml(block.id)}</span>`);
@@ -12357,12 +12357,12 @@
     // per user feedback — pill stays in the My Channel grid card (where
     // owner sees it at a glance) but is unnecessary in the detail view
     // where the owner is already deep into managing this specific channel.
-    return `<a class="bc-h4-user" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a><span class="bc-h4-sep">/</span><a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(channel?.id || '')}" title="${escapeHtml(channel?.label || '')}">${escapeHtml(channel?.label || '')}</a>`;
+    return `<a class="bc-h4-user" href="#" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a><span class="bc-h4-sep">/</span><a class="bc-h4-channel" href="#" data-bc="channel" data-cid="${escapeHtml(channel?.id || '')}" title="${escapeHtml(channel?.label || '')}">${escapeHtml(channel?.label || '')}</a>`;
   }
   // Plain handle underlined link (used in meta-times "by ..." line)
   function _ownerTextLink() {
     const handle = _currentHandle();
-    return `<a class="bc-owner-text" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`;
+    return `<a class="bc-owner-text" href="#" data-bc="user" title="${escapeHtml(handle)}">${escapeHtml(handle)}</a>`;
   }
   // Block title with breadcrumb path: "Taka / Archive 00 / Block Title"
   // — handle and channel are linked, block title is the current location.
@@ -12382,8 +12382,8 @@
     // these attrs, the click would fall through to openChannelDetail
     // and try to open the viewer's own channel by that id (wrong).
     const channelPart = ownerHandle
-      ? `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" data-uid="${escapeHtml(ownerId || '')}" data-handle="${escapeHtml(handle)}" data-clabel="${escapeHtml(cLabel)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`
-      : `<a class="bc-h4-channel" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
+      ? `<a class="bc-h4-channel" href="#" data-bc="channel" data-cid="${escapeHtml(cid)}" data-uid="${escapeHtml(ownerId || '')}" data-handle="${escapeHtml(handle)}" data-clabel="${escapeHtml(cLabel)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`
+      : `<a class="bc-h4-channel" href="#" data-bc="channel" data-cid="${escapeHtml(cid)}" title="${escapeHtml(cLabel)}">${escapeHtml(cLabel)}</a>`;
     // Phase A-refactor 2 (2026-04-29): emit data-uid / data-handle on the
     // user link when the block is external, so the global breadcrumb click
     // handler can route to the visitor portfolio instead of (incorrectly)
@@ -12398,7 +12398,7 @@
       ? `<span class="bc-explore-badge" title="${escapeHtml(t('visitorBadgeTitle'))}">${escapeHtml(t('exploreBadgeLabel'))}</span>`
       : '';
     return exploreBadge
-      + `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
+      + `<a class="bc-h4-user${ownerHandle ? ' bc-external' : ''}" href="#" data-bc="user" title="${escapeHtml(handle)}"${externalAttrs}>${escapeHtml(handle)}</a>`
       + (cLabel ? `<span class="bc-h4-sep">/</span>` + channelPart : '')
       + `<span class="bc-h4-sep">/</span>`
       + escapeHtml(label || '');
@@ -12502,7 +12502,7 @@
           const _m = (channel.meta || '').trim();
           return `
           <span class="meta">${_m ? escapeHtml(_m) + ' · ' : ''}${count} ${blocksLabel}</span>
-          <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${isExternal ? `<a class="bc-owner-text bc-external" data-bc="user" data-uid="${escapeHtml(block?._ownerId || '')}" data-handle="${escapeHtml(ownerHandle)}" style="cursor:pointer;">@${escapeHtml(ownerHandle)}</a>` : _ownerTextLink()}</span>
+          <span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by ${isExternal ? `<a class="bc-owner-text bc-external" href="#" data-bc="user" data-uid="${escapeHtml(block?._ownerId || '')}" data-handle="${escapeHtml(ownerHandle)}" style="cursor:pointer;">@${escapeHtml(ownerHandle)}</a>` : _ownerTextLink()}</span>
           `;
         })() : '' }
       </div>
@@ -13433,7 +13433,7 @@
           <div style="min-width:0; flex:1;">
             <h4>
               <span class="bc-explore-badge" title="${escapeHtml(t('visitorBadgeTitle'))}">${escapeHtml(t('exploreBadgeLabel'))}</span>
-              <a class="bc-h4-user bc-external" data-bc="user" title="${escapeHtml(handle)}" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a>
+              <a class="bc-h4-user bc-external" href="#" data-bc="user" title="${escapeHtml(handle)}" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a>
               <span class="bc-h4-sep">/</span>
               <span class="bc-h4-channel">${escapeHtml(channelLabel)}</span>
             </h4>
@@ -13447,7 +13447,7 @@
         </div>
         ${ channelMainPhrase ? `<p class="ch-detail-mainphrase" style="font-family: var(--sans-jp); font-size: 14px; color: var(--ink-2); margin: 4px 0 8px; line-height: 1.55;">${escapeHtml(channelMainPhrase)}</p>` : '' }
         ${ channelMeta ? `<span class="meta">${escapeHtml(channelMeta)} · ${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>` : `<span class="meta">${rows.length} ${ rows.length === 1 ? t('blockSingular') : t('blocksPlural') }</span>` }
-        ${ createdTs || editedTs ? `<span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by <a class="bc-owner-text" data-bc="user" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a></span>` : '' }
+        ${ createdTs || editedTs ? `<span class="meta meta-times">${t('chCreatedLabel')} ${escapeHtml(createdLabel)} · ${t('chEditedLabel')} ${escapeHtml(editedLabel)} by <a class="bc-owner-text" href="#" data-bc="user" data-handle="${escapeHtml(handle)}" data-uid="${escapeHtml(ownerId)}" style="cursor:pointer;">${escapeHtml(handle)}</a></span>` : '' }
       </div>
     `;
     // Build the body — uses .pane-index directly on the OL (the same
