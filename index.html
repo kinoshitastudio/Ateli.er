@@ -11670,7 +11670,7 @@
             try { if (b.url) domain = new URL(b.url).hostname.replace(/^www\./, ''); } catch(e) {}
             if (!domain) domain = 'link';
             const urlThumbHtml = b.ogImage
-              ? `<img src="${escapeHtml(_thumbUrl(b.ogImage, 120))}" style="width:100%;height:100%;object-fit:cover;border-radius:2px;" loading="lazy">`
+              ? `<img src="${escapeHtml(_thumbUrl(b.ogImage, 120))}" style="width:100%;height:100%;object-fit:cover;border-radius:2px;" loading="lazy" onload="this.classList.add('is-loaded')" onerror="this.parentElement.style.background='none'">`
               : `<span class="ix-thumb-url">${escapeHtml(domain)}</span>`;
             return `<li data-kind="url" data-bid="${escapeHtml(b.id)}">
               <span class="ix-num"><span class="ix-icon">${_kindIcon('url')}</span>${escapeHtml(b.id)}</span>
