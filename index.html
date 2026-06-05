@@ -13268,6 +13268,10 @@
   // public_blocks), and clicks open the existing block modal in external
   // / read-only mode (with a "+ connect to my channel" action).
   function openUserChannel({ ownerId, handle, channelId, channelLabel }) {
+    // If handle is missing (stale public_blocks.owner_handle), resolve from profile cache.
+    if (!handle && ownerId && typeof _exploreProfilesCache !== 'undefined') {
+      handle = _exploreProfilesCache[ownerId]?.handle || '';
+    }
     // Phase A-refactor 2 (2026-04-30): keep parent #modal Explore-active
     // so the visitor flow's tab context stays consistent across portfolio
     // → channel → block drilling.
@@ -13383,7 +13387,10 @@
         return (a.ts || 0) - (b.ts || 0);
       });
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
-    try { history.replaceState(history.state, '', channelId && channelId !== '_unkn' ? '/ch/' + _handleToSlug(handle) + '/' + channelId + '/' : '/ch/' + _handleToSlug(handle) + '/'); } catch(_) {}
+    try {
+      const _slug = _handleToSlug(handle);
+      if (_slug) history.replaceState(history.state, '', channelId && channelId !== '_unkn' ? '/ch/' + _slug + '/' + channelId + '/' : '/ch/' + _slug + '/');
+    } catch(_) {}
     const inner = $('#pieceModalInner');
     // Build the head — mirrors the owner's ch-detail-head exactly (search +
     // share icons, meta + meta-times) but skips edit / delete / select-all
@@ -13908,7 +13915,9 @@
       const _cx  = !_cr ? (crossUserBlocksCache || []).find(b => b.id === currentBlockModalId) : null;
       const _cid = _cr?.channel_id || _cx?.channelId || _cx?._hostChannelId;
       const _oid = _cr?.owner_id   || _cx?._ownerId  || _cx?.ownerId;
-      const _oh  = _cr?.owner_handle || _cx?._ownerHandle || _cx?.ownerHandle || '';
+      // Fallback to _exploreProfilesCache if owner_handle is missing/stale in public_blocks.
+      const _oh  = _cr?.owner_handle || _cx?._ownerHandle || _cx?.ownerHandle
+                   || (typeof _exploreProfilesCache !== 'undefined' ? _exploreProfilesCache[_oid]?.handle : '') || '';
       const _cl  = _cr?.channel_label || _cx?._externalChannelLabel || '';
       if (_cid && _oid && typeof openUserChannel === 'function') {
         currentBlockModalId = null; currentBlockModalKind = null;
