@@ -11616,6 +11616,7 @@
     if (!$('#pieceModal').classList.contains('is-open')) navOpen('pieceModal');
     currentBlockModalId = null;
     currentBlockModalKind = null;
+    try { history.replaceState(history.state, '', '/tags/' + encodeURIComponent(tag) + '/'); } catch(_) {}
     const itemsHtml = matches.length === 0
       ? `<p style="font-family: var(--mono); font-size: 10.5px; color: var(--gray-2); padding: 22px 0;">${t('feedEmpty')}</p>`
       : `<ol class="pane-index">${ matches.map(m => {
@@ -13651,10 +13652,12 @@
     $('#searchModal').classList.add('is-open');
     $('#searchInput').value = '';
     renderSearchResults('');
+    try { history.replaceState(history.state, '', '/search/'); } catch(_) {}
     setTimeout(() => $('#searchInput').focus(), 80);
   }
   function closeSearchInner() {
     $('#searchModal').classList.remove('is-open');
+    try { history.replaceState(history.state, '', '/'); } catch(_) {}
   }
   function closeSearch() {
     if (navStack.includes('searchModal')) navCloseExternal('searchModal');
@@ -13755,23 +13758,27 @@
     // Wire result clicks
     out.querySelectorAll('.srch-ch').forEach(el => {
       el.addEventListener('click', () => {
+        const cid = el.dataset.cid;
         closeSearch();
         openModal('pieces');
+        setTimeout(() => { if (cid) openChannelDetail(cid); }, 30);
       });
     });
     out.querySelectorAll('.srch-tr').forEach(el => {
       el.addEventListener('click', () => {
         const t = TRACKS.find(x => x.id === el.dataset.tid);
-        if (t) {
-          closeSearch();
-          openPieceModal(t);
-        }
+        if (t) { closeSearch(); openPieceModal(t); }
       });
     });
     out.querySelectorAll('.srch-blk').forEach(el => {
       el.addEventListener('click', () => {
         const b = (typeof loadBlocks === 'function' ? loadBlocks() : []).find(x => x.id === el.dataset.bid);
-        if (b) { closeSearch(); openBlockModal(b); }
+        if (!b) return;
+        closeSearch();
+        if (b.kind === 'image') openImageModal(b);
+        else if (b.kind === 'url') openUrlModal(b);
+        else if (b.kind === 'text') openTextModal(b);
+        else openImageModal(b);
       });
     });
   }
