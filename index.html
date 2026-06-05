@@ -15574,8 +15574,8 @@
     if (!email || !displayName || !handle) {
       setAuthStatus('signupStatus', 'すべての項目を入力してください。', 'err'); return;
     }
-    if (!/^[a-zA-Z0-9_-]+$/.test(handle)) {
-      setAuthStatus('signupStatus', 'url name は英数字・ハイフン・アンダースコアのみ使用できます。', 'err'); return;
+    if (!/^[a-z0-9_-]+$/.test(handle)) {
+      setAuthStatus('signupStatus', 'url name は半角小文字英数字・ハイフン・アンダースコアのみ使用できます。', 'err'); return;
     }
     if (!tosAgreed) {
       setAuthStatus('signupStatus', '利用規約・プライバシーポリシー・コミュニティガイドラインへの同意が必要です。', 'err'); return;
@@ -15791,7 +15791,7 @@
     if (!supabaseClient)  { setStatus('バックエンドが読み込めていません。', 'err'); return; }
     if (!newDisplayName)  { setStatus('name を入力してください。', 'err'); return; }
     if (!newHandle)       { setStatus('url name を入力してください。', 'err'); return; }
-    if (!/^[a-zA-Z0-9_-]+$/.test(newHandle)) { setStatus('url name は英数字・ハイフン・アンダースコアのみ使用できます。', 'err'); return; }
+    if (!/^[a-z0-9_-]+$/.test(newHandle)) { setStatus('url name は半角小文字英数字・ハイフン・アンダースコアのみ使用できます。', 'err'); return; }
     setStatus('保存中…');
 
     // Helper: race any awaitable against a timeout so nothing hangs forever
