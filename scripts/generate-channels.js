@@ -415,6 +415,98 @@ ${bt.artist ? `<p style="font-size:.8rem;opacity:.5">${esc(bt.artist)}</p>` : ''
   }
   console.log(`  ✓ ${allPublicBlocks.length} block pages generated`);
 
+  // ── タグページ (/tags/[tag]/) ─────────────────────────────
+  console.log('Generating tag pages...');
+
+  function parseTags(str) {
+    if (!str) return [];
+    return str.split(/[,、，\n]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  }
+  function tagToSlug(tag) {
+    return tag.replace(/\s+/g, '-').replace(/[^\w.\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  // タグ → ブロック一覧のマップを構築
+  const tagMap = new Map(); // tag → [{ bt, block, owner }]
+  for (const block of allPublicBlocks) {
+    let payload = block.payload;
+    if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) { payload = {}; } }
+    payload = payload || {};
+    const tags = parseTags(payload.context);
+    const bt = extractBlockText(block);
+    const owner = profileMap[block.owner_id] || { slug: block.owner_id?.slice(0, 8) || 'unknown', displayName: 'unknown' };
+    for (const tag of tags) {
+      if (!tagMap.has(tag)) tagMap.set(tag, []);
+      tagMap.get(tag).push({ bt, block, owner });
+    }
+  }
+
+  const TAGS_DIR = path.join(__dirname, '..', 'tags');
+  if (fs.existsSync(TAGS_DIR)) fs.rmSync(TAGS_DIR, { recursive: true });
+  fs.mkdirSync(TAGS_DIR, { recursive: true });
+
+  let tagPageCount = 0;
+  for (const [tag, items] of tagMap) {
+    const slug = tagToSlug(tag);
+    if (!slug || items.length < 1) continue;
+
+    const canonical = `${SITE_URL}/tags/${slug}/`;
+    const redirect  = `${SITE_URL}/#tag=${encodeURIComponent(tag)}`;
+    const desc = `Ateli.erで「#${tag}」タグが付いた音楽・画像・テキスト・リンクのコレクション。アルゴリズムなし、数字なし。`;
+    const ogImage = convertOgImageUrl(items.find(i => i.bt.ogImage)?.bt.ogImage) || DEFAULT_OGP;
+
+    const listHtml = `<ul style="list-style:none;padding:0;margin:0">${
+      items.map(({ bt, owner }) => {
+        const sub = [bt.artist, bt.context].filter(Boolean).join(' — ').slice(0, 100);
+        return `<li style="padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.06)">
+  <span style="font-size:.85rem">${esc(bt.title || `(${bt.kind})`)}</span>${sub ? `<br><span style="font-size:.75rem;opacity:.5">${esc(sub)}</span>` : ''}
+  <br><span style="font-size:.7rem;opacity:.4">by <a href="${SITE_URL}/ch/${esc(owner.slug)}/" style="color:#a89060">${esc(owner.displayName)}</a></span>
+</li>`;
+      }).join('')
+    }</ul>`;
+
+    const tagHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<script>location.replace(${JSON.stringify(redirect)});</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#${esc(tag)} — Ateli.er</title>
+<meta name="description" content="${esc(desc)}">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="${esc(canonical)}">
+<meta property="og:title" content="#${esc(tag)} — Ateli.er">
+<meta property="og:description" content="${esc(desc)}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${esc(canonical)}">
+<meta property="og:image" content="${esc(ogImage)}">
+<meta property="og:site_name" content="Ateli.er">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="#${esc(tag)} — Ateli.er">
+<meta name="twitter:description" content="${esc(desc)}">
+<meta name="twitter:image" content="${esc(ogImage)}">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"CollectionPage","name":"#${esc(tag)} — Ateli.er","description":"${esc(desc)}","url":"${esc(canonical)}"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Ateli.er","item":"${SITE_URL}/"},{"@type":"ListItem","position":2,"name":"#${esc(tag)}","item":"${esc(canonical)}"}]}
+</script>
+<style>body{font-family:sans-serif;background:#0e0e0c;color:#c8c5bc;margin:0;padding:2rem;max-width:600px}a{color:#a89060}h1{font-size:1.1rem;font-weight:400;margin-bottom:.5rem}p{font-size:.85rem;opacity:.6;margin-bottom:1.5rem}</style>
+</head>
+<body>
+<h1>#${esc(tag)}</h1>
+<p>${esc(items.length)} items tagged with #${esc(tag)} on Ateli.er</p>
+${listHtml}
+<p style="font-size:.75rem;opacity:.4;margin-top:2rem">Redirecting to Ateli.er…</p>
+</body>
+</html>`;
+
+    writeFile(path.join(TAGS_DIR, slug, 'index.html'), tagHtml);
+    sitemapUrls.push(canonical);
+    tagPageCount++;
+  }
+  console.log(`  ✓ ${tagPageCount} tag pages generated`);
+
   // ── Courtyard ページ ──────────────────────────────────────
   console.log('Generating courtyard page...');
   let courtyardBlocks = [];
