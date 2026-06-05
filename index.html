@@ -6396,15 +6396,29 @@
       const track = document.getElementById('imageTrack');
       if (!track || track._touchPauseWired) return;
       track._touchPauseWired = true;
-      const pause = () => { track.style.animationPlayState = 'paused'; };
-      const resume = () => { track.style.animationPlayState = 'running'; };
+      const pause = () => {
+        clearTimeout(track._resumeTimer);
+        track.style.animationPlayState = 'paused';
+      };
+      const resume = () => {
+        // Delay resume so the click event fires on the correct element
+        // before the animation moves items (touchend fires before click on iOS).
+        clearTimeout(track._resumeTimer);
+        track._resumeTimer = setTimeout(() => {
+          track.style.animationPlayState = 'running';
+        }, 80);
+      };
       track.addEventListener('touchstart', pause, { passive: true });
       track.addEventListener('touchend', resume, { passive: true });
       track.addEventListener('touchcancel', resume, { passive: true });
     })();
 
     // ─── Click bindings ───
+    // Guard: _clickWired prevents duplicate listeners when renderMarquees()
+    // is called multiple times without DOM change (_setTrackIfChanged cache hit).
     document.querySelectorAll('.phrase-item, .title-item, .image-item').forEach(el => {
+      if (el._clickWired) return;
+      el._clickWired = true;
       const kind = el.dataset.kind;
       el.addEventListener('click', () => {
         if (kind === 'phrase' || kind === 'metadata') {
