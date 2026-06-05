@@ -59,11 +59,12 @@ function extractBlockText(block) {
   const kind = block.kind || payload.kind || '';
 
   if (kind === 'audio') {
+    const phrases = (payload.phrases || []).filter(Boolean).join(' / ');
     return {
       kind:    'audio',
       title:   payload.title  || '',
       artist:  payload.artist || '',
-      context: [payload.description, payload.phrase].filter(Boolean).join(' — ') || payload.context || '',
+      context: [payload.description, phrases].filter(Boolean).join(' — ') || payload.context || '',
       ogImage: payload.imageUrl || payload.ogImage || null,
     };
   }
@@ -71,28 +72,20 @@ function extractBlockText(block) {
     return {
       kind:    'url',
       title:   payload.title  || payload.source || '',
-      context: payload.description || payload.context || '',
+      artist:  payload.context || payload.source || '',
+      context: payload.description || '',
       ogImage: payload.ogImage || payload.imageUrl || null,
     };
   }
   if (kind === 'text') {
-    // payload.text が本文（最大2000文字）、titleがタイトル、descriptionが補足
+    const shortTitle = payload.title || (payload.text ? payload.text.slice(0, 80) + (payload.text.length > 80 ? '…' : '') : '');
     const bodyText = [payload.text, payload.description].filter(Boolean).join('\n');
     return {
       kind:    'text',
-      title:   payload.title || payload.text || '',
+      title:   shortTitle,
       artist:  payload.context || '',
       context: bodyText,
       ogImage: null,
-    };
-  }
-  if (kind === 'url') {
-    return {
-      kind:    'url',
-      title:   payload.title || payload.source || '',
-      artist:  payload.context || payload.source || '',
-      context: payload.description || '',
-      ogImage: payload.ogImage || payload.imageUrl || null,
     };
   }
   if (kind === 'image') {
