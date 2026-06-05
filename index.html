@@ -8574,9 +8574,10 @@
           b.isPublic = false;
           mutated = true;
         }
-        // Always remove from public_blocks if channel is draft (idempotent).
+        // DB-first: set is_public=false instead of deleting, so draft blocks
+        // survive new-device login and can be restored via _importFromPublicBlocks.
         if (b.channelId === cid) {
-          try { atelierPublic?.remove(b.id); } catch (e) {}
+          try { atelierPublic?.sync(b); } catch (e) {}
         }
       });
       if (mutated) saveBlocks(blocks);
@@ -14548,6 +14549,7 @@
             // (新デバイスログイン・row 消失どちらにも対応)
             console.log('[atelierSync] pull: user_state empty — importing from public_blocks');
             try { await _importFromPublicBlocks(); } catch(e) {}
+            _fetchAndMergeChannelMeta().catch(() => {});
             lastPushedJson = JSON.stringify(_snapshot());
             localStorage.setItem(LAST_USER_KEY, currentUser.id);
             isPulling = false;
@@ -14598,6 +14600,9 @@
           if (typeof _rehydrateFromLocalStorage === 'function') _rehydrateFromLocalStorage();
           lastPushedJson = JSON.stringify(_snapshot());
           localStorage.setItem(LAST_USER_KEY, currentUser.id);
+          // DB-first: fetch channel metadata (mainPhrase/meta) from channels table
+          // and merge into in-memory CHANNELS so My Channel always shows correct data.
+          _fetchAndMergeChannelMeta().catch(() => {});
           // Fire-and-forget: merge own public_blocks rows that are missing or
           // newer than local (handles Clip extension blocks and cross-device edits).
           // Runs before reconcile so newly imported blocks aren't deleted as orphans.
@@ -14730,6 +14735,41 @@
     }, 80);
   });
 
+  // ──────────────── DB-first: channels テーブルから mainPhrase/meta を取得 ────────────────
+  // ログイン後に自分の channels 行を取得して in-memory CHANNELS に mainPhrase/meta を補完する。
+  // localStorage の CHANNEL_EDITS_KEY より DB が正なので、DB の値を優先して上書きする。
+  async function _fetchAndMergeChannelMeta() {
+    if (!currentUser?.id) return;
+    const token = (() => {
+      try {
+        const k = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        return k ? JSON.parse(localStorage.getItem(k) || 'null')?.access_token : null;
+      } catch(e) { return null; }
+    })();
+    if (!token) return;
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/channels?owner_id=eq.${encodeURIComponent(currentUser.id)}&select=id,label,main_phrase,meta,lang,is_public&limit=200`,
+        { headers: { apikey: SUPABASE_PUB_KEY, Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) return;
+      let updated = false;
+      for (const r of rows) {
+        const ch = (typeof CHANNELS !== 'undefined' ? CHANNELS : []).find(c => c.id === r.id);
+        if (ch) {
+          if (r.main_phrase) ch.mainPhrase = r.main_phrase;
+          if (r.meta)        ch.meta        = r.meta;
+          if (r.lang)        ch.lang        = r.lang;
+          if (r.label)       ch.label       = r.label;
+          updated = true;
+        }
+      }
+      if (updated && typeof renderChannelGrid === 'function') renderChannelGrid();
+    } catch(e) { /* fire and forget */ }
+  }
+
   // ──────────────── Clip 拡張 / クロスデバイス補完 ────────────────
   // public_blocks に存在するが user_state (localStorage) にないブロックを補完する。
   // Atelier Clip 拡張が public_blocks に直接書いた行や、別デバイスで追加した公開ブロックが対象。
@@ -14745,7 +14785,7 @@
     try {
       const res = await Promise.race([
         fetch(
-          `${SUPABASE_URL}/rest/v1/public_blocks?owner_id=eq.${encodeURIComponent(currentUser.id)}&select=id,ts,payload,kind,channel_id,channel_label&order=ts.desc&limit=200`,
+          `${SUPABASE_URL}/rest/v1/public_blocks?owner_id=eq.${encodeURIComponent(currentUser.id)}&select=id,ts,payload,kind,channel_id,channel_label,is_public&order=ts.desc&limit=200`,
           { headers: { 'apikey': SUPABASE_PUB_KEY, 'Authorization': `Bearer ${token}` } }
         ),
         new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
@@ -14767,7 +14807,7 @@
             ...payload,
             id: r.id,
             kind: r.kind,
-            isPublic: true,
+            isPublic: r.is_public !== false,
             channelId: r.channel_id || payload.channelId || null,
             ts: r.ts || Date.now(),
           };
@@ -14781,7 +14821,7 @@
             ...payload,
             id: r.id,
             kind: r.kind || local.kind,
-            isPublic: true,
+            isPublic: r.is_public !== false,
             channelId: r.channel_id || payload.channelId || local.channelId || null,
             ts: r.ts,
           };
@@ -14873,6 +14913,7 @@
         payload: block,
         ts: block.ts || Date.now(),
         sort_order: _sortOrder,
+        is_public: block.isPublic !== false,
       };
       try {
         const res = await Promise.race([
@@ -14968,9 +15009,10 @@
           _warnedUnnamedChannels.add(block.channelId);
           try { showToast(t('toastChannelNoName')); } catch (e) {}
         }
-        return await upsert(block);
       }
-      return await remove(block.id);
+      // DB-first: always upsert (draft → is_public=false, public → is_public=true).
+      // Keeping the row lets new-device login restore draft blocks too.
+      return await upsert(block);
     }
     async function list(limit) {
       const url = `${SUPABASE_URL}/rest/v1/public_blocks?select=*&order=ts.desc&limit=${limit || 60}`;
