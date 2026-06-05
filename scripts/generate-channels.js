@@ -423,7 +423,13 @@ ${bt.artist ? `<p style="font-size:.8rem;opacity:.5">${esc(bt.artist)}</p>` : ''
     return str.split(/[,、，\n]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
   }
   function tagToSlug(tag) {
-    return tag.replace(/\s+/g, '-').replace(/[^\w.\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    // Preserve non-ASCII (Japanese etc.) — GitHub Pages URL-decodes %XX so
+    // /tags/滋賀/ and /tags/%E6%BB%8B%E8%B3%80/ resolve to the same file.
+    return tag
+      .replace(/\s+/g, '-')
+      .replace(/[^\w.\-ÿ-￿]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   // タグ → ブロック一覧のマップを構築
