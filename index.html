@@ -13683,12 +13683,21 @@
     const chMatches = _chPool.filter(c =>
       _matches(c.label, q) || _matches(c.mainPhrase, q) || _matches(c.meta, q)
     );
-    // Block matches (non-audio: text / url / image)
-    const _blkMatches = (typeof loadBlocks === 'function') ? loadBlocks().filter(b => {
-      if (b.kind === 'audio') return false; // audio covered by TRACKS
+    // Tag matches — uses buildTagIndex which includes cross-user broadcast blocks
+    const _tagIdx = (typeof buildTagIndex === 'function') ? buildTagIndex() : new Map();
+    const tagMatches = [..._tagIdx.entries()]
+      .filter(([tag]) => _matches(tag, q))
+      .slice(0, 12)
+      .map(([tag, { items }]) => ({ tag, count: items.length }));
+
+    // Block matches — use _broadcastBlocks for cross-user + remote own blocks (fixes mobile)
+    const _allBlocks = (typeof _broadcastBlocks === 'function')
+      ? _broadcastBlocks().filter(b => b.kind !== 'audio')
+      : (typeof loadBlocks === 'function' ? loadBlocks().filter(b => b.kind !== 'audio') : []);
+    const _blkMatches = _allBlocks.filter(b => {
       return _matches(b.title, q) || _matches(b.text, q) || _matches(b.source, q)
           || _matches(b.url, q) || _matches(b.caption, q) || _matches(b.context, q);
-    }) : [];
+    });
     // Track matches
     const trMatches = TRACKS.filter(t => {
       const m = t.metadata || {};
@@ -13705,6 +13714,19 @@
     });
 
     let html = '';
+    if (tagMatches.length) {
+      html += `<div style="margin-bottom: 28px;">
+        <h4 style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gray); margin-bottom: 12px;">— tags · ${tagMatches.length}</h4>
+        <ul>${
+          tagMatches.map(({ tag, count }) => `
+            <li class="srch-tag" data-tag="${escapeHtml(tag)}" style="display: flex; align-items: baseline; gap: 18px; padding: 10px 0; border-bottom: 1px dashed var(--line-soft); cursor: pointer;">
+              <span style="font-family: var(--sans-jp); font-size: 14px; color: var(--ink);">#${escapeHtml(tag)}</span>
+              <span style="font-family: var(--mono); font-size: 9.5px; color: var(--gray);">${count} block${count !== 1 ? 's' : ''}</span>
+            </li>
+          `).join('')
+        }</ul>
+      </div>`;
+    }
     if (chMatches.length) {
       html += `<div style="margin-bottom: 28px;">
         <h4 style="font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gray); margin-bottom: 12px;">— channels · ${chMatches.length}</h4>
@@ -13750,12 +13772,19 @@
         }</ul>
       </div>`;
     }
-    if (!chMatches.length && !trMatches.length && !_blkMatches.length) {
+    if (!tagMatches.length && !chMatches.length && !trMatches.length && !_blkMatches.length) {
       html = `<p style="font-family: var(--mono); font-size: 11px; color: var(--gray); letter-spacing: 0.06em; padding: 16px 0;">— no matches.</p>`;
     }
     out.innerHTML = html;
 
     // Wire result clicks
+    out.querySelectorAll('.srch-tag').forEach(el => {
+      el.addEventListener('click', () => {
+        const tag = el.dataset.tag;
+        closeSearch();
+        if (tag && typeof openTagModal === 'function') openTagModal(tag);
+      });
+    });
     out.querySelectorAll('.srch-ch').forEach(el => {
       el.addEventListener('click', () => {
         const cid = el.dataset.cid;
