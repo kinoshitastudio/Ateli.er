@@ -13900,6 +13900,25 @@
   window.addEventListener('popstate', () => {
     if (_navIgnorePopstate) return;
     if (navStack.length === 0) return;
+
+    // If a block is open within pieceModal (Explore/visitor mode),
+    // browser back should return to the parent channel — not close pieceModal.
+    if (currentBlockModalId && navStack[navStack.length - 1] === 'pieceModal') {
+      const _cr  = (typeof _explorePublicCache !== 'undefined') ? _explorePublicCache[currentBlockModalId] : null;
+      const _cx  = !_cr ? (crossUserBlocksCache || []).find(b => b.id === currentBlockModalId) : null;
+      const _cid = _cr?.channel_id || _cx?.channelId || _cx?._hostChannelId;
+      const _oid = _cr?.owner_id   || _cx?._ownerId  || _cx?.ownerId;
+      const _oh  = _cr?.owner_handle || _cx?._ownerHandle || _cx?.ownerHandle || '';
+      const _cl  = _cr?.channel_label || _cx?._externalChannelLabel || '';
+      if (_cid && _oid && typeof openUserChannel === 'function') {
+        currentBlockModalId = null; currentBlockModalKind = null;
+        try { history.replaceState({ atelierNav: 'pieceModal' }, ''); } catch (_) {}
+        openUserChannel({ ownerId: _oid, handle: _oh, channelId: _cid, channelLabel: _cl });
+        _syncBodyOverlay();
+        return;
+      }
+    }
+
     const id = navStack.pop();
     _doCloseOverlay(id);
     _syncBodyOverlay();
