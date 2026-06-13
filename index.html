@@ -8097,18 +8097,20 @@
     $('#channelDetailView').hidden = false;
     // If mainPhrase is empty (e.g. after user_state restore from public_blocks),
     // fetch from Supabase channels table and patch DOM + in-memory CHANNELS.
-    if (!c.mainPhrase && cid && _channelMetaCache[cid] === undefined) {
-      _channelMetaCache[cid] = null;
+    const _ownCacheKey = `${currentUser?.id || ''}:${cid}`;
+    if (!c.mainPhrase && cid && _channelMetaCache[_ownCacheKey] === undefined) {
+      _channelMetaCache[_ownCacheKey] = null;
       (async () => {
         try {
+          const _ownerFilter = currentUser?.id ? `&owner_id=eq.${encodeURIComponent(currentUser.id)}` : '';
           const _mr = await fetch(
-            `${SUPABASE_URL}/rest/v1/channels?id=eq.${encodeURIComponent(cid)}&select=label,main_phrase,meta&limit=1`,
+            `${SUPABASE_URL}/rest/v1/channels?id=eq.${encodeURIComponent(cid)}${_ownerFilter}&select=label,main_phrase,meta&limit=1`,
             { headers: { apikey: SUPABASE_PUB_KEY } }
           );
           if (!_mr.ok) return;
           const _mrows = await _mr.json();
           if (!Array.isArray(_mrows) || _mrows.length === 0) return;
-          _channelMetaCache[cid] = _mrows[0];
+          _channelMetaCache[_ownCacheKey] = _mrows[0];
           const _phrase = _mrows[0].main_phrase;
           if (!_phrase) return;
           const _ch = CHANNELS.find(x => x.id === cid);
@@ -13426,7 +13428,8 @@
     }
     const createdLabel = createdTs ? ageString(createdTs) : '—';
     const editedLabel  = editedTs ? ageString(editedTs) : '—';
-    const _cachedMeta = _channelMetaCache[channelId];
+    const _extCacheKey = `${ownerId}:${channelId}`;
+    const _cachedMeta = _channelMetaCache[_extCacheKey];
     const channelMeta = channel?.meta || (_cachedMeta ? _cachedMeta.meta || '' : '');
     const channelMainPhrase = channel?.mainPhrase || (_cachedMeta ? _cachedMeta.main_phrase || '' : '');
     // mainPhrase / meta line: pull from any one block's channel_label (we
@@ -13550,18 +13553,18 @@
     inner.innerHTML = headHtml + bodyHtml;
     // ユーザー作成チャンネルの mainPhrase は CHANNELS に入っていないので
     // channels テーブルから非同期で取得してキャッシュ + DOM補完する
-    if (!channelMainPhrase && channelId && _channelMetaCache[channelId] === undefined) {
-      _channelMetaCache[channelId] = null; // フェッチ中フラグ
+    if (!channelMainPhrase && channelId && _channelMetaCache[_extCacheKey] === undefined) {
+      _channelMetaCache[_extCacheKey] = null; // フェッチ中フラグ
       (async () => {
         try {
           const _mr = await fetch(
-            `${SUPABASE_URL}/rest/v1/channels?id=eq.${encodeURIComponent(channelId)}&select=label,main_phrase,meta&limit=1`,
+            `${SUPABASE_URL}/rest/v1/channels?id=eq.${encodeURIComponent(channelId)}&owner_id=eq.${encodeURIComponent(ownerId)}&select=label,main_phrase,meta&limit=1`,
             { headers: { apikey: SUPABASE_PUB_KEY } }
           );
           if (!_mr.ok) return;
           const _mrows = await _mr.json();
           if (!Array.isArray(_mrows) || _mrows.length === 0) return;
-          _channelMetaCache[channelId] = _mrows[0];
+          _channelMetaCache[_extCacheKey] = _mrows[0];
           const _phrase = _mrows[0].main_phrase;
           if (!_phrase) return;
           const _dh = inner.querySelector('.ch-detail-head');
