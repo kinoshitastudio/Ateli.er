@@ -13416,7 +13416,9 @@
     // personal channels (Taka's seed channels) must not leak their metadata
     // (mainPhrase, meta) into other users' channel detail views.
     const _channelDef = (typeof CHANNELS !== 'undefined') ? CHANNELS.find(c => c.id === channelId) : null;
-    const channel = (_channelDef?.personal && !_isSelfChannel) ? null : _channelDef;
+    // CHANNELS は自分のチャンネルリスト。他ユーザーのチャンネルを見るとき使うと
+    // 自分の ch-u01 の mainPhrase が他ユーザーの ch-u01 に漏れる。
+    const channel = _isSelfChannel ? _channelDef : null;
     let createdTs, editedTs;
     if (channel) {
       createdTs = channel.createdAt || 0;
