@@ -257,11 +257,15 @@ async function main() {
   let channelMetaRows = [];
   try {
     channelMetaRows = await fetchJSON(
-      `${SUPABASE_URL}/rest/v1/channels?select=id,label,main_phrase,meta,is_public&is_public=eq.true&limit=1000`
+      `${SUPABASE_URL}/rest/v1/channels?select=id,owner_id,label,main_phrase,meta,is_public&is_public=eq.true&limit=1000`
     );
   } catch (e) { console.warn('channel meta fetch failed:', e.message); }
   const channelMeta = {};
-  for (const r of channelMetaRows) channelMeta[r.id] = r;
+  for (const r of channelMetaRows) {
+    // owner_id:channel_id の複合キーでインデックス（channel_id だけだと別ユーザーのデータが混入する）
+    const key = r.owner_id ? `${r.owner_id}:${r.id}` : r.id;
+    channelMeta[key] = r;
+  }
   console.log(`  ${channelMetaRows.length} channel meta rows found`);
 
   const sitemapUrls = [];
@@ -322,7 +326,7 @@ async function main() {
       }
 
       const label = ch.channel_label || ch.channel_id;
-      const cmeta = channelMeta[ch.channel_id] || {};
+      const cmeta = channelMeta[`${p.id}:${ch.channel_id}`] || channelMeta[ch.channel_id] || {};
       writeFile(
         path.join(OUT_DIR, handle, ch.channel_id, 'index.html'),
         buildChannelPage({
