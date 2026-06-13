@@ -169,9 +169,8 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
       : `${name}のチャンネル「${channelLabel}」。Ateli.erでキュレーションされたコレクション。`));
 
   const canonical = `${SITE_URL}/ch/${handle}/${channelId}/`;
-  // #ch=channelId は自分自身のチャンネルを開くコマンドのため、外部ユーザーのチャンネルには使えない。
-  // #u=userId でそのユーザーのポートフォリオを開くことで正しいユーザーのページに誘導する。
-  const redirect  = `${SITE_URL}/#u=${encodeURIComponent(userId)}`;
+  // #uch=userId/channelId でポートフォリオを開いた後、そのチャンネルに自動遷移する。
+  const redirect  = `${SITE_URL}/#uch=${encodeURIComponent(userId)}/${encodeURIComponent(channelId)}`;
 
   // ブロック一覧HTML
   const blockListHtml = blockTexts.length

@@ -12924,7 +12924,7 @@
   // their public channels rendered in the SAME polished ch-card grid style
   // as the owner's own My Channel tab (visitor read-only mode).
   // Owner can also open this overlay on themselves to preview the visitor view.
-  async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel, bio, snsUrl }) {
+  async function openUserPortfolio({ id: ownerId, handle, avatarUrl, joinedLabel, bio, snsUrl, _pendingChannelId = null }) {
     if (!ownerId) return;
     // Phase A-refactor 2 (2026-04-30): keep parent #modal Explore-active.
     if (typeof _markVisitorContextOnTabs === 'function') _markVisitorContextOnTabs();
@@ -13261,6 +13261,13 @@
     recentSection.querySelectorAll('.up-recent-item[data-pb-id]').forEach(el => {
       el.addEventListener('click', () => openExternalFromCache(el.dataset.pbId));
     });
+    // Deep-link: auto-open a specific channel after the portfolio grid loads.
+    if (_pendingChannelId) {
+      const targetCard = grid.querySelector(`.ch-card[data-pb-cid="${CSS.escape(_pendingChannelId)}"]`);
+      if (targetCard) {
+        openUserChannel({ ownerId, handle, channelId: _pendingChannelId, channelLabel: targetCard.dataset.pbClabel || _pendingChannelId });
+      }
+    }
   }
   // Drill into a specific channel of another user (read-only).
   // Uses the same polished ch-detail-head + ix-list HTML / classes as the
@@ -14357,14 +14364,15 @@
     history.replaceState(null, '', location.pathname);
   })();
 
-  // On load, capture any #b= / #ch= / #u= deep-link params and clear the hash.
+  // On load, capture any #b= / #ch= / #u= / #uch= deep-link params and clear the hash.
   // Actual navigation runs in _resolveDeepLink() after auth + data are ready.
   (function detectDeepLinkOnLoad() {
-    const mBlock   = location.hash.match(/^#b=(.+)$/);
-    const mChannel = location.hash.match(/^#ch=(.+)$/);
-    const mUser    = location.hash.match(/^#u=(.+)$/);
-    if (!mBlock && !mChannel && !mUser) return;
-    window._pendingDeepLink = { mBlock, mChannel, mUser };
+    const mBlock       = location.hash.match(/^#b=(.+)$/);
+    const mChannel     = location.hash.match(/^#ch=(.+)$/);
+    const mUser        = location.hash.match(/^#u=(.+)$/);
+    const mUserChannel = location.hash.match(/^#uch=([^/]+)\/(.+)$/);
+    if (!mBlock && !mChannel && !mUser && !mUserChannel) return;
+    window._pendingDeepLink = { mBlock, mChannel, mUser, mUserChannel };
     history.replaceState(null, '', location.pathname);
     // Prefetch block data immediately (parallel with auth+sync) so _resolveDeepLink
     // doesn't pay an extra Supabase roundtrip after push/pull finish.
@@ -14390,6 +14398,29 @@
     const p = window._pendingDeepLink;
     if (!p) return;
     window._pendingDeepLink = null;
+
+    if (p.mUserChannel) {
+      const uid       = decodeURIComponent(p.mUserChannel[1]);
+      const channelId = decodeURIComponent(p.mUserChannel[2]);
+      try {
+        const rows = await fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?select=*&id=eq.${encodeURIComponent(uid)}`,
+          { headers: { apikey: SUPABASE_PUB_KEY } }
+        ).then(r => r.ok ? r.json() : []);
+        const pr = rows && rows[0];
+        if (!pr) { try { showToast(t('toastResidentNotFound')); } catch (e) {} return; }
+        if (typeof _exploreProfilesCache !== 'undefined') _exploreProfilesCache[pr.id] = pr;
+        openModal('explore');
+        openUserPortfolio({
+          id: pr.id, handle: pr.handle,
+          avatarUrl: pr.avatar_url ? _thumbUrl(pr.avatar_url, 120) : '',
+          joinedLabel: pr.created_at ? ageString(new Date(pr.created_at).getTime()) : '',
+          bio: pr.bio || '', snsUrl: pr.sns_url || '',
+          _pendingChannelId: channelId,
+        });
+      } catch (e) {}
+      return;
+    }
 
     if (p.mUser) {
       const uid = decodeURIComponent(p.mUser[1]);
