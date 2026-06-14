@@ -40,6 +40,8 @@ function convertOgImageUrl(url) {
       .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
       .replace(/[?&]dl=0/, '').replace(/[?&]raw=0/, '');
   }
+  // HTTP URLs are blocked by X/Twitter mobile — skip and fall back to DEFAULT_OGP
+  if (url.startsWith('http://')) return null;
   return url;
 }
 
@@ -372,7 +374,7 @@ async function main() {
     const bt      = extractBlockText(block);
     const owner   = profileMap[block.owner_id] || { slug: block.owner_id?.slice(0, 8) || 'unknown', displayName: 'unknown' };
     const ogImage = convertOgImageUrl(bt.ogImage) || DEFAULT_OGP;
-    const title   = bt.title || `(${block.kind})`;
+    const title   = bt.title || owner.displayName || `(${block.kind})`;
     const desc    = [bt.artist, bt.context].filter(Boolean).join(' — ').slice(0, 200) || `${title} — Ateli.er`;
     const canonical = `${SITE_URL}/b/${block.id}/`;
     const redirect  = `${SITE_URL}/#b=${encodeURIComponent(block.id)}`;
