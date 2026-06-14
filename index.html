@@ -13156,7 +13156,14 @@
     // hardcoded seed order — same UX as before.
     const _SEED_ORDER = ['-01', '00', '01'];
     const _ownerProfile = (typeof _exploreProfilesCache !== 'undefined') ? _exploreProfilesCache[ownerId] : null;
-    const _ownerOrder = (Array.isArray(_ownerProfile?.channel_grid_order)) ? _ownerProfile.channel_grid_order : [];
+    // 自分のポートフォリオを見るときは My Channel と同じソース（localStorage）を使う。
+    // profiles.channel_grid_order はキャッシュ同期タイミングによりズレが生じることがあるため。
+    let _ownerOrder = [];
+    if (_isSelfPortfolio && typeof loadChannelGridOrder === 'function') {
+      _ownerOrder = loadChannelGridOrder();
+    } else if (Array.isArray(_ownerProfile?.channel_grid_order)) {
+      _ownerOrder = _ownerProfile.channel_grid_order;
+    }
     const _channelSortIndex = (cid) => {
       const userIdx = _ownerOrder.indexOf(cid);
       if (userIdx >= 0) return userIdx;
