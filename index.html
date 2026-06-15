@@ -11917,7 +11917,7 @@
     const isBlockOwner = !!(currentUser?.id && blockOwnerId === currentUser.id);
     const composer = `
       <form class="ptc-composer" data-bid="${escapeHtml(blockId)}">
-        <input type="text" class="ptc-composer-input" placeholder="${escapeHtml(t('composerPlaceholder'))}" maxlength="160" autocomplete="off">
+        <input type="text" class="ptc-composer-input" placeholder="${escapeHtml(t('composerPlaceholder'))}" maxlength="400" autocomplete="off">
         <button type="submit" class="ptc-composer-submit">${t('composerLeave')}</button>
       </form>
     `;
