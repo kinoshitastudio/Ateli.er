@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ateli.er — シェアリンク</title>
+<meta name="description" content="Ateli.er のシェアリンクです。自動的に転送されます。">
+<meta name="robots" content="noindex,follow">
+<style>
+  body{margin:0;background:#0a0a0a;color:#ccc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center}
+  a{color:#fff;text-decoration:underline}
+</style>
+<script>
+  (function(){
+    var p = new URLSearchParams(location.search);
+    var type = p.get('type');
+    var id   = p.get('id');
+    var dest = '/';
+    if (type === 'block' && id)   dest = '/b/' + encodeURIComponent(id) + '/';
+    if (type === 'channel' && id) dest = '/';   // handle 未解決のためトップへ
+    location.replace(dest);
+  })();
+</script>
+</head>
+<body>
+<p>転送中… <a href="/">Ateli.er トップへ</a></p>
+</body>
+</html>
