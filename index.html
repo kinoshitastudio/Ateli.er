@@ -4464,6 +4464,10 @@
         <input type="checkbox" id="suTos" required>
         <span id="suTosText"></span>
       </label>
+      <label class="auth-form-tos">
+        <input type="checkbox" id="suEmailOptIn">
+        <span>アップデートや新機能のお知らせをメールで受け取る（任意）</span>
+      </label>
       <div class="auth-form-status" id="signupStatus"></div>
       <div class="auth-form-actions">
         <button type="button" class="auth-form-cancel" data-act="auth-switch-login">— already have an account?</button>
@@ -7645,11 +7649,15 @@
     // order immediately without waiting for the next periodic cache refresh.
     _pushChannelGridOrderToProfile(arr)
       .then(() => {
-        if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined' && _exploreProfilesCache[currentUser.id]) {
-          _exploreProfilesCache[currentUser.id].channel_grid_order = arr;
+        if (currentUser?.id && typeof _exploreProfilesCache !== 'undefined') {
+          if (_exploreProfilesCache[currentUser.id]) {
+            _exploreProfilesCache[currentUser.id].channel_grid_order = arr;
+          }
+          // Refresh profiles cache so /ch/<handle>/ visitor view picks up new order immediately.
+          try { if (typeof refreshProfilesCache === 'function') refreshProfilesCache(); } catch (e) {}
         }
       })
-      .catch(() => {});
+      .catch(e => console.warn('[channelGridOrder] push failed:', e));
   }
   async function _pushChannelGridOrderToProfile(arr) {
     if (!currentUser?.id || !SUPABASE_URL || !SUPABASE_PUB_KEY) return;
@@ -15652,7 +15660,8 @@
     const email       = document.getElementById('suEmail')?.value.trim();
     const displayName = document.getElementById('suDisplayName')?.value.trim();
     const handle      = document.getElementById('suHandle')?.value.trim().replace(/^@+/, '');
-    const tosAgreed   = document.getElementById('suTos')?.checked;
+    const tosAgreed    = document.getElementById('suTos')?.checked;
+    const emailOptIn   = document.getElementById('suEmailOptIn')?.checked ?? false;
     if (!email || !displayName || !handle) {
       setAuthStatus('signupStatus', 'すべての項目を入力してください。', 'err'); return;
     }
@@ -15670,7 +15679,7 @@
       email,
       options: {
         emailRedirectTo: redirectTo,
-        data: { handle, display_name: displayName, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion },
+        data: { handle, display_name: displayName, tos_accepted_at: tosAcceptedAt, tos_version: tosVersion, email_opt_in: emailOptIn },
       },
     });
     if (error) {
@@ -16029,10 +16038,19 @@
           // already created a default email-derived row). The SDK builder is
           // known to hang in this env, so race it against a 5s timeout and
           // never block the rest of the sign-in flow on it.
+          // IMPORTANT: only overwrite profiles.handle if it has no valid slug yet.
+          // Japanese/non-ASCII user_metadata.handle would produce an empty slug
+          // via _handleToSlug, breaking /ch/<handle>/ URLs for existing users.
           Promise.race([
-            supabaseClient.from('profiles')
-              .update({ handle: chosenHandle, display_name: chosenHandle })
-              .eq('id', user.id),
+            (async () => {
+              const { data: existing } = await supabaseClient.from('profiles')
+                .select('handle').eq('id', user.id).maybeSingle();
+              const existingSlug = _handleToSlug(existing?.handle || '');
+              const patch = existingSlug
+                ? { display_name: chosenHandle }                        // handle already set — only update display_name
+                : { handle: chosenHandle, display_name: chosenHandle }; // new user — set both
+              await supabaseClient.from('profiles').update(patch).eq('id', user.id);
+            })(),
             new Promise(res => setTimeout(() => res({ timeout: true }), 5000)),
           ]).catch(() => { /* swallow */ });
         }
