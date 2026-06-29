@@ -114,7 +114,7 @@ function buildUserPage({ handle, displayName, avatarUrl, bio, userId, channelCou
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
-<script>location.replace(${JSON.stringify(redirect)});</script>
+<script>(function(){if(!/bot|crawl|spider|slurp|google|bing|yandex|baidu|duckduckbot|facebookexternalhit|twitterbot|slackbot|discordbot|embedly|whatsapp|telegram|pinterest|linkedinbot|applebot/i.test(navigator.userAgent||''))location.replace(${JSON.stringify(redirect)});})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
@@ -189,7 +189,7 @@ function buildChannelPage({ handle, displayName, userId, channelId, channelLabel
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
-<script>location.replace(${JSON.stringify(redirect)});</script>
+<script>(function(){if(!/bot|crawl|spider|slurp|google|bing|yandex|baidu|duckduckbot|facebookexternalhit|twitterbot|slackbot|discordbot|embedly|whatsapp|telegram|pinterest|linkedinbot|applebot/i.test(navigator.userAgent||''))location.replace(${JSON.stringify(redirect)});})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
@@ -382,7 +382,7 @@ async function main() {
     const blockHtml = `<!DOCTYPE html>
 <html lang="ja">
 <head>
-<script>location.replace(${JSON.stringify(redirect)});</script>
+<script>(function(){if(!/bot|crawl|spider|slurp|google|bing|yandex|baidu|duckduckbot|facebookexternalhit|twitterbot|slackbot|discordbot|embedly|whatsapp|telegram|pinterest|linkedinbot|applebot/i.test(navigator.userAgent||''))location.replace(${JSON.stringify(redirect)});})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)} — Ateli.er</title>
@@ -481,7 +481,7 @@ ${bt.artist ? `<p style="font-size:.8rem;opacity:.5">${esc(bt.artist)}</p>` : ''
     const tagHtml = `<!DOCTYPE html>
 <html lang="ja">
 <head>
-<script>location.replace(${JSON.stringify(redirect)});</script>
+<script>(function(){if(!/bot|crawl|spider|slurp|google|bing|yandex|baidu|duckduckbot|facebookexternalhit|twitterbot|slackbot|discordbot|embedly|whatsapp|telegram|pinterest|linkedinbot|applebot/i.test(navigator.userAgent||''))location.replace(${JSON.stringify(redirect)});})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>#${esc(tag)} — Ateli.er</title>
@@ -580,7 +580,7 @@ ${listHtml}
 </div>
 ${courtyardListHtml}
 <p class="redirect">Redirecting to Ateli.er Courtyard…</p>
-<script>location.replace("${SITE_URL}/#tab=courtyard");</script>
+<script>(function(){if(!/bot|crawl|spider|slurp|google|bing|yandex|baidu|duckduckbot|facebookexternalhit|twitterbot|slackbot|discordbot|embedly|whatsapp|telegram|pinterest|linkedinbot|applebot/i.test(navigator.userAgent||''))location.replace("${SITE_URL}/#tab=courtyard");})();</script>
 </body>
 </html>`;
 
@@ -635,7 +635,7 @@ ${courtyardListHtml}
 </div>
 <ul style="list-style:none;padding:0;margin:0">${exploreUserListHtml}</ul>
 <p class="redirect">Redirecting to Ateli.er Explore…</p>
-<script>location.replace("${SITE_URL}/#tab=explore");</script>
+<script>(function(){if(!/bot|crawl|spider|slurp|google|bing|yandex|baidu|duckduckbot|facebookexternalhit|twitterbot|slackbot|discordbot|embedly|whatsapp|telegram|pinterest|linkedinbot|applebot/i.test(navigator.userAgent||''))location.replace("${SITE_URL}/#tab=explore");})();</script>
 </body>
 </html>`;
 
