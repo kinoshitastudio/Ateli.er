@@ -9941,6 +9941,17 @@
   }
   const USER_CHANNELS_KEY = 'atelier_user_channels_v1';
   function loadUserChannels() { try { return JSON.parse(localStorage.getItem(USER_CHANNELS_KEY)) || []; } catch(e) { return []; } }
+  // True only when this browser actually holds the user's portfolio content
+  // (own blocks or own channels). Used to gate the pre-pull / flush pushes: a
+  // blank device — first login, or after iOS ITP wiped localStorage — must NOT
+  // push an empty snapshot, or it overwrites the server's real user_state and
+  // the following pull restores that emptiness. That is the recurring
+  // "My Channel empty on mobile" data loss. See atelier-bug-fix-master.md.
+  function _hasLocalAtelierData() {
+    try { const b = JSON.parse(localStorage.getItem('atelier_blocks_v1') || '[]'); if (Array.isArray(b) && b.length > 0) return true; } catch (e) {}
+    try { const c = JSON.parse(localStorage.getItem(USER_CHANNELS_KEY) || '[]'); if (Array.isArray(c) && c.length > 0) return true; } catch (e) {}
+    return false;
+  }
   function saveUserChannels(arr) { _safeSetItem(USER_CHANNELS_KEY, JSON.stringify(arr)); }
   function applyUserChannels() {
     const arr = loadUserChannels();
@@ -16063,7 +16074,12 @@
         // Pre-pull push: flush any pending local edits so pull doesn't overwrite
         // them with stale server data (push timer may have been cancelled by nav).
         // Skip for user-switch — that path already wiped localStorage above.
-        if (!_prevUserId || _prevUserId === user.id) {
+        // Guard: only flush local up when this browser actually holds content.
+        // A blank device (first login / ITP-wiped localStorage) would otherwise
+        // push an empty snapshot and clobber the server's real state; the pull
+        // below then restores emptiness ("My Channel empty on mobile" loss).
+        // (Still skipped on user-switch — that path already wiped localStorage.)
+        if ((!_prevUserId || _prevUserId === user.id) && _hasLocalAtelierData()) {
           try { await atelierSync.push(true); } catch (e) {}
         }
         try {
@@ -16176,7 +16192,12 @@
     // Existing session on reload: pull latest state from DB before rendering.
     // Pre-pull push: flush any local edits whose debounce timer was cancelled
     // before navigation, so pull doesn't restore stale server data.
-    try { await atelierSync.push(true); } catch (e) {}
+    // Guard: only when this browser holds real content — a blank device (ITP
+    // cleared localStorage) must NOT push empty over the server, or the pull
+    // below restores emptiness ("My Channel empty on mobile" data loss).
+    if (_hasLocalAtelierData()) {
+      try { await atelierSync.push(true); } catch (e) {}
+    }
     try {
       const ok = await atelierSync.pull();
       if (ok) {
@@ -16334,7 +16355,9 @@
     } else {
       // Tab hidden / iOS background: flush pending edits immediately so the
       // debounce timer doesn't get killed before it fires (common on iOS Safari).
-      if (typeof atelierSync !== 'undefined' && currentUser) {
+      // Guarded by _hasLocalAtelierData so a blank/ITP-wiped tab can't flush an
+      // empty snapshot over the server's real state.
+      if (typeof atelierSync !== 'undefined' && currentUser && _hasLocalAtelierData()) {
         try { atelierSync.push(true); } catch (e) {}
       }
     }
