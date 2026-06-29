@@ -2806,6 +2806,16 @@
   .piece-modal-image svg { width: 100%; height: 100%; display: block; }
   .piece-modal-image img { cursor: zoom-in; opacity: 0; transition: opacity 0.3s ease; }
   .piece-modal-image img.is-loaded { opacity: 1; }
+  /* Failed-image badge: shown by _imgFailed() when an image can't load (e.g.
+     unsupported Dropbox link), so the loading shimmer resolves to a clear
+     "source error" instead of spinning forever. */
+  .img-broken-badge {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .04em;
+    color: var(--gray-2); background: var(--paper-2);
+    text-align: center; padding: 4px; overflow: hidden; pointer-events: none;
+  }
   .piece-modal-image:not(:has(img.is-loaded)) {
     background: linear-gradient(90deg, var(--paper-2) 25%, var(--line-soft) 50%, var(--paper-2) 75%);
     background-size: 200% 100%;
@@ -6055,9 +6065,8 @@
           if (original) { img.src = decodeURIComponent(original); return; }
         } catch (e) {}
       }
-      // All wsrv.nl paths exhausted — hide, stamp is-loaded to stop shimmer
-      img.style.display = 'none';
-      img.classList.add('is-loaded');
+      // All wsrv.nl paths exhausted — mark failed (stops shimmer, shows ⚠)
+      window._imgFailed(img);
       return;
     }
 
@@ -6069,10 +6078,43 @@
       img.src = `https://wsrv.nl/?url=${encodeURIComponent(clean)}&w=400&output=webp&q=60`;
       return;
     }
-    // All retries exhausted — hide and stamp is-loaded to stop shimmer
+    // All retries exhausted — mark failed (stops shimmer, shows ⚠)
+    window._imgFailed(img);
+  };
+
+  // Shared "image failed for good" finalizer. Stops the loading shimmer
+  // (is-loaded clears the :not(:has(img.is-loaded)) rule) and surfaces a
+  // ⚠ source-error badge in place of the image, instead of leaving the
+  // gradient spinning forever (e.g. unsupported Dropbox image links).
+  // Idempotent — safe to call from both _imgRetry and the watchdog below.
+  window._imgFailed = function(img) {
+    if (!img || img.dataset.failed) return;
+    img.dataset.failed = '1';
     img.style.display = 'none';
     img.classList.add('is-loaded');
+    const parent = img.parentElement;
+    if (parent && !parent.querySelector('.img-broken-badge')) {
+      if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+      const b = document.createElement('span');
+      b.className = 'img-broken-badge';
+      b.textContent = '⚠ source error';
+      parent.appendChild(b);
+    }
   };
+  // Watchdog: a retry whose request hangs (no onload/onerror — common on mobile
+  // when a Dropbox share link returns an HTML page instead of image bytes) would
+  // keep the shimmer spinning forever. Sweep retry-managed images and fail any
+  // that have been loading too long, so the loading state always resolves to
+  // either the image or the ⚠ badge.
+  setInterval(function() {
+    document.querySelectorAll('img:not(.is-loaded)').forEach(function(img) {
+      if (img.dataset.failed) return;
+      if ((img.getAttribute('onerror') || '').indexOf('_imgRetry') === -1) return;
+      const started = +(img.dataset.loadStart || 0);
+      if (!started) { img.dataset.loadStart = String(Date.now()); return; }
+      if (Date.now() - started > 12000) window._imgFailed(img);
+    });
+  }, 3000);
   // All images render in their original colour. The `mono` flag is kept for
   // backward compatibility (call-site signatures unchanged) but no longer
   // forces grayscale — colour photos were appearing washed out in the grid.
