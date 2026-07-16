@@ -420,6 +420,12 @@
     display: none;  /* hidden until audio is actively playing */
   }
   .player.is-active { display: block; }
+  /* 🔧 再生中はプレイヤー(fixed; bottom:0・高さ約100px)の分だけスクロール領域の下余白を確保
+     ＝Courtyard等のリスト末尾がプレイヤーの裏に隠れないように（表示のみ／データ・JS非接触）。
+     iOSのホームバー分(safe-area)も加算。:has対応ブラウザで有効。 */
+  body:has(.player.is-active) .modal-shell {
+    padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+  }
 
   .player-controls {
     display: inline-flex; gap: 16px; align-items: center;
