@@ -238,6 +238,7 @@ details[open] .sum-icon { transform: rotate(90deg); }
   font-size: 13px;
   line-height: 1.75;
 }
+.callout b { font-weight: inherit; color: var(--ink); }   /* 強調しない＝太さでなく濃さで（.notice b と同原則） */
 .callout-tag {
   display: inline-block;
   font-family: var(--mono); font-size: 9px;
@@ -247,6 +248,29 @@ details[open] .sum-icon { transform: rotate(90deg); }
   border-radius: 999px;
   margin-bottom: 8px;
   text-transform: uppercase;
+}
+
+/* ── Chrome 拡張セクション（09 Player / 10 Clip）── */
+/* ロゴは囲まず余白に置く＝拡張だけがUIで飛び出さない */
+.ext-logo { text-align: center; margin: 4px 0 28px; }
+.ext-logo img {
+  width: 120px; height: 120px; object-fit: contain;
+  display: inline-block;
+}
+.ext-logo-note {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.2em; color: var(--gray);
+  margin-top: 10px;
+}
+.ext-actions {
+  display: flex; flex-wrap: wrap;
+  gap: 12px; align-items: center;
+  margin-bottom: 14px;
+}
+.ext-note {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.15em; color: var(--gray);
+  line-height: 1.8;
 }
 
 .notice {
@@ -822,6 +846,130 @@ footer.foot a:hover { border-bottom-color: rgba(255,255,255,0.82); }
         4. It appears in My Channel as a "pinned block"<br><br>
         The original stays with its owner. You <b>chose and placed</b> it.</span>
       </div>
+    </div>
+  </details>
+
+  <!-- 09 PLAYER（Chrome 拡張） -->
+  <details>
+    <summary>
+      <span class="sum-num">— 09</span>
+      <span class="sum-title">
+        <span class="lang-ja"><em>Ateli.er Player</em> — 新しいタブを、中庭に</span>
+        <span class="lang-en"><em>Ateli.er Player</em> — a new-tab courtyard</span>
+      </span>
+      <span class="sum-hint">chrome 拡張</span>
+      <span class="sum-icon">▶</span>
+    </summary>
+    <div class="acc-body">
+      <div class="ext-logo">
+        <img src="img/player-logo.png" alt="Ateli.er Player">
+        <p class="ext-logo-note">
+          <span class="lang-ja">— Chrome Web Store で公開中</span>
+          <span class="lang-en">— available on the Chrome Web Store</span>
+        </p>
+      </div>
+      <div class="section-desc">
+        <p class="lang-ja">投稿された未発表曲・写真・断片が、誰の操作も挟まず漂います。新しいタブを開くたびに<strong>中庭がはじまる</strong>。ツールバーから小窓でも開けるので、仕事中もデスクの脇で生き続けます。</p>
+        <p class="lang-en">Unreleased songs, photographs, half-thoughts — drifting on their own with no one driving. Every new tab <strong>opens into the courtyard</strong>. A small floating window keeps it alive at the corner of your desk, even while you work.</p>
+      </div>
+      <figure class="shot">
+        <img src="img/howto/13-player.png" alt="Ateli.er Player new tab">
+        <figcaption class="shot-caption">
+          <span><b>player</b> / 新しいタブが中庭になる</span>
+          <span>chrome extension</span>
+        </figcaption>
+      </figure>
+      <div class="shot-callouts">
+        <div class="callout">
+          <span class="callout-tag">new tab</span>
+          <span class="lang-ja"><b>新しいタブ</b>を開くたび、画面いっぱいの中庭。</span>
+          <span class="lang-en">A <b>full-screen courtyard</b> on every new tab.</span>
+        </div>
+        <div class="callout">
+          <span class="callout-tag">window</span>
+          <span class="lang-ja">ツールバーから、どこへでも動かせる<b>小窓モード</b>。</span>
+          <span class="lang-en">A <b>floating window</b> from the toolbar — drag it anywhere.</span>
+        </div>
+        <div class="callout">
+          <span class="callout-tag">mode</span>
+          <span class="lang-ja"><b>音だけ / 画像だけ</b>のモードにも切り替えできます。</span>
+          <span class="lang-en"><b>Audio-only or visual-only</b> modes, switchable.</span>
+        </div>
+      </div>
+      <div class="ext-actions">
+        <a class="btn" href="https://atelistudio.com/player.html" target="_blank" rel="noopener">
+          <span class="lang-ja">ブラウザ版を試す →</span>
+          <span class="lang-en">try the browser version →</span>
+        </a>
+        <a class="btn" href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" target="_blank" rel="noopener" data-cws-link>
+          <span class="lang-ja">Chrome Web Store で追加 →</span>
+          <span class="lang-en">add from the Chrome Web Store →</span>
+        </a>
+      </div>
+      <p class="ext-note">
+        <span class="lang-ja">2026-05-16 公開開始。Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</span>
+        <span class="lang-en">Live since 2026-05-16. Works on Chrome, Edge, Brave and other Chromium browsers.</span>
+      </p>
+    </div>
+  </details>
+
+  <!-- 10 CLIP（Chrome 拡張） -->
+  <details>
+    <summary>
+      <span class="sum-num">— 10</span>
+      <span class="sum-title">
+        <span class="lang-ja"><em>Ateli.er Clip</em> — 見つけたものを、そのまま置く</span>
+        <span class="lang-en"><em>Ateli.er Clip</em> — clip what you find</span>
+      </span>
+      <span class="sum-hint">chrome 拡張</span>
+      <span class="sum-icon">▶</span>
+    </summary>
+    <div class="acc-body">
+      <div class="ext-logo">
+        <img src="img/clip-logo.png" alt="Ateli.er Clip" style="border-radius: 28px;">
+        <p class="ext-logo-note">
+          <span class="lang-ja">— Chrome Web Store で公開中</span>
+          <span class="lang-en">— available on the Chrome Web Store</span>
+        </p>
+      </div>
+      <div class="section-desc">
+        <p class="lang-ja">ウェブで見つけた記事、Dropbox の音源、Google Drive の画像。ブラウザのツールバーから<strong>一クリック</strong>で、今開いているページの OGP 情報を取得し、Atelier のチャンネルに送ります。</p>
+        <p class="lang-en">An article you found, an audio file on Dropbox, an image on Google Drive. <strong>One click</strong> from the toolbar grabs the OGP info of the current page and sends it straight into your Atelier channel.</p>
+      </div>
+      <figure class="shot">
+        <img src="img/howto/14-clip.png" alt="Ateli.er Clip popup">
+        <figcaption class="shot-caption">
+          <span><b>clip</b> / ツールバーから一クリックで送る</span>
+          <span>chrome extension</span>
+        </figcaption>
+      </figure>
+      <div class="shot-callouts">
+        <div class="callout">
+          <span class="callout-tag">auto</span>
+          <span class="lang-ja"><b>URL・画像・音源</b>を自動判別して Atelier に送ります。</span>
+          <span class="lang-en">Auto-detects <b>URL, image, or audio</b> and routes it to Atelier.</span>
+        </div>
+        <div class="callout">
+          <span class="callout-tag">storage</span>
+          <span class="lang-ja"><b>Dropbox / Google Drive</b> のリンクにも対応。</span>
+          <span class="lang-en">Works with <b>Dropbox and Google Drive</b> links too.</span>
+        </div>
+        <div class="callout">
+          <span class="callout-tag">archive</span>
+          <span class="lang-ja">収集したリンクは<b>ブラウザ内にアーカイブ</b>されます。</span>
+          <span class="lang-en"><b>Archives</b> collected links right in your browser.</span>
+        </div>
+      </div>
+      <div class="ext-actions">
+        <a class="btn" href="https://chromewebstore.google.com/detail/atelier-clip/ngkhghpnghaihcifjmieelhekmjpfkbo" target="_blank" rel="noopener" data-cws-link>
+          <span class="lang-ja">Chrome Web Store で追加 →</span>
+          <span class="lang-en">add from the Chrome Web Store →</span>
+        </a>
+      </div>
+      <p class="ext-note">
+        <span class="lang-ja">Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</span>
+        <span class="lang-en">Works on Chrome, Edge, Brave and other Chromium browsers.</span>
+      </p>
     </div>
   </details>
 
