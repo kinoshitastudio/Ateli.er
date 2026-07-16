@@ -65,7 +65,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@200;300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+JP:wght@200;300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -80,7 +80,8 @@
   --gray-3:   rgba(22,0,162,0.22);
   --line:     rgba(22,0,162,0.32);
   --line-soft:rgba(22,0,162,0.16);
-  --sans:    'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+  /* ラテン=Inter（Söhne系グロテスク）／日本語=Noto Sans JP にフォールスルー＝MercuryOS寄りの洗練グロテスク */
+  --sans:    'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
   --mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
 }
 html { scroll-behavior: smooth; }
@@ -89,9 +90,9 @@ body {
   color: var(--ink);
   font-family: var(--sans);
   font-weight: 400;
-  font-size: 15px;
-  line-height: 1.85;
-  letter-spacing: -0.005em;
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
@@ -158,7 +159,7 @@ body.is-en .lang-en { display: block; }
 
 /* ──────────────── HERO ──────────────── */
 .hero {
-  padding: 72px 28px 56px;
+  padding: clamp(88px, 13vh, 148px) 28px 80px;
   position: relative;
 }
 .hero-inner {
@@ -187,12 +188,13 @@ body.is-en .lang-en { display: block; }
 }
 .hero-title {
   font-family: var(--sans);
-  font-weight: 500;
-  font-size: clamp(36px, 6vw, 64px);
-  line-height: 1.18;
-  letter-spacing: -0.025em;
+  font-weight: 400;
+  font-size: clamp(38px, 5.6vw, 64px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
   color: var(--ink);
-  margin-bottom: 22px;
+  margin-bottom: 26px;
+  text-wrap: balance;   /* 行を均等に折り返す＝EN見出しが3段→2段に整う */
 }
 .hero-title .accent {
   display: inline-block;
@@ -286,7 +288,7 @@ body.is-en .lang-en { display: block; }
 
 /* ──────────────── SECTION SCAFFOLD ──────────────── */
 section.block {
-  padding: 64px 28px;
+  padding: clamp(84px, 11vh, 128px) 28px;
 }
 .block-inner { max-width: 760px; margin: 0 auto; }
 .block-num {
@@ -300,11 +302,11 @@ section.block {
 }
 .block-head {
   font-family: var(--sans);
-  font-weight: 500;
-  font-size: clamp(24px, 3.5vw, 38px);
-  letter-spacing: -0.02em;
-  line-height: 1.3;
-  margin-bottom: 22px;
+  font-weight: 400;
+  font-size: clamp(26px, 3.8vw, 44px);
+  letter-spacing: -0.032em;
+  line-height: 1.22;
+  margin-bottom: 26px;
   max-width: 760px;
 }
 .block-head .pill {
@@ -375,16 +377,17 @@ section.block.is-alt {
 @media (min-width: 480px) { .units-grid { grid-template-columns: 1fr 1fr; } }
 
 .unit {
-  background: var(--paper);
-  border: 1.5px solid var(--ink);
-  border-radius: 22px;
-  padding: 22px 22px 24px;
+  background: var(--paper-3);
+  border: 1px solid rgba(22,0,162,0.06);
+  border-radius: 18px;
+  padding: 26px 24px 28px;
   position: relative;
-  transition: transform 0.18s, box-shadow 0.18s;
+  box-shadow: 0 14px 44px rgba(22,0,162,0.08);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 .unit:hover {
-  transform: translateY(-4px);
-  box-shadow: 6px 6px 0 var(--ink);
+  transform: translateY(-3px);
+  box-shadow: 0 22px 60px rgba(22,0,162,0.14);
 }
 .unit-art {
   aspect-ratio: 1 / 1;
@@ -449,10 +452,11 @@ section.block.is-alt {
   grid-template-columns: 72px 1fr;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  background: var(--paper);
-  border: 1.5px solid var(--ink);
+  padding: 18px 20px;
+  background: var(--paper-3);
+  border: 1px solid rgba(22,0,162,0.06);
   border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(22,0,162,0.06);
 }
 @media (max-width: 540px) {
   .principles { grid-template-columns: 1fr; }
@@ -494,15 +498,16 @@ section.block.is-alt {
   gap: 12px;
 }
 .audience li {
-  padding: 18px 22px;
-  background: var(--paper);
-  border: 1.5px solid var(--line);
+  padding: 20px 24px;
+  background: var(--paper-3);
+  border: 1px solid rgba(22,0,162,0.06);
   border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(22,0,162,0.06);
   font-size: 15.5px;
   line-height: 1.7;
   color: var(--ink);
   position: relative;
-  padding-left: 48px;
+  padding-left: 50px;
 }
 .audience li::before {
   content: '✿';
@@ -620,6 +625,11 @@ section.block.is-alt {
 .final-art:has(img) {
   overflow: hidden;
 }
+/* MercuryOS調＝実画像/イラストのカードを"柔らかい影で浮かせる"（枠でなく影で立たせる） */
+.hero-art:has(img),
+.illustration-box:has(img) {
+  box-shadow: 0 22px 66px rgba(22,0,162,0.12);
+}
 /* logo.svg in the aesthetic slot reads as a mark, not a photo —
    contain it with breathing room instead of crop-fill. */
 .illustration-box > img[src$=".svg"] {
@@ -683,24 +693,24 @@ section.block.is-alt {
 
 /* ──────────────── FOOTER ──────────────── */
 footer.foot {
-  padding: 36px 28px 56px;
+  background: #16141d;
+  margin-top: clamp(40px, 8vh, 96px);
+  padding: 56px 32px 64px;
   font-family: var(--mono);
   font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--gray);
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.5);
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 14px;
-  max-width: 760px;
-  margin: 0 auto;
 }
 .foot a {
-  color: var(--ink);
+  color: rgba(255,255,255,0.82);
   text-decoration: none;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid rgba(255,255,255,0.16);
 }
-.foot a:hover { border-bottom-color: var(--ink); }
+.foot a:hover { border-bottom-color: rgba(255,255,255,0.82); }
 .foot-links { display: inline-flex; flex-wrap: wrap; gap: 18px; }
 
 /* ──────────────── RESPONSIVE ──────────────── */
@@ -741,7 +751,7 @@ footer.foot {
     </span>
     <h1 class="hero-title">
       <span class="lang-ja">未完成のまま、<br>そっと <span class="accent">置いておく</span> 場所。</span>
-      <span class="lang-en">A place to <span class="accent">leave</span> things,<br>still unfinished.</span>
+      <span class="lang-en">A place to <span class="accent">leave</span> things, still unfinished.</span>
     </h1>
     <p class="hero-sub">
       <span class="lang-ja">アルゴリズムも、ランキングも、いいね数もない。<br>静かな対話のための小さな中庭です。</span>
