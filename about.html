@@ -150,8 +150,8 @@ body.is-en .lang-en { display: block; }
   text-transform: uppercase;
 }
 .lang-toggle button.is-active {
-  background: var(--ink);
-  color: var(--paper);
+  background: rgba(22,0,162,0.13);   /* 濃紺ベタ→他と同じ淡いトーンに統一 */
+  color: var(--ink);
 }
 
 /* ──────────────── CONTAINER ──────────────── */
@@ -299,7 +299,9 @@ body.is-en .lang-en { display: block; }
 }
 .hero-lead .accent {
   display: inline-block;
-  background: rgba(22,0,162,0.13); color: var(--ink);   /* 青い囲みも淡く＝強調しすぎない（文字の濃さで印を付ける） */
+  /* 囲み・文字とも周囲から浮かせすぎない＝そっと印を付けるだけ */
+  background: rgba(22,0,162,0.08);
+  color: rgba(22,0,162,0.78);
   padding: 0 10px; border-radius: 9px;
   transform: rotate(-1.2deg);
 }
@@ -391,14 +393,16 @@ section.block {
   line-height: 1.22;
   margin-bottom: 26px;
   max-width: 760px;
+  text-wrap: balance;   /* 行を均等に折り返す＝"by"だけ取り残される等の変な改行を防ぐ */
 }
 .block-head .pill {
   display: inline-block;
-  background: rgba(22,0,162,0.13);   /* ヒーローのピルと同じ淡いトーンに統一 */
-  color: var(--ink);
+  /* ヒーローのピルと同じ薄さに統一＝そっと印を付けるだけ */
+  background: rgba(22,0,162,0.08);
+  color: rgba(22,0,162,0.78);
   padding: 0 10px;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: inherit;   /* 見出し本体(400)と同じ太さに＝太さで飛び出さない */
 }
 .block-body {
   font-size: 15px;
@@ -913,14 +917,14 @@ footer.foot {
 <!-- ──────── 02 — units ──────── -->
 <section class="block is-alt">
   <div class="block-inner">
-    <span class="block-num">02 — <span class="lang-ja">構成する 4 つの単位</span><span class="lang-en">four units of work</span></span>
+    <span class="block-num">02 — <span class="lang-ja">四つの動詞</span><span class="lang-en">four verbs</span></span>
     <h2 class="block-head">
-      <span class="lang-ja">block · channel · connect · footprint</span>
-      <span class="lang-en">block · channel · connect · footprint</span>
+      <span class="lang-ja">置く。集める。<span class="pill">並べ直す</span>。<br>痕跡が残る。それだけ。</span>
+      <span class="lang-en">Place. Gather. <span class="pill">Re-arrange</span>.<br>Leave a trace. That's all.</span>
     </h2>
     <div class="block-body">
-      <p class="lang-ja">この場のすべては、たった 4 つの単位でできています。シンプルだから、置きやすい。</p>
-      <p class="lang-en">Everything here is built from just four units. Simple, so it's easy to leave something behind.</p>
+      <p class="lang-ja">この場に動詞は四つしかない。機能表を伸ばす代わりに、語彙を削った。<strong>覚えることが少ないほど、置くまでの距離は短い。</strong>迷う余地がないから、手が止まらない。</p>
+      <p class="lang-en">There are only four verbs here. Instead of growing a feature list, we shrank the vocabulary. <strong>The less there is to learn, the shorter the distance to placing something.</strong> Nothing to deliberate over, so your hands don't stop.</p>
     </div>
     <div class="units-grid">
       <article class="unit">
@@ -978,8 +982,8 @@ footer.foot {
 <!-- ──────── STAMP 1 ──────── -->
 <div class="stamp">
   <p class="stamp-quote">
-    <span class="lang-ja">速さの外側にある、静かな積み重ねを支えるための器。</span>
-    <span class="lang-en">A vessel for the quiet accumulation that lives outside of speed.</span>
+    <span class="lang-ja">速さを競う場所では、遅い制作は<br>存在しないことになる。</span>
+    <span class="lang-en">In a place that competes on speed,<br>slow work simply ceases to exist.</span>
   </p>
   <p class="stamp-mark">— atelier philosophy</p>
 </div>
@@ -987,10 +991,10 @@ footer.foot {
 <!-- ──────── 03 — principles ──────── -->
 <section class="block">
   <div class="block-inner">
-    <span class="block-num">03 — <span class="lang-ja">設計の核</span><span class="lang-en">design choices</span></span>
+    <span class="block-num">03 — <span class="lang-ja">足さないもの</span><span class="lang-en">what we refuse</span></span>
     <h2 class="block-head">
       <span class="lang-ja">何を <span class="pill">足さない</span> かで、<br>場の温度は決まる。</span>
-      <span class="lang-en">The temperature of a place is decided by<br>what you <span class="pill">refuse to add</span>.</span>
+      <span class="lang-en">The temperature of a place is decided by what you <span class="pill">refuse to add</span>.</span>
     </h2>
     <div class="block-body" style="margin-bottom:6px">
       <p class="lang-ja">機能を足すのは簡単だ。難しいのは、足さないと決め、決め続けること。ここに無いものは、作れなかったものではない。<strong>置かないと決めたものだ。</strong></p>
@@ -1026,7 +1030,7 @@ footer.foot {
 <!-- ──────── 04 — aesthetic ──────── -->
 <section class="block is-alt">
   <div class="block-inner">
-    <span class="block-num">04 — <span class="lang-ja">美学について</span><span class="lang-en">on the look</span></span>
+    <span class="block-num">04 — <span class="lang-ja">中庭という考え方</span><span class="lang-en">the courtyard</span></span>
     <h2 class="block-head">
       <span class="lang-ja">フィードは押し寄せる。<br>中庭は、<span class="pill">歩いて入る</span>。</span>
       <span class="lang-en">A feed pushes at you.<br>A courtyard is something you <span class="pill">walk into</span>.</span>
@@ -1122,7 +1126,7 @@ footer.foot {
     }
   </style>
   <div class="block-inner">
-    <span class="block-num">08 — <span class="lang-ja">作った人</span><span class="lang-en">the maker</span></span>
+    <span class="block-num">05 — <span class="lang-ja">作った人</span><span class="lang-en">the maker</span></span>
     <div class="maker-grid">
       <img
         src="assets/founder.jpg"
@@ -1162,12 +1166,12 @@ footer.foot {
 <div class="final">
   <span class="final-eyebrow">— join</span>
   <h3 class="final-title">
-    <span class="lang-ja">静かな器に、参加しませんか。</span>
-    <span class="lang-en">Will you join this quiet vessel?</span>
+    <span class="lang-ja">あなたの途中を、<br>置きにきてください。</span>
+    <span class="lang-en">Come and leave<br>your unfinished here.</span>
   </h3>
   <p class="final-sub">
-    <span class="lang-ja">無料で、誰でも参加できます。<br>サービスを開いて、アカウントを作るだけ。</span>
-    <span class="lang-en">Free and open to everyone.<br>Just open the service and create an account.</span>
+    <span class="lang-ja">誰でも、無料で。アカウントを作れば、もう中庭にいる。<br>完成していなくていい。それがここの前提だから。</span>
+    <span class="lang-en">Anyone, free. Make an account and you're already in the courtyard.<br>It doesn't have to be finished. That's the premise here.</span>
   </p>
   <a class="btn btn-invert" href="/"><span class="lang-ja">サービスを開く →</span><span class="lang-en">open the service →</span></a>
 </div>
