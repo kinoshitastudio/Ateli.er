@@ -245,6 +245,87 @@ body.is-en .lang-en { display: block; }
   text-transform: uppercase;
 }
 
+/* ──────────── HOMEPAGE型ヒーロー：巨大な淡いワードマーク＋実メディア＋深いリード＋4値 ──────────── */
+.wordmark {
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: clamp(68px, 17vw, 236px);
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+  color: rgba(22,0,162,0.15);   /* 淡く沈むワードマーク＝見出しでなく"気配" */
+  text-align: center;
+  user-select: none;
+}
+.scrollcue {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  font-size: 17px;
+  color: var(--gray-2);
+  animation: cueDrop 2.6s ease-in-out infinite;
+}
+@keyframes cueDrop { 0%,100%{transform:translateY(0);opacity:.45} 50%{transform:translateY(6px);opacity:.9} }
+
+/* 大きな実メディア（実際のAtelier画面のスクショ／動画）＝イラストでなく"実物"を主役に */
+.hero-media {
+  max-width: 1000px;
+  margin: clamp(44px, 7vh, 88px) auto 0;
+  aspect-ratio: 1800 / 968;   /* 実機KVの実比率に合わせる＝切らずに全体を見せる */
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--paper-3);
+  border: 1px solid #8f8e8b;   /* KVだけ枠線＝ベージュ地に沈まず輪郭が分かるミッドグレー（黒だと重く、薄いと消える） */
+  box-shadow: 0 30px 90px rgba(22,0,162,0.16);
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-media > img, .hero-media > video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-media-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; color: var(--gray-2); text-transform: uppercase; }
+.media-cap {
+  text-align: center; margin-top: 14px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em;
+  color: var(--gray-3);   /* 補足はさらに薄く＝主役はKV本体 */
+  text-transform: lowercase;
+}
+
+.hero-lead {
+  max-width: 640px;
+  margin: clamp(44px, 7vh, 84px) auto 0;
+  text-align: center;
+  font-size: clamp(18px, 2.4vw, 27px);
+  line-height: 1.62;
+  letter-spacing: -0.022em;
+  color: var(--gray);
+  text-wrap: balance;
+}
+.hero-lead .accent {
+  display: inline-block;
+  background: rgba(22,0,162,0.13); color: var(--ink);   /* 青い囲みも淡く＝強調しすぎない（文字の濃さで印を付ける） */
+  padding: 0 10px; border-radius: 9px;
+  transform: rotate(-1.2deg);
+}
+
+/* 4値グリッド（参照サイトの Humane / Fluid / Focused / Familiar に相当） */
+.values {
+  max-width: 900px;
+  margin: clamp(60px, 9vh, 108px) auto 0;
+  padding: 0 28px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(30px, 4vw, 54px) clamp(28px, 4vw, 52px);
+}
+@media (max-width: 640px) { .values { grid-template-columns: 1fr; } }
+.v-title {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(19px, 2.2vw, 24px);
+  letter-spacing: -0.028em;
+  color: var(--ink);
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.v-body { font-size: 14px; line-height: 1.95; color: var(--gray); }
+
 /* ──────────────── BUTTONS ──────────────── */
 .btn {
   display: inline-flex;
@@ -261,12 +342,13 @@ body.is-en .lang-en { display: block; }
   font-weight: 500;
 }
 .btn-primary {
-  background: var(--ink);
-  color: var(--paper);
+  /* 濃紺ベタ塗りは強すぎる→ワードマークと同じ"淡く沈む"トーンに（静けさの思想／参照サイトの控えめなボタン） */
+  background: rgba(22,0,162,0.10);
+  color: var(--ink);
 }
 .btn-primary:hover {
   transform: translateY(-2px);
-  background: #1d09c9;
+  background: rgba(22,0,162,0.17);
 }
 .btn-soft {
   background: transparent;
@@ -278,11 +360,12 @@ body.is-en .lang-en { display: block; }
   transform: translateY(-2px);
 }
 .btn-invert {
-  background: var(--paper);
+  /* 箱が無くなりベージュ地に置かれるので、他のボタンと同じ淡いトーンに */
+  background: rgba(22,0,162,0.10);
   color: var(--ink);
 }
 .btn-invert:hover {
-  background: var(--paper-3);
+  background: rgba(22,0,162,0.17);
   transform: translateY(-2px);
 }
 
@@ -311,8 +394,8 @@ section.block {
 }
 .block-head .pill {
   display: inline-block;
-  background: var(--ink);
-  color: var(--paper);
+  background: rgba(22,0,162,0.13);   /* ヒーローのピルと同じ淡いトーンに統一 */
+  color: var(--ink);
   padding: 0 10px;
   border-radius: 8px;
   font-weight: 500;
@@ -338,33 +421,34 @@ section.block.is-alt {
 }
 
 /* ──────────────── STAMP (big aphorism box) ──────────────── */
+/* 思想の一文は"色ベタの箱"に入れない＝余白の中に静かに置く（ページの息継ぎ・静けさの思想／参照サイト準拠） */
 .stamp {
-  margin: 24px 16px;
-  padding: 28px 32px;
-  background: var(--ink);
-  color: var(--paper);
-  border-radius: 20px;
+  margin: clamp(60px, 10vh, 116px) 16px;
+  padding: 0 24px;
+  background: transparent;
   text-align: center;
   position: relative;
 }
 .stamp-quote {
   font-family: var(--sans);
   font-weight: 300;
-  font-size: clamp(14px, 2vw, 20px);
-  line-height: 1.6;
-  letter-spacing: -0.01em;
+  font-size: clamp(20px, 2.9vw, 31px);
+  line-height: 1.55;
+  letter-spacing: -0.028em;
+  color: var(--gray);
   max-width: 720px;
-  margin: 0 auto 10px;
+  margin: 0 auto 14px;
+  text-wrap: balance;
 }
 .stamp-mark {
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(220,219,213,0.6);
+  color: var(--gray-2);
 }
 @media (min-width: 720px) {
-  .stamp { margin: 24px 32px; padding: 32px 40px; }
+  .stamp { margin: clamp(72px, 11vh, 128px) 32px; padding: 0 40px; }
 }
 
 /* ──────────────── UNITS GRID ──────────────── */
@@ -466,14 +550,14 @@ section.block.is-alt {
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--paper);
-  background: var(--ink);
+  color: var(--ink);
+  background: rgba(22,0,162,0.11);   /* 濃紺ベタ→他のピル/ボタンと同じ淡いトーンに統一（叫ばない） */
   padding: 6px 12px;
   border-radius: 999px;
   text-align: center;
   display: inline-block;
 }
-.p-mark.is-yes { background: var(--ink); }
+.p-mark.is-yes { background: rgba(22,0,162,0.11); }
 .p-key {
   font-family: var(--sans);
   font-weight: 500;
@@ -541,17 +625,16 @@ section.block.is-alt {
 }
 
 /* ──────────────── FINAL CTA ──────────────── */
+/* 最後の呼びかけも色ベタの箱をやめる＝静けさの思想と揃える（囲って叫ばない） */
 .final {
-  margin: 24px 16px;
-  padding: 20px 24px;
-  background: var(--ink);
-  color: var(--paper);
-  border-radius: 20px;
+  margin: clamp(76px, 11vh, 132px) 16px clamp(44px, 6vh, 76px);
+  padding: 0 24px;
+  background: transparent;
   text-align: center;
   position: relative;
 }
 @media (min-width: 720px) {
-  .final { margin: 24px 32px; padding: 24px 40px; }
+  .final { margin: clamp(88px, 12vh, 144px) 32px clamp(48px, 7vh, 80px); padding: 0 40px; }
 }
 .final-eyebrow {
   display: inline-flex;
@@ -561,28 +644,30 @@ section.block.is-alt {
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(220,219,213,0.7);
-  background: rgba(220,219,213,0.08);
+  color: var(--gray-2);
+  background: rgba(22,0,162,0.06);
   padding: 5px 14px;
   border-radius: 999px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 .final-title {
   font-family: var(--sans);
-  font-weight: 500;
-  font-size: clamp(16px, 2.2vw, 24px);
-  line-height: 1.3;
-  letter-spacing: -0.02em;
-  margin-bottom: 10px;
+  font-weight: 400;
+  font-size: clamp(24px, 3.2vw, 38px);
+  line-height: 1.28;
+  letter-spacing: -0.032em;
+  color: var(--ink);
+  margin-bottom: 16px;
   max-width: 720px;
   margin-left: auto;
   margin-right: auto;
+  text-wrap: balance;
 }
 .final-sub {
-  font-size: 13px;
-  color: rgba(220,219,213,0.8);
-  line-height: 1.7;
-  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.9;
+  margin-bottom: 26px;
   max-width: 520px;
   margin-left: auto;
   margin-right: auto;
@@ -720,7 +805,7 @@ footer.foot {
   .hero-eyebrow { margin-bottom: 18px; }
   section.block { padding: 48px 20px; }
   section.block.is-alt { padding: 48px 20px; margin: 0 12px 18px; border-radius: 24px; }
-  .stamp { margin: 18px 12px; padding: 52px 24px; border-radius: 24px; }
+  .stamp { margin: 64px 12px; padding: 0 20px; }
   .final { margin: 18px 12px; padding: 20px 24px; border-radius: 20px; }
   .principles li { grid-template-columns: 60px 1fr; gap: 10px; padding: 12px 14px; }
 }
@@ -745,25 +830,58 @@ footer.foot {
 
 <!-- ──────── HERO ──────── -->
 <section class="hero">
+  <h1 class="wordmark">Ateli.er</h1>
+  <span class="scrollcue">↓</span>
+
+  <!-- ★実メディアスロット：実際のAtelier画面のスクショ／動画をここに入れる（イラストでなく実物を主役に）
+       <img src="img/courtyard.png" alt=""> または <video src="img/courtyard.mp4" autoplay muted loop playsinline></video> -->
+  <div class="hero-media" data-art-slot="hero-media">
+    <img src="img/kv-courtyard.jpg" alt="Ateli.er — 中庭のトップ画面" loading="eager" decoding="async">
+  </div>
+  <p class="media-cap"><span class="lang-ja">— 中庭。過程が、そのまま置かれている。</span><span class="lang-en">— the courtyard, where process is left as it is.</span></p>
+
+  <p class="hero-lead">
+    <span class="lang-ja">未完成のまま、そっと <span class="accent">置いておく</span> 場所。<br>速さも、数字も、「完成せよ」という圧力も持たない中庭。</span>
+    <span class="lang-en">A place to <span class="accent">leave</span> things, still unfinished — a courtyard without speed, without numbers, without the pressure to be complete.</span>
+  </p>
+
   <div class="hero-inner">
-    <span class="hero-eyebrow">
-      <span class="lang-ja">誰でも参加できます</span><span class="lang-en">open to all</span>
-    </span>
-    <h1 class="hero-title">
-      <span class="lang-ja">未完成のまま、<br>そっと <span class="accent">置いておく</span> 場所。</span>
-      <span class="lang-en">A place to <span class="accent">leave</span> things, still unfinished.</span>
-    </h1>
-    <p class="hero-sub">
-      <span class="lang-ja">アルゴリズムも、ランキングも、いいね数もない。<br>静かな対話のための小さな中庭です。</span>
-      <span class="lang-en">No algorithms, no rankings, no like counts. A small courtyard for quiet exchange.</span>
-    </p>
-    <div class="hero-art" data-art-slot="hero">
-      <img src="img/flower.png" alt="" loading="eager" decoding="async">
-    </div>
     <div class="hero-cta">
       <a class="btn btn-primary" href="/"><span class="lang-ja">Atelier を開く →</span><span class="lang-en">open Atelier →</span></a>
       <a class="btn btn-soft" href="#section-01"><span class="lang-ja">読む ↓</span><span class="lang-en">read ↓</span></a>
     </div>
+  </div>
+</section>
+
+<!-- ──────── 4値（参照サイトの Humane/Fluid/Focused/Familiar 相当）＝思想の芯を4つで言い切る ──────── -->
+<section class="values">
+  <div>
+    <div class="v-title"><span class="lang-ja">未完成のまま。</span><span class="lang-en">Unfinished.</span></div>
+    <p class="v-body">
+      <span class="lang-ja">途中のまま置いていい。書きかけの一行、名前のない音、まだ理由のない一枚。ここでは未完成は失敗ではなく、ひとつの状態だ。</span>
+      <span class="lang-en">Things rest here mid-process. A half-written line, an untitled sound, a photo without a reason yet. Unfinished is not a failure — it is a state.</span>
+    </p>
+  </div>
+  <div>
+    <div class="v-title"><span class="lang-ja">静けさ。</span><span class="lang-en">Quiet.</span></div>
+    <p class="v-body">
+      <span class="lang-ja">アルゴリズムも、ランキングも、いいね数もない。何ひとつ注目を奪い合わない。空白ではなく余韻としての静けさを、設計の軸に置いている。</span>
+      <span class="lang-en">No algorithm, no ranking, no like counts. Nothing competes for attention. Silence — not as emptiness, but as resonance — is the axis of this design.</span>
+    </p>
+  </div>
+  <div>
+    <div class="v-title"><span class="lang-ja">あなたのもの。</span><span class="lang-en">Yours.</span></div>
+    <p class="v-body">
+      <span class="lang-ja">広告を持たない、独立した個人運営の器。置いたものが数字に翻訳されることはなく、あなたのものであり続ける。</span>
+      <span class="lang-en">Independently run, without advertising. What you place here is never translated into numbers. It stays yours.</span>
+    </p>
+  </div>
+  <div>
+    <div class="v-title"><span class="lang-ja">並べ直す。</span><span class="lang-en">Curatorial.</span></div>
+    <p class="v-body">
+      <span class="lang-ja">他者が公開した断片を、自分のチャンネルに紐付ける。作品を集めるのではなく、世界を自分の文脈で並べ直す行為。</span>
+      <span class="lang-en">Pin another's public fragment into your own channel. Not collecting works — re-arranging the world into your own context.</span>
+    </p>
   </div>
 </section>
 
@@ -772,28 +890,25 @@ footer.foot {
   <div class="block-inner">
     <span class="block-num">01 — <span class="lang-ja">なぜつくったのか</span><span class="lang-en">why this exists</span></span>
     <h2 class="block-head">
-      <span class="lang-ja">完成と拡散の <span class="pill">外</span> で、<br>もっと静かに考える場所が要った。</span>
-      <span class="lang-en">A quieter spot, <span class="pill">outside</span> "finished" and "shared."</span>
+      <span class="lang-ja">完成と拡散の <span class="pill">外</span> に、<br>もう一つの場所が要った。</span>
+      <span class="lang-en">Something else had to exist <span class="pill">outside</span> "finished" and "shared."</span>
     </h2>
     <div class="block-body">
       <div class="lang-ja">
-        <p>多くの SNS は「完成」と「拡散」のためにできています。投稿は速さで競い、見られる回数で評価され、磨きの途中の作品はそもそも置く場所がない。</p>
-        <p>Ateli.er は、その逆を選んでいます。手書きのメモ、まだタイトルがついていない曲の断片、書きかけの文章、ふと撮ったままの写真。「途中のままで」置いておける、小さな中庭のような場所です。</p>
+        <p>ほとんどのプラットフォームは、二つの言葉のために設計されている——「完成」と「拡散」。作品は速さで競い、見られた回数で測られ、まだ磨いている途中のものには、そもそも居場所がない。</p>
+        <p>そして数字は、静かに作り手を作り変える。作りたいから作る、ではなく、見られたいから作る。その反転はいつも気づかないうちに起きて、気づいた時には、手が止まっている。</p>
+        <p>Ateli.er は、その手前に立つ。まだ名前のない音。書きかけの一行。理由も分からないまま撮った一枚。それらが、途中のまま息をしていられる中庭。<strong>ここでは未完成は欠落ではなく、ひとつの状態だ。</strong></p>
       </div>
       <div class="lang-en">
-        <p>Most social platforms are built for "finished" and "shared." Posts compete on speed, get judged by visibility, and works mid-process have nowhere to live.</p>
-        <p>Ateli.er chooses the opposite. Handwritten notes, untitled fragments of a song, half-written paragraphs, photos taken without knowing why. A small courtyard for leaving them as they are, mid-process.</p>
+        <p>Most platforms are designed for two words — finished, and shared. Work competes on speed, is measured by how often it was seen, and anything still being shaped has nowhere to stand.</p>
+        <p>And numbers quietly rewrite the maker. Not making because you want to make, but because you want to be seen. The reversal always happens unnoticed — and by the time you notice, your hands have stopped.</p>
+        <p>Ateli.er stands before that. An untitled sound. A half-written line. A photo taken without knowing why. A courtyard where they can keep breathing, still in motion. <strong>Here, unfinished is not a lack — it is a state.</strong></p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ──────── ILLUSTRATION SLOT ──────── -->
-<div class="illustration">
-  <div class="illustration-box" data-art-slot="manifesto">
-    <img src="img/dog.png" alt="" loading="lazy" decoding="async">
-  </div>
-</div>
 
 <!-- ──────── 02 — units ──────── -->
 <section class="block is-alt">
@@ -874,9 +989,13 @@ footer.foot {
   <div class="block-inner">
     <span class="block-num">03 — <span class="lang-ja">設計の核</span><span class="lang-en">design choices</span></span>
     <h2 class="block-head">
-      <span class="lang-ja">何を <span class="pill">足さない</span> か、で場の温度をつくる。</span>
-      <span class="lang-en">What we <span class="pill">don't add</span> shapes the temperature here.</span>
+      <span class="lang-ja">何を <span class="pill">足さない</span> かで、<br>場の温度は決まる。</span>
+      <span class="lang-en">The temperature of a place is decided by<br>what you <span class="pill">refuse to add</span>.</span>
     </h2>
+    <div class="block-body" style="margin-bottom:6px">
+      <p class="lang-ja">機能を足すのは簡単だ。難しいのは、足さないと決め、決め続けること。ここに無いものは、作れなかったものではない。<strong>置かないと決めたものだ。</strong></p>
+      <p class="lang-en">Adding features is easy. What's hard is deciding not to — and keeping that decision. What's missing here was not beyond us. <strong>It was refused.</strong></p>
+    </div>
     <ul class="principles">
       <li>
         <span class="p-mark">— no</span>
@@ -903,28 +1022,25 @@ footer.foot {
 </section>
 
 <!-- ──────── ILLUSTRATION SLOT ──────── -->
-<div class="illustration">
-  <div class="illustration-box" data-art-slot="aesthetic">
-    <img src="img/logo.svg" alt="" loading="lazy" decoding="async">
-  </div>
-</div>
 
 <!-- ──────── 04 — aesthetic ──────── -->
 <section class="block is-alt">
   <div class="block-inner">
     <span class="block-num">04 — <span class="lang-ja">美学について</span><span class="lang-en">on the look</span></span>
     <h2 class="block-head">
-      <span class="lang-ja">画像が前面に立たない、<br>活字主体の中庭。</span>
-      <span class="lang-en">A type-led courtyard,<br>where imagery doesn't take the lead.</span>
+      <span class="lang-ja">フィードは押し寄せる。<br>中庭は、<span class="pill">歩いて入る</span>。</span>
+      <span class="lang-en">A feed pushes at you.<br>A courtyard is something you <span class="pill">walk into</span>.</span>
     </h2>
     <div class="block-body">
       <div class="lang-ja">
-        <p>視覚は、ベージュ地と青墨の二色を基調にしたモノクロームです。完成された雑誌の「目次」のような佇まい。意図的に画像が前面に出ない、活字主体のレイアウトを採用しています。</p>
-        <p>「BIWAKO SILENCE」と呼んでいる、静けさを軸に置いた設計思想。賑やかな SNS とは違う、対話のための余白を持つ画面です。</p>
+        <p>フィードは、あなたの意思とは無関係に流れてくる。中庭は違う。門をくぐり、自分の足で歩き、立ち止まる場所を自分で決める。この差は、UIの差ではなく、<strong>誰が主導権を持つかの差</strong>だ。</p>
+        <p>だから画面は、ベージュ地と青墨の二色しか持たない。画像が前面に立たず、活字が場を仕切る。雑誌のフィードでなく、雑誌の「目次」に近い佇まい。声を張る要素を、ひとつずつ引いていった結果がこれだ。</p>
+        <p>この設計思想を <strong>BIWAKO SILENCE</strong> と呼んでいる。滋賀の湖の名前から取った。<strong>余白は、空白ではない。余韻のためにある。</strong>静けさは"何も無いこと"ではなく、置かれたものが響くための条件だ。</p>
       </div>
       <div class="lang-en">
-        <p>A monochrome built on warm paper and ink-blue. A presence closer to the table-of-contents of a printed quarterly than a feed. Type-driven layout that intentionally doesn't lead with imagery.</p>
-        <p>We call this "BIWAKO SILENCE" — silence as the axis. Unlike noisy social feeds, this screen leaves white space for dialogue.</p>
+        <p>A feed arrives regardless of your intent. A courtyard does not. You pass through a gate, walk on your own feet, and decide for yourself where to stop. That difference isn't a UI difference — it's <strong>a difference in who holds the initiative</strong>.</p>
+        <p>So the screen holds only two colors: warm paper and ink-blue. Imagery never takes the lead; type runs the place. Closer to the table of contents of a quarterly than to a feed. This is what remained after removing, one by one, every element that raises its voice.</p>
+        <p>We call this design axis <strong>BIWAKO SILENCE</strong>, named after the lake in Shiga. <strong>White space is not emptiness. It exists for resonance.</strong> Silence is not the absence of things — it is the condition that lets what you placed here be heard.</p>
       </div>
     </div>
   </div>
@@ -940,128 +1056,6 @@ footer.foot {
 </div>
 
 <!-- ──────── 05 — audience ──────── -->
-<section class="block">
-  <div class="block-inner">
-    <span class="block-num">05 — <span class="lang-ja">こんな人へ</span><span class="lang-en">for whom</span></span>
-    <h2 class="block-head">
-      <span class="lang-ja">完成品より、<br>過程に価値を置く人へ。</span>
-      <span class="lang-en">For people who value process<br>over the finished work.</span>
-    </h2>
-    <ul class="audience">
-      <li><span class="lang-ja">制作の途中を、誰かに見せながら考えたい人</span><span class="lang-en">People who want to think out loud, mid-process, with someone watching.</span></li>
-      <li><span class="lang-ja">完成品ではなく、過程に価値を置く人</span><span class="lang-en">People who value the process over the finished work.</span></li>
-      <li><span class="lang-ja">SNS の速さに疲れて、別のリズムを探している人</span><span class="lang-en">People tired of social media's tempo, looking for a different rhythm.</span></li>
-      <li><span class="lang-ja">他者の制作物を curate して、自分の視点で並べ直したい人</span><span class="lang-en">People who want to curate others' work into their own viewpoint.</span></li>
-    </ul>
-  </div>
-</section>
-
-<!-- ──────── 06 — extension (coming soon) ──────── -->
-<section class="block is-alt" id="section-06">
-  <div class="block-inner">
-    <span class="block-num">06 — <span class="lang-ja">新タブを、中庭に</span><span class="lang-en">a new-tab courtyard</span></span>
-    <span style="display:inline-block;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:10px;letter-spacing:0.14em;padding:4px 12px;border-radius:999px;margin-left:8px;vertical-align:middle;">Chrome 拡張</span>
-    <h2 class="block-head">
-      <span class="lang-ja">Ateli.er Player —<br>Chrome 拡張で、中庭を持ち歩く。</span>
-      <span class="lang-en">Ateli.er Player —<br>a Chrome extension that carries the courtyard with you.</span>
-    </h2>
-    <div style="text-align:center; margin:32px 0 8px;">
-      <img src="img/player-logo.png" alt="Ateli.er Player" style="width:140px;height:140px;object-fit:contain;">
-    </div>
-    <!-- preview mock -->
-    <div style="max-width: 480px; margin: 24px auto 0;">
-      <div style="position: relative; aspect-ratio: 16/10; background: var(--paper); border-radius: 14px; box-shadow: 0 6px 28px rgba(22,0,162,0.10); overflow: hidden; border: 1px solid var(--line-soft); display: flex; flex-direction: column;">
-        <!-- top-left title (np-top mock) -->
-        <div style="position: absolute; left: 16px; top: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: var(--ink); text-transform: uppercase; line-height: 1.5;">
-          樹海<br><span style="color: var(--gray);">99LETTERS</span>
-        </div>
-        <!-- top-right meta -->
-        <div style="position: absolute; right: 16px; top: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: var(--gray); text-transform: uppercase; line-height: 1.5; text-align: right;">
-          MODE · ALL<br>7♪ 17◦ 2…
-        </div>
-        <!-- center: image area + fragment mat -->
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;">
-          <div style="background: var(--ink); color: #fff; padding: 12px 18px; font-family: var(--sans); font-size: 13px; line-height: 1.6; max-width: 280px; text-align: center;">
-            <div style="font-family: var(--mono); font-size: 8px; letter-spacing: .3em; color: rgba(255,255,255,0.55); margin-bottom: 6px;">— A FRAGMENT —</div>
-            <span class="lang-ja">静かなものほど、長く残る。</span><span class="lang-en">The quiet ones linger longest.</span>
-          </div>
-        </div>
-        <!-- bottom audio bar mock -->
-        <div style="background: var(--ink); color: #fff; padding: 8px 16px 10px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; display: flex; align-items: center; gap: 10px;">
-          <div style="height: 2px; background: rgba(255,255,255,0.18); position: absolute; left: 0; right: 0; bottom: 30px;">
-            <div style="height: 100%; width: 32%; background: #fff;"></div>
-          </div>
-          <span style="font-size: 14px;">⏮</span>
-          <span style="font-size: 16px;">⏸</span>
-          <span style="font-size: 14px;">⏭</span>
-          <span style="font-size: 12px;">🔊</span>
-          <span style="margin-left: auto; font-size: 9px; color: rgba(255,255,255,0.72);">0:42 / 3:14</span>
-        </div>
-        <!-- NOW LIVE badge -->
-        <div style="position: absolute; top: 14px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em; padding: 5px 14px; border-radius: 999px;">
-          NOW LIVE
-        </div>
-      </div>
-      <p style="text-align: center; margin-top: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; color: var(--gray); text-transform: lowercase;">
-        <span class="lang-ja">— Chrome Web Store で公開中</span><span class="lang-en">— available on the Chrome Web Store</span>
-      </p>
-    </div>
-    <div class="block-body">
-      <p class="lang-ja">投稿された未発表曲・写真・断片が、誰の操作も挟まず漂います。新しいタブを開くたびに中庭がはじまる。ツールバーから小窓でも開けるので、仕事中もデスクの脇で生き続ける。</p>
-      <p class="lang-en">Unreleased songs, photographs, half-thoughts — drifting on their own with no one driving. Every new tab opens into the courtyard. A small floating window keeps it alive at the corner of your desk, even while you work.</p>
-    </div>
-    <ul class="audience">
-      <li><span class="lang-ja">新タブで、画面いっぱいの中庭</span><span class="lang-en">A full-screen courtyard on every new tab.</span></li>
-      <li><span class="lang-ja">ツールバーから、移動できる小窓モード</span><span class="lang-en">A floating window from the toolbar — drag it anywhere.</span></li>
-      <li><span class="lang-ja">音だけ / 画像だけのモードも切り替え可能</span><span class="lang-en">Audio-only or visual-only modes, switchable.</span></li>
-    </ul>
-    <div style="margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-      <a class="btn btn-primary" href="https://atelistudio.com/player.html" target="_blank" rel="noopener">
-        <span class="lang-ja">ブラウザ版を試す →</span><span class="lang-en">try the browser version →</span>
-      </a>
-      <a class="btn btn-soft" href="https://chromewebstore.google.com/detail/atelier-player/gcanhohabiciialjlfigmpchoeeoeglb" target="_blank" rel="noopener" data-cws-link>
-        <span class="lang-ja">Chrome Web Store で追加 →</span><span class="lang-en">add from the Chrome Web Store →</span>
-      </a>
-    </div>
-    <p class="lang-ja" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">2026-05-16 公開開始。Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</p>
-    <p class="lang-en" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">Live since 2026-05-16. Works on Chrome, Edge, Brave and other Chromium browsers.</p>
-  </div>
-</section>
-
-<!-- ──────── 07 — Ateli.er Clip ──────── -->
-<section class="block" id="section-07">
-  <div class="block-inner">
-    <span class="block-num">07 — <span class="lang-ja">ウェブを、中庭へ</span><span class="lang-en">from the web to the courtyard</span></span>
-    <span style="display:inline-block;background:var(--ink);color:var(--paper);font-family:var(--mono);font-size:10px;letter-spacing:0.14em;padding:4px 12px;border-radius:999px;margin-left:8px;vertical-align:middle;">Chrome 拡張</span>
-    <h2 class="block-head">
-      <span class="lang-ja">Ateli.er Clip —<br>見つけたものを、そのまま置く。</span>
-      <span class="lang-en">Ateli.er Clip —<br>clip what you find, right into the courtyard.</span>
-    </h2>
-    <div style="text-align:center; margin:32px 0 24px; position:relative; display:inline-block; left:50%; transform:translateX(-50%);">
-      <img src="img/clip-logo.png" alt="Ateli.er Clip" style="width:140px;height:140px;object-fit:contain;border-radius:28px; display:block;">
-      <p style="text-align:center; margin-top:10px; font-family:var(--mono); font-size:9px; letter-spacing:0.2em; color:var(--gray); text-transform:lowercase;">
-        <span class="lang-ja">— Chrome Web Store で公開中</span><span class="lang-en">— available on the Chrome Web Store</span>
-      </p>
-    </div>
-    <div class="block-body">
-      <p class="lang-ja">ウェブで見つけた記事、Dropbox の音源、Google Drive の画像。ブラウザのツールバーから一クリックで、今開いているページの OGP 情報を取得し Atelier のチャンネルに送ります。</p>
-      <p class="lang-en">An article you found, an audio file on Dropbox, an image on Google Drive. One click from the toolbar grabs the OGP info of the current page and sends it straight into your Atelier channel.</p>
-    </div>
-    <ul class="audience" style="margin-top:20px;">
-      <li><span class="lang-ja">URL・画像・音源を自動判別して Atelier に送る</span><span class="lang-en">Auto-detects URL, image, or audio and routes it to Atelier.</span></li>
-      <li><span class="lang-ja">Dropbox / Google Drive リンクにも対応</span><span class="lang-en">Works with Dropbox and Google Drive links too.</span></li>
-      <li><span class="lang-ja">収集したリンクをブラウザ内にアーカイブ</span><span class="lang-en">Archives collected links right in your browser.</span></li>
-    </ul>
-    <div style="margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-      <a class="btn btn-soft" href="https://chromewebstore.google.com/detail/atelier-clip/ngkhghpnghaihcifjmieelhekmjpfkbo" target="_blank" rel="noopener" data-cws-link>
-        <span class="lang-ja">Chrome Web Store で追加 →</span><span class="lang-en">add from the Chrome Web Store →</span>
-      </a>
-    </div>
-    <p class="lang-ja" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">Chrome / Edge / Brave 等の Chromium 系ブラウザで使えます。</p>
-    <p class="lang-en" style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--gray); margin-top: 12px;">Works on Chrome, Edge, Brave and other Chromium browsers.</p>
-  </div>
-</section>
-
 <!-- ──────── MAKER ──────── -->
 <section class="block is-alt" id="maker">
   <style>
@@ -1077,7 +1071,7 @@ footer.foot {
       aspect-ratio: 4/5;
       object-fit: cover;
       display: block;
-      border: 1.5px solid var(--ink);
+      /* 枠線は外す＝写真そのものを立たせる */
     }
     .maker-body h3 {
       font-family: var(--sans);
