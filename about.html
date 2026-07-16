@@ -407,8 +407,14 @@ section.block {
 .block-body {
   font-size: 15px;
   line-height: 1.95;
-  color: var(--ink);
+  color: rgba(22,0,162,0.72);   /* 本文はやや沈める＝strongとの落差を"濃さ"だけで作る */
   max-width: 680px;
+}
+/* ★強調しない：本文のstrongを太字(既定700)で殴らない。太さは本文と同じにして、
+   色をわずかに濃くするだけ＝そっと際立つ（Atelierの「注目を奪い合わない」思想の実装） */
+.block-body strong {
+  font-weight: inherit;
+  color: var(--ink);
 }
 .block-body p { margin-bottom: 16px; }
 .block-body p:last-child { margin-bottom: 0; }

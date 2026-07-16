@@ -191,7 +191,9 @@ details[open] .sum-icon { transform: rotate(90deg); }
   margin-bottom: 24px;
 }
 .section-desc p + p { margin-top: 10px; }
-.section-desc strong { font-weight: 500; }
+/* ★強調しない：太さで殴らず、濃さだけでそっと際立たせる（about と同原則） */
+.section-desc { color: rgba(22,0,162,0.72); }
+.section-desc strong { font-weight: inherit; color: var(--ink); }
 .section-desc code {
   font-family: var(--mono); font-size: 0.87em;
   background: var(--paper-3);
@@ -217,7 +219,7 @@ details[open] .sum-icon { transform: rotate(90deg); }
   letter-spacing: 0.06em;
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
 }
-.shot-caption b { color: var(--ink); font-weight: 500; font-family: inherit; }
+.shot-caption b { color: var(--ink); font-weight: inherit; font-family: inherit; }
 
 .shot-callouts {
   display: grid;
@@ -255,7 +257,7 @@ details[open] .sum-icon { transform: rotate(90deg); }
   font-size: 13px;
   line-height: 1.85;
 }
-.notice b { font-weight: 500; }
+.notice b { font-weight: inherit; color: var(--ink); }   /* 強調しない＝太さでなく濃さで */
 
 .diagram {
   background: var(--paper-3);
