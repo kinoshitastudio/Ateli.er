@@ -171,6 +171,11 @@
     <changefreq>weekly</changefreq>
   </url>
   <url>
+    <loc>https://atelistudio.com/ch/pearlriversound/ch-u03/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
     <loc>https://atelistudio.com/ch/j.tripp/</loc>
     <lastmod>2026-08-19</lastmod>
     <changefreq>weekly</changefreq>
@@ -192,6 +197,11 @@
   </url>
   <url>
     <loc>https://atelistudio.com/ch/metalupa/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://atelistudio.com/b/t001-o9sxdp/</loc>
     <lastmod>2026-08-19</lastmod>
     <changefreq>weekly</changefreq>
   </url>
@@ -651,6 +661,36 @@
     <changefreq>weekly</changefreq>
   </url>
   <url>
+    <loc>https://atelistudio.com/tags/demoscene/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://atelistudio.com/tags/labels/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://atelistudio.com/tags/drafts/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://atelistudio.com/tags/electronic-music/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://atelistudio.com/tags/philosophy/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
+    <loc>https://atelistudio.com/tags/music/</loc>
+    <lastmod>2026-08-19</lastmod>
+    <changefreq>weekly</changefreq>
+  </url>
+  <url>
     <loc>https://atelistudio.com/tags/99letters/</loc>
     <lastmod>2026-08-19</lastmod>
     <changefreq>weekly</changefreq>
@@ -687,11 +727,6 @@
   </url>
   <url>
     <loc>https://atelistudio.com/tags/琵琶湖/</loc>
-    <lastmod>2026-08-19</lastmod>
-    <changefreq>weekly</changefreq>
-  </url>
-  <url>
-    <loc>https://atelistudio.com/tags/music/</loc>
     <lastmod>2026-08-19</lastmod>
     <changefreq>weekly</changefreq>
   </url>
